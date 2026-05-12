@@ -56,7 +56,22 @@ If a gameplay feature can't be exercised through these hooks, the hooks are inco
 
 ## Commands
 
-None yet — repo is empty. Once an engine and build tool are chosen, add canonical build / run / test / deploy commands here (and update this section in the same PR).
+```
+npm run dev       # Vite dev server (HMR)
+npm run build     # production web build → dist/
+npm run preview   # preview dist/
+npm run typecheck # tsc --noEmit
+npm run lint      # eslint src/
+npm run test      # vitest run (unit tests, node environment)
+npm run headless  # build headless entry then run: node dist-node/runner.js
+```
+
+Headless smoke check (same as CI):
+```
+npm run headless -- --seed 42 --ticks 10
+```
+
+Stack: npm · TypeScript 5 (strict) · Vite 6 · PixiJS 8 · Vitest 3 · ESLint 9 · Prettier 3
 
 ## Deferred design decisions
 
