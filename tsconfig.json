@@ -12,7 +12,8 @@
     "esModuleInterop": true,
     "outDir": "dist",
     "rootDir": "src",
-    "paths": {}
+    "paths": {},
+    "types": ["vite/client"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist", "dist-node"]
