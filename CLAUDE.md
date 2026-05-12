@@ -57,21 +57,17 @@ If a gameplay feature can't be exercised through these hooks, the hooks are inco
 ## Commands
 
 ```
-npm run dev       # Vite dev server (HMR)
-npm run build     # production web build → dist/
-npm run preview   # preview dist/
-npm run typecheck # tsc --noEmit
-npm run lint      # eslint src/
-npm run test      # vitest run (unit tests, node environment)
-npm run headless  # build headless entry then run: node dist-node/runner.js
+just dev          # Vite dev server (HMR)
+just build        # production web build → dist/
+just preview      # preview dist/
+just typecheck    # tsc --noEmit
+just lint         # eslint src/
+just test         # vitest run (unit + scenario tests)
+just smoke        # headless smoke check: node dist-node/runner.js --seed 42 --ticks 10
+just ci           # full CI sequence locally
 ```
 
-Headless smoke check (same as CI):
-```
-npm run headless -- --seed 42 --ticks 10
-```
-
-Stack: npm · TypeScript 5 (strict) · Vite 6 · PixiJS 8 · Vitest 3 · ESLint 9 · Prettier 3
+Stack: npm · TypeScript 5 (strict) · Vite 6 · PixiJS 8 · Vitest 3 · ESLint 9 · Prettier 3 · just 1.40
 
 ## Deferred design decisions
 
