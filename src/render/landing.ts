@@ -4,7 +4,7 @@ const BLINK_INTERVAL_MS = 800;
 const PROMPT_TEXT = "PRESS ANY KEY";
 
 export async function showLanding(app: Application): Promise<void> {
-  const texture = await Assets.load("landing.png");
+  const texture = await Assets.load(import.meta.env.BASE_URL + "landing.png");
 
   return new Promise<void>((resolve) => {
     const container = new Container();
