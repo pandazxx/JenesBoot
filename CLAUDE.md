@@ -56,7 +56,18 @@ If a gameplay feature can't be exercised through these hooks, the hooks are inco
 
 ## Commands
 
-None yet — repo is empty. Once an engine and build tool are chosen, add canonical build / run / test / deploy commands here (and update this section in the same PR).
+```
+just dev          # Vite dev server (HMR)
+just build        # production web build → dist/
+just preview      # preview dist/
+just typecheck    # tsc --noEmit
+just lint         # eslint src/
+just test         # vitest run (unit + scenario tests)
+just smoke        # headless smoke check: node dist-node/runner.js --seed 42 --ticks 10
+just ci           # full CI sequence locally
+```
+
+Stack: npm · TypeScript 5 (strict) · Vite 6 · PixiJS 8 · Vitest 3 · ESLint 9 · Prettier 3 · just 1.40
 
 ## Deferred design decisions
 
