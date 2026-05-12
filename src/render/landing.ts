@@ -11,7 +11,7 @@ export function showLanding(app: Application): Promise<void> {
     const texture = Texture.from("landing.png");
     const sprite = new Sprite(texture);
 
-    const fitToCanvas = () => {
+    const fitToCanvas = (): void => {
       const { width: cw, height: ch } = app.renderer;
       const scaleX = cw / 480;
       const scaleY = ch / 270;
@@ -35,7 +35,7 @@ export function showLanding(app: Application): Promise<void> {
     const promptText = new Text({ text: PROMPT_TEXT, style });
     promptText.anchor.set(0.5, 1);
 
-    const positionPrompt = () => {
+    const positionPrompt = (): void => {
       const { width: cw, height: ch } = app.renderer;
       promptText.x = Math.round(cw / 2);
       promptText.y = ch - 8;
@@ -47,7 +47,7 @@ export function showLanding(app: Application): Promise<void> {
     let blinkVisible = true;
     let blinkAccum = 0;
 
-    const onTick = () => {
+    const onTick = (): void => {
       blinkAccum += app.ticker.deltaMS;
       if (blinkAccum >= BLINK_INTERVAL_MS) {
         blinkAccum -= BLINK_INTERVAL_MS;
@@ -58,7 +58,7 @@ export function showLanding(app: Application): Promise<void> {
 
     app.ticker.add(onTick);
 
-    const onKey = () => {
+    const onKey = (): void => {
       app.ticker.remove(onTick);
       document.removeEventListener("keydown", onKey);
       app.stage.removeChild(container);
@@ -69,7 +69,7 @@ export function showLanding(app: Application): Promise<void> {
 
     document.addEventListener("keydown", onKey, { once: true });
 
-    const onResize = () => {
+    const onResize = (): void => {
       fitToCanvas();
       positionPrompt();
     };
@@ -78,7 +78,7 @@ export function showLanding(app: Application): Promise<void> {
 
     window.addEventListener(
       "jenesboooot:start",
-      () => {
+      (): void => {
         window.removeEventListener("resize", onResize);
       },
       { once: true },
