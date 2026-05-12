@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  base: "/JenesBoot/",
+  base: process.env.VITE_BASE_URL ?? "/JenesBoot/",
   build: {
     target: "es2022",
     outDir: "dist",

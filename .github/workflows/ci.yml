@@ -4,7 +4,9 @@ on:
   push:
     branches: ["**"]
   pull_request:
-    branches: ["**"]
+    types: [opened, synchronize, reopened]
+  pull_request_target:
+    types: [closed]
 
 permissions:
   contents: read
@@ -13,6 +15,7 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request_target'
 
     steps:
       - name: Checkout
@@ -41,36 +44,123 @@ jobs:
       - name: Unit tests and scenario tests
         run: just test
 
-      - name: Web build
-        run: just build
-
       - name: Headless smoke check
         run: just smoke
 
-      - name: Upload Pages artifact
-        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        uses: actions/upload-pages-artifact@v3
+      - name: Web build (PR preview)
+        if: github.event_name == 'pull_request'
+        env:
+          VITE_BASE_URL: /JenesBoot/pr-${{ github.event.pull_request.number }}/
+        run: just build
+
+      - name: Web build (production)
+        if: github.event_name != 'pull_request'
+        run: just build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
         with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  deploy-preview:
+    name: deploy preview
+    needs: build
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
           path: dist/
 
-  deploy:
-    name: deploy
+      - name: Deploy PR preview to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist/
+          destination_dir: pr-${{ github.event.pull_request.number }}
+          keep_files: true
+
+      - name: Comment preview URL on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = `https://pandazxx.github.io/JenesBoot/pr-${{ github.event.pull_request.number }}/`;
+            const marker = '<!-- pr-preview-comment -->';
+            const body = `${marker}\n🔍 **Preview:** ${url}\n\n_Updated on every push to this PR._`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  deploy-production:
+    name: deploy production
     needs: build
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
-
     permissions:
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      contents: write
 
     steps:
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy to gh-pages root
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist/
+          keep_files: true
+
+  cleanup-preview:
+    name: cleanup preview
+    if: github.event_name == 'pull_request_target' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Remove PR preview directory
+        run: |
+          PR="${{ github.event.pull_request.number }}"
+          if [ -d "pr-${PR}" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git rm -rf "pr-${PR}/"
+            git commit -m "chore: remove preview for PR #${PR}"
+            git push
+          else
+            echo "No preview directory for PR #${PR}, nothing to clean up."
+          fi
