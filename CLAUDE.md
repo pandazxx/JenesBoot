@@ -42,6 +42,10 @@ Tooling below this layer (package manager, linter, test runner, formatter) is ch
 - **CI/CD is a requirement from day one.** Every merge should produce a deployable web build the user can open in a browser. Wire this up before mechanics pile up.
 - Keep PRs small and self-contained so each can be reviewed and play-tested independently.
 
+## PR handoff rule
+
+Before any agent surfaces a pull-request URL to the user, it **must** spawn the `pr-sentinel` subagent with the PR number and wait for its verdict. Only forward a `VERDICT: green` to the user. On `VERDICT: red`, fix the reported issue first, then re-run the sentinel. Never skip this step to save time.
+
 ## Agent-testable by design
 
 This project is heavily agent-driven, so the **game itself must be drivable by an agent without a human at the keyboard**. Treat this as a first-class architectural constraint, not an afterthought:
