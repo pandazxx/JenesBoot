@@ -1,14 +1,15 @@
-import { Application, Container, Sprite, Text, TextStyle, Texture } from "pixi.js";
+import { Application, Assets, Container, Sprite, Text, TextStyle } from "pixi.js";
 
 const BLINK_INTERVAL_MS = 800;
 const PROMPT_TEXT = "PRESS ANY KEY";
 
-export function showLanding(app: Application): Promise<void> {
+export async function showLanding(app: Application): Promise<void> {
+  const texture = await Assets.load("landing.png");
+
   return new Promise<void>((resolve) => {
     const container = new Container();
     app.stage.addChild(container);
 
-    const texture = Texture.from("landing.png");
     const sprite = new Sprite(texture);
 
     const fitToCanvas = (): void => {
