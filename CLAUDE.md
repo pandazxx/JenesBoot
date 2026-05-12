@@ -26,11 +26,15 @@ Fantasy WWII with alien technology. The player fights Nazis and the aliens contr
 
 Pixel art, FTL-style. Keep palette and sprite scale consistent with that reference.
 
-## Tech stack (provisional)
+## Tech stack
 
-- **Target platform: web.** Anything added must run in a browser. Native-only dependencies are out.
-- **Engine: not yet chosen.** raylib (via emscripten/WebAssembly) is the leading candidate. Other small web-capable options (Macroquad, LÖVE.js, PixiJS, Phaser, Bevy) are still on the table. Pick the simplest thing that ships a playable prototype — avoid heavy frameworks like Unity / Unreal / Godot unless explicitly requested.
-- Prefer one language across game and tooling once the engine is chosen.
+- **Language:** TypeScript (strict mode).
+- **Renderer:** PixiJS (WebGL pixel-art).
+- **Build:** Vite. Deployed as a static site to GitHub Pages.
+- **Simulation:** plain TypeScript modules. No DOM, no PixiJS imports, no `window` / `document`, no wall-clock reads, no `Math.random()`. The simulation is the same code in the web build and the headless build.
+- **Headless target:** a Node entry that imports the same simulation modules. Used by `gameplay-qa` for scripted scenarios and by CI for smoke runs.
+
+Tooling below this layer (package manager, linter, test runner, formatter) is chosen by `build-engineer` in its first PR — boring, mainstream, version-pinned.
 
 ## Way of working
 
@@ -54,10 +58,9 @@ If a gameplay feature can't be exercised through these hooks, the hooks are inco
 
 None yet — repo is empty. Once an engine and build tool are chosen, add canonical build / run / test / deploy commands here (and update this section in the same PR).
 
-## Open decisions
+## Deferred design decisions
 
-Not yet decided — flag these before assuming an answer:
-- Engine and language.
+Not blocking, but flag before silently picking an answer:
 - Save format and run-state representation.
 - Map / sector model (FTL-style beacon graph vs. tile grid vs. something else).
 - How the "fantasy WWII + aliens" tone is conveyed in UI copy and faction naming.
