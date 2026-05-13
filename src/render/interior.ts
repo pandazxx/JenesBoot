@@ -196,5 +196,6 @@ export class InteriorView {
 
     // Tutorial text
     this.tutorialText.text = TUTORIAL_TEXT[step];
+    this.tutorialText.style.fill = step === 4 ? 0xff3333 : step === 3 ? 0x00ff88 : 0xffffff;
   }
 }
