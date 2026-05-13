@@ -35,6 +35,8 @@ export class InteriorView {
   private roomGraphics: Map<string, Graphics> = new Map();
   private crewGraphics: Map<string, Graphics> = new Map();
   private pulseGfx: Graphics;
+  private hpBar: Graphics;
+  private hpText: Text;
   private tutorialText: Text;
 
   constructor(engine: ISimEngine) {
@@ -88,6 +90,26 @@ export class InteriorView {
       });
       this.container.addChild(hitArea);
     }
+
+    // Hull HP display
+    const hpLabelStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x8899aa });
+    const hpLabel = new Text({ text: "HULL HP", style: hpLabelStyle });
+    hpLabel.x = 16;
+    hpLabel.y = 186;
+    this.container.addChild(hpLabel);
+
+    const hpBarBg = new Graphics();
+    hpBarBg.rect(16, 200, 420, 16).fill(0x1a2030);
+    this.container.addChild(hpBarBg);
+
+    this.hpBar = new Graphics();
+    this.container.addChild(this.hpBar);
+
+    const hpTextStyle = new TextStyle({ fontFamily: "monospace", fontSize: 11, fill: 0xffffff });
+    this.hpText = new Text({ text: "", style: hpTextStyle });
+    this.hpText.x = 16;
+    this.hpText.y = 222;
+    this.container.addChild(this.hpText);
 
     // Tutorial text
     const tutStyle = new TextStyle({
@@ -162,6 +184,15 @@ export class InteriorView {
 
       gfx.circle(cx, cy, 10).fill(color);
     }
+
+    // Hull HP bar
+    const hpFrac = state.player.maxHullHP > 0 ? state.player.hullHP / state.player.maxHullHP : 0;
+    const hpColor = hpFrac > 0.6 ? 0x00ff88 : hpFrac > 0.3 ? 0xffcc00 : 0xff3333;
+    this.hpBar.clear();
+    if (hpFrac > 0) {
+      this.hpBar.rect(16, 200, Math.round(420 * hpFrac), 16).fill(hpColor);
+    }
+    this.hpText.text = `${state.player.hullHP} / ${state.player.maxHullHP}`;
 
     // Tutorial text
     this.tutorialText.text = TUTORIAL_TEXT[step];
