@@ -72,12 +72,14 @@ Surface vessels use visual lookout, radar, and active sonar.
 | Sub depth ↓ / Range → | `LONG` | `MEDIUM` | `SHORT` | `POINT_BLANK` |
 |---|---|---|---|---|
 | `SURFACE` | 8 | 9 | 10 | 10 |
-| `PERISCOPE` | 3 | 5 | 7 | 8 |
-| `SHALLOW` | 2 | 4 | 6 | 7 |
-| `DEEP` | 1 | 2 | 4 | 5 |
-| `ABYSSAL` | 0 | 1 | 2 | 3 |
+| `PERISCOPE` | 3 | 5 | 7 | 3 |
+| `SHALLOW` | 2 | 4 | 6 | 2 |
+| `DEEP` | 1 | 2 | 4 | 1 |
+| `ABYSSAL` | 0 | 1 | 2 | 0 |
 
-A `SURFACE` sub is always at least `TRACKING`. An `ABYSSAL` sub is undetectable at `LONG` and only ever `FAINT`. The destroyer's job is to push you to `SHORT` while you are shallow.
+**`POINT_BLANK` sonar dead zone:** Active sonar requires a minimum propagation distance to resolve a return. When the sub is directly beneath the hull (`POINT_BLANK`), the sonar cone misses it entirely — contact quality drops back to `FAINT` or `NONE` for all submerged depths. This is historically accurate: submarines sometimes closed to point-blank to shelter under a destroyer's keel. The destroyer's counter is to hold at `SHORT` rather than charging in.
+
+A `SURFACE` sub is always at least `TRACKING` at any range. An `ABYSSAL` sub is undetectable at `LONG` and never above `FAINT` at any range.
 
 ### 2.3 Table B — Submarine detecting surface vessel
 
@@ -109,10 +111,15 @@ An enemy that ducks one band and goes silent drops you from `TRACKING` to `FAINT
 
 ### 2.5 Acoustic signature modifier
 
-The base tables assume the target is at `STANDARD` speed (acoustic sig = 4). Adjust each tick:
+The acoustic modifier applies **only when detection is sonar or hydrophone-based** — that is, when the target is submerged (`PERISCOPE` or deeper). Surface-to-surface detection (Table A row `SURFACE`, and Table B when the sub is itself at `SURFACE`) is visual/radar and is not affected by engine noise.
+
+For all sonar/hydrophone contacts, adjust each tick:
 
 ```
-contactQuality = baseTableValue + (targetAcousticSig − 4)
+if target.depth >= PERISCOPE or observer.depth >= PERISCOPE:
+    contactQuality = baseTableValue + (targetAcousticSig − 4)
+else:
+    contactQuality = baseTableValue   // both surface: visual only, no acoustic modifier
 ```
 
 Clamp to `[0, 10]`. All integer math.
