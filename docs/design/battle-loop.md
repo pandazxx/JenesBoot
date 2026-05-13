@@ -1,145 +1,284 @@
-# JenesBoot — Battle Loop Design v0.1
+# JenesBoot — Battle Loop Design v0.2
 
-**Status:** Authoritative spec for combat implementation. Pre-balance numbers — all integers. Reading order for engineers: §0 (tick sequence), §1 (detection), §2 (depth), §3 (weapons), §4 (enemies), §5 (crew in combat), §6 (escape).
+**Status:** Revision of v0.1. The room-to-room crew-in-combat layer (FTL's "click sailor, click room") is **rejected** for in-battle play. Crew matter between fights and gate certain systems, but moment-to-moment combat is steered by **range, depth, and speed**. Scope is locked to three MVP scenarios: surface-vs-surface gunfight, surface-contact-then-dive, and submerged ambush.
+
+**Reading order for engineers:** §1 (tactical space), §2 (player actions), §3 (weapon resolution), §4 (enemy AI), §5 (win/lose/escape), §6 (crew contribution), §7 (tick sequence), §8 (tradeoffs), §9 (out of scope).
 
 ---
 
-## §0. Tick sequence (deterministic, ordered)
+## §1. The tactical space
 
-**Target tick rate: 10 ticks per real-time second at 1× speed.**
+Three axes. Two are discrete, one is a small integer.
 
-Every combat tick runs these 12 steps in strict order. No step may skip ahead or reorder.
+### 1.1 Range — discrete bands
+
+Range is a single scalar between the player sub and the current engaged enemy (MVP: one enemy at a time).
+
+| Band | Value | Description |
+|---|---|---|
+| `LONG` | 4 | Initial sonar/visual contact. Outside gun range. |
+| `MEDIUM` | 3 | Torpedoes effective; deck gun ineffective. |
+| `SHORT` | 2 | Deck gun effective; torpedoes accurate. |
+| `POINT_BLANK` | 1 | Deck gun devastating; torpedoes risk under-running. |
+| `RAMMING` | 0 | Collision tick; both ships take hull damage. End state. |
+
+Storing range as an integer 0–4 keeps the sim deterministic, testable, and legible. A "close 1 band" command is a single integer delta in the event log.
+
+### 1.2 Depth — discrete enum
+
+`SURFACE`, `PERISCOPE`, `SHALLOW`, `DEEP`, `ABYSSAL` — five bands. Unchanged from core-reference §0.
+
+### 1.3 Speed — three settings
+
+| Setting | Range change rate | Resource cost | Acoustic Sig delta |
+|---|---|---|---|
+| `AHEAD_FULL` | 1 band per 8 ticks | High fuel (surface) / high battery (submerged) | +2 |
+| `STANDARD` | 1 band per 15 ticks | Normal drain | +0 |
+| `SILENT` | None (range holds) | Low drain | −3 |
+
+Speed has a **direction**: `CLOSE`, `OPEN`, or `HOLD`. Full command form: `(setting, direction)`. `SILENT` ignores direction.
+
+### 1.4 How the three axes interact
+
+- Depth **gates weapons** (§3): deck gun requires `SURFACE`; torpedoes require `PERISCOPE`–`DEEP`.
+- Depth **reduces enemy detection**: each band below `SURFACE` reduces enemy sensor accuracy.
+- Speed **modifies range change rate** and **acoustic signature**.
+- Range **gates weapon accuracy** (§3): a torpedo at `LONG` can be dodged; at `SHORT` it is hard to evade.
+- Depth transitions take **6 ticks per band**. During transition: cannot fire, −20 Evasion.
+
+---
+
+## §2. Player actions each tick
+
+Commands queue while paused; apply on unpause. Only one command per category may be queued (queuing a new one replaces the prior).
+
+| Command | Parameters | Effect | Time-to-execute |
+|---|---|---|---|
+| `SET_SPEED` | `(AHEAD_FULL\|STANDARD\|SILENT, CLOSE\|OPEN\|HOLD)` | Changes throttle and direction | Applied next tick |
+| `SET_DEPTH_TARGET` | One of the 5 depth bands | Starts transition toward target one band at a time | 6 ticks per band |
+| `FIRE_DECK_GUN` | — | Fires at engaged enemy | Reload: 12 ticks; shot resolves next tick |
+| `FIRE_TORPEDO` | `tube_index` | Launches torpedo from a loaded tube | Travel time varies by range (§3) |
+| `LAUNCH_DECOY` | — | Defeats one incoming torpedo this tick | Ammo-limited; 1 per encounter in MVP |
+| `BLOW_BALLAST_EMERGENCY` | — | Forces transition toward `SURFACE` at 3 ticks/band | +5 acoustic sig for 10 ticks; costs 1 fuel |
+| `RIG_FOR_SILENT` | — | Shortcut: `SET_SPEED(SILENT, HOLD)` + pause all reloads | Immediate |
+
+Eight commands. Resist adding a ninth before the first playable.
+
+---
+
+## §3. Weapon resolution
+
+Hit chance formula: `base_accuracy × range_modifier × depth_modifier × evasion_modifier`, clamped to `[5, 95]`. All values are integers.
+
+### 3.1 Deck Gun
+
+**Depth required:** player at `SURFACE`. Target at `SURFACE` (full accuracy) or `PERISCOPE` (½ accuracy).
+
+| Range | Hit chance vs surface target |
+|---|---|
+| `LONG` | 0 (out of range) |
+| `MEDIUM` | 15 |
+| `SHORT` | 60 |
+| `POINT_BLANK` | 85 |
+
+- **Damage:** 2 hull HP per hit.
+- **Reload:** 12 ticks (modified by Gunnery crew — see §6).
+
+### 3.2 Torpedo
+
+Depth differential between player and target determines validity. A torpedo runs at the player's current depth ±1 band.
+
+| Player depth | Hittable target depth bands |
+|---|---|
+| `PERISCOPE` | `SURFACE`, `PERISCOPE`, `SHALLOW` |
+| `SHALLOW` | `PERISCOPE`, `SHALLOW`, `DEEP` |
+| `DEEP` | `SHALLOW`, `DEEP`, `ABYSSAL` |
+
+**Travel time by range at fire:**
+
+| Range | Travel ticks |
+|---|---|
+| `LONG` | 12 |
+| `MEDIUM` | 7 |
+| `SHORT` | 3 |
+| `POINT_BLANK` | 1 |
+
+**Hit chance:**
+
+| Range | Base accuracy |
+|---|---|
+| `LONG` | 20 |
+| `MEDIUM` | 55 |
+| `SHORT` | 80 |
+| `POINT_BLANK` | 50 (under-run risk) |
+
+Apply −20 if target depth differs by 1 band from the torpedo run depth (edge of the ±1 window).
+
+- **Damage:** 5 hull HP per hit.
+- **Reload:** 30 ticks (modified by Torpedo Room crew — see §6).
+
+### 3.3 Depth Charges (enemy weapon — Patrol Destroyer only in MVP)
+
+**Enemy depth required:** `SURFACE`. Target bands: `PERISCOPE`–`DEEP`.
+
+Each charge is aimed at a depth band. Hit if player's current depth matches **and** range is `SHORT` or `POINT_BLANK`: **60% chance, 3 hull HP**.
+
+Miss conditions: player at `SURFACE` (charges sink too slow), player at `ABYSSAL` (out of reach), or range `MEDIUM`+.
+
+If the player has been rigged for silent for 10+ continuous ticks the destroyer loses depth fix — subsequent charges drop to a random band (low hit chance).
+
+### 3.4 Range × depth quick-reference
+
+| Player depth | Enemy depth | Available weapon |
+|---|---|---|
+| `SURFACE` | `SURFACE` | Deck gun |
+| `SURFACE` | `PERISCOPE` | Deck gun (½ acc) |
+| `PERISCOPE` | `SURFACE` | Torpedo |
+| `PERISCOPE` | `PERISCOPE` | Torpedo |
+| `SHALLOW` | `SURFACE` | Torpedo (−20) |
+| `SHALLOW` | `PERISCOPE` | Torpedo |
+| `DEEP` | `PERISCOPE` | Torpedo (−20) |
+
+If neither side has a valid weapon vs the other's current depth, the encounter is a **stalemate** — resolved only by changing range, depth, or escaping.
+
+---
+
+## §4. Enemy AI
+
+Each archetype is 2–3 priority rules evaluated in order each AI tick. First true rule fires.
+
+### 4.1 Merchant / Small Boat (Scenario 1)
+
+| Priority | Rule |
+|---|---|
+| 1 | If range ≤ `SHORT` and deck gun reloaded → fire deck gun. |
+| 2 | If hull HP < 50% → `AHEAD_FULL, OPEN` (flee). |
+| 3 | Otherwise → `STANDARD, HOLD`. |
+
+Speed: 1 band per 20 ticks (slower than player). Cannot dive.
+
+### 4.2 Patrol Destroyer (Scenario 2)
+
+| Priority | Rule |
+|---|---|
+| 1 | If player at `PERISCOPE`–`DEEP` and range ≤ `SHORT` → drop depth charge at last known depth. |
+| 2 | If player at `SURFACE` and range > `SHORT` → `AHEAD_FULL, CLOSE`. |
+| 3 | If player at `SURFACE` and range ≤ `SHORT` → fire deck gun. |
+| 4 | Otherwise → `STANDARD, CLOSE` and ping sonar. |
+
+Loses depth fix after player rigs for silent 10+ continuous ticks; subsequent charges drop to random band.
+
+### 4.3 Submerged Hostile (Scenario 3)
+
+| Priority | Rule |
+|---|---|
+| 1 | If torpedoes loaded and range ≤ `MEDIUM` and depth differential ≤ 1 → fire torpedo. |
+| 2 | If hit within last 20 ticks and not detected → change depth 1 band + `SILENT, HOLD`. |
+| 3 | Otherwise → match player depth + `STANDARD, CLOSE`. |
+
+Only attacks when it has a firing solution. A missed first shot from the player triggers rule 2 — the fight becomes a stealth chase.
+
+---
+
+## §5. Win, lose, escape
+
+### 5.1 Common conditions
+
+| Outcome | Condition |
+|---|---|
+| **Win** | Enemy `hullHP` reaches 0 |
+| **Lose** | Player `hullHP` reaches 0, **or** O2 reaches 0 while submerged with no surface path, **or** all crew dead/panicked |
+| **Escape** | Scenario-specific (below); node marked `EVADED` — no XP, no loot |
+
+### 5.2 Scenario 1 — surface gunfight
+
+- **Escape:** range reaches `LONG` for 10 continuous ticks with direction `OPEN`. No fuel cost.
+- **Target:** winnable around tick 80 with default loadout. This is the tutorial fight.
+
+### 5.3 Scenario 2 — surface contact, dive decision
+
+- **Escape:** reach `DEEP` and hold for 15 ticks while range ≥ `MEDIUM`. Geometric — no RNG once conditions are met.
+- **Key decision:** dive to fight with torpedoes vs stay on surface with deck gun. Loadout should make one option clearly better; the player should feel that consequence.
+
+### 5.4 Scenario 3 — submerged ambush
+
+- **Escape:** rig for silent for 30 continuous ticks while range ≥ `MEDIUM`. Hostile breaks contact.
+- **Key decision:** first-shot accuracy. A missed opening salvo usually means breaking off.
+
+---
+
+## §6. Crew contribution during combat (passive only)
+
+Crew are assigned to rooms **before** the encounter. They do not move during combat. Room effectiveness is a function of the assigned crew's skill and alive/panic status.
+
+| Room | Effect during combat | Gate or multiplier? |
+|---|---|---|
+| Sonar | +1 detection range band per skill level; retains enemy depth fix longer while silent | Multiplier |
+| Helm | −1 tick per skill level on per-band range change timer | Multiplier |
+| Gunnery | −1 tick per level on deck gun reload; +5 accuracy per level | Multiplier |
+| Torpedo Room | −2 ticks per level on torpedo reload | **Gate**: if crew dead, reload halts entirely |
+| Engineering | Reduces battery/fuel drain per tick | **Gate**: if unmanned or destroyed, `AHEAD_FULL` locked |
+
+**Panic (MP = 0):** crew refuses orders for 20 ticks. Manifests as the operated system going offline for those 20 ticks (reload stall, speed cap locked). No crew-walking UI required.
+
+**Damage Control:** deferred from MVP. Repairs run between encounters.
+
+---
+
+## §7. Tick sequence
+
+10 steps. Fires at 10 ticks per real-time second at 1× speed.
 
 | Step | Action |
 |---|---|
-| 1 | Resolve in-flight projectiles (apply hits from last tick's fire) |
-| 2 | Apply resource costs (battery drain, O2 burn, fuel if surfaced) |
-| 3 | Process player input queue (depth commands, weapon commands, crew moves) |
+| 1 | Resolve in-flight projectiles (torpedoes whose travel timer expired) |
+| 2 | Apply resource costs (fuel, battery, O2, ammo on fired shots) |
+| 3 | Process player command queue |
 | 4 | Process enemy AI |
-| 5 | Apply depth transitions (advance band timer; apply vulnerability if mid-transition) |
-| 6 | Fire weapons (player and enemy, subject to depth constraints) |
-| 7 | Apply damage to rooms and crew |
-| 8 | Update room state (fire spread, flood spread, O2 loss in breached rooms) |
-| 9 | Update crew state (move 1 tile toward assignment, apply morale/panic ticks) |
-| 10 | Check win/lose/escape conditions |
-| 11 | Emit structured event log entries |
-| 12 | Advance tick counter |
+| 5 | Advance range (speed × direction; clamp 0–4) |
+| 6 | Advance depth transitions (tick timer; clamp on band arrival) |
+| 7 | Fire weapons (player + enemy, gated by depth and range; spawn projectiles or instant-resolve) |
+| 8 | Apply damage; trigger crew panic checks |
+| 9 | Check win/lose/escape conditions |
+| 10 | Emit event log entries; advance tick counter |
 
-**Headless note:** A torpedo fired on tick N resolves on tick N+1 (step 1 of the next tick). A depth transition started on tick N and an incoming torpedo on tick N both resolve depth first (step 5), then damage (step 7) — so the evasion bonus from a completed band transition applies to shots on the same tick.
+**Invariant:** steps 5 and 6 run after command intake (3, 4) and before weapon firing (7). A player who commands a depth change and fires on the same tick gets their new depth state at the moment of fire.
 
 ---
 
-## §1. Detection phase
+## §8. Design tradeoffs
 
-Combat does not begin at first contact. Both sides close in on the map. Detection is a comparison resolved each tick before weapons range.
+1. **Discrete range bands vs continuous distance.** Bands are testable, pixel-art-displayable, and AI-legible. Cost: fights can feel snappy at transitions. Recommendation: take the bands. Revisit if MVP playtest shows fights feel binary.
 
-| Variable | Description |
-|---|---|
-| Player Sonar Range | Ship stat (see core-reference §1). Increases with depth at `DEEP`+ via Hydrophone Bonus. |
-| Enemy Acoustic Signature | Per-enemy value (see §4). Stealthy enemies have low acoustic signature. |
-| Enemy Sensor Range | Per-enemy value. |
-| Player Acoustic Signature | Ship stat. Increases +2 at full engine power; +3 while firing. |
+2. **Single engaged enemy in MVP.** Multi-target means per-enemy range scalars and an AI coordination layer. Recommendation: 1v1 only for MVP. Model a "reinforcement arrives" beat as an environmental timer, not a second simulated unit.
 
-**Spotter rule:** Whichever side's sensor range first exceeds the other side's acoustic signature becomes the *spotter* for that encounter.
-
-**Spotter grace window:** 10 ticks. During this window the spotting side may: engage (fire first), reposition (attempt map movement), or flee (begin an escape sequence). The spotted side is unaware and cannot act. After 10 ticks, both sides are mutually aware and active combat begins.
-
-**Design intent:** Hydrophone upgrades and quiet-engine investment buy the right to decide whether a fight happens at all — not just a statistical bonus.
+3. **Gate vs multiplier for crew rooms.** Gates (Engineering → no `AHEAD_FULL`; Torpedo Room → reload halts) make crew loss narratable. Pure multipliers feel like a spreadsheet. At least one room per fight must be a gate.
 
 ---
 
-## §2. Depth as a live combat tool
+## §9. Out of scope for MVP
 
-Depth band transitions take **6 ticks per band**. The sub is *vulnerable* (−20 Evasion) for the full duration of any mid-transition. Depth is a commitment, not a spam button.
+The following are noted but not implemented for the three MVP scenarios:
 
-| Band | Combat effects |
-|---|---|
-| `SURFACE` | Diesel runs; max sensor range; +0 Evasion; fully hittable by all weapons |
-| `PERISCOPE` | Diesel off; −5 Evasion from surface; hittable by surface weapons and torpedoes |
-| `SHALLOW` | Standard cruise; +10 Evasion; hides from surface gun fire |
-| `DEEP` | +20 Evasion; immune to surface weapons; Hydrophone Bonus active; −1 O2/tick extra; hull stress if Depth Rating < 3 |
-| `ABYSSAL` | +30 Evasion; immune to all standard weapons; −3 O2/tick extra; hard hull stress if Depth Rating < 4; **ABYSSAL escape available** |
+- Multi-enemy battles and wolfpack encounters
+- Bearing / facing / firing arcs
+- Fire and flood spread inside rooms
+- Crew movement during combat
+- Damage Control room active during combat
+- Alien weapons (Arc-Lance, Harmonic Charge) — kept as a future loadout layer
+- Hydrophone Bonus and full acoustic-signature math beyond the speed modifier
 
-Evasion bonuses here are additive on top of the base Evasion stat from core-reference §1.
-
----
-
-## §3. Weapon depth constraints
-
-Each weapon has a depth band range `[min, max]` within which it can fire. Outside that range, the fire command is silently queued and executes when depth re-enters the valid range, or can be cancelled by the player.
-
-| Weapon | Type | Depth range | Notes |
-|---|---|---|---|
-| Deck Gun | Conventional; projectile; 1-tick travel | `SURFACE` only | High damage, no ammo cost for basic shells; vulnerable placement |
-| Torpedo | Conventional; projectile; 2-tick travel | `PERISCOPE`–`DEEP` | Standard offensive weapon; ammo-limited |
-| Arc-Lance | Alien; instant hit; no travel time | `SURFACE`–`SHALLOW` | Cannot miss; fixed damage; high electricity cost per shot |
-| Harmonic Charge | Alien; area; 1-tick travel; depth-seeking | `SHALLOW`–`ABYSSAL` | Hits the target's current band ±1; very high O2 cost |
-
-**Loadout commits depth strategy.** Equipping Arc-Lance means staying near the surface to use it; equipping Harmonic Charge means going deep. Changing strategy mid-combat requires surfacing into danger or diving into O2 risk.
+Ship the three scenarios first. Balance them. Then expand.
 
 ---
 
-## §4. Enemy archetypes
-
-### Enemy room layout
-
-Enemy rooms are **visible from combat start** (Option A). The detection-phase fog already provides enough early uncertainty; FTL follows this pattern and it keeps QA scenario assertions clean. Revealed-on-hit is a second-pass feature if warranted by playtesting.
-
-### Archetype table
-
-| Archetype | Depth range | Weapons | Acoustic Sig | Design role |
-|---|---|---|---|---|
-| Patrol Destroyer | `SURFACE` only; drops depth charges to `SHALLOW`–`DEEP` | Surface guns + depth charges (miss `ABYSSAL`) | High (8) | Easiest to escape by going deep; dangerous to linger at `SHALLOW` |
-| Wolfpack Hunter | `SURFACE`–`SHALLOW` | Torpedoes | Medium (5) | Follows to `SHALLOW`; symmetric torpedo fight; cannot be escaped by diving past `SHALLOW` |
-| Cult-craft | `DEEP`–`ABYSSAL`; fires from any depth | Harmonic Charges + unknown alien weapon | Very low (2) | Late-game enemy; `ABYSSAL` is not shelter against it; punishes the deep-sea build's assumed safe zone |
-
-### Enemy stat template
-
-Each archetype has: `hullHP`, `roomCount`, `sensorRange`, `acousticSig`, `weapons[]`, `depthRange[min,max]`, `aiPattern`. AI pattern is an enum: `PURSUE`, `DEPTH_CHARGE`, `ORBIT`. Specific values are in the balance sheet (TBD pre-playtest).
-
----
-
-## §5. Crew during combat
-
-Crew mechanics follow the FTL model: click crew → click destination room → crew walks at **1 tile per tick** toward assignment.
-
-### Room damage
-
-| Event | Effect |
-|---|---|
-| Room takes a hit | All crew inside lose `hitDamage` HP; room HP decreases |
-| Room HP < 25% | Room function offline; crew in room gain +1 stress/tick |
-| Room HP = 0 | Room inoperable; fire or flood may spread |
-
-### Panic (MP = 0)
-
-When a crew member's Morale Points reach 0:
-- Crew abandons their post and refuses orders for **20 ticks**
-- Manifests as a *system failure*, not a raw number: sonar goes dark, weapon stalls, engine loses output
-- After 20 ticks, MP resets to 1 and crew can be reassigned
-
-**Design intent:** Panic should feel like a subsystem crisis, not a UI debuff.
-
----
-
-## §6. Escape
-
-Two escape paths exist. Both leave the node marked `EVADED` with **no XP and no loot**. A failed attempt does not lock the player in — they may try again.
-
-| Escape type | Requirement | Cost | Condition |
-|---|---|---|---|
-| Surface flee | Stay at `SURFACE` for **15 ticks** while under enemy fire | 2 Fuel | Enemy must be unable to reach `SURFACE` combat range, or player accepts hits during the 15 ticks |
-| Abyssal escape | Stay at `ABYSSAL` for **5 ticks** | O2 burn (−5/tick during hold) + pressure damage if Depth Rating < 4 | Fails against Cult-craft (which operates at `ABYSSAL`) |
-
----
-
-## §7. RNG streams used in combat
+## §10. RNG streams used in combat
 
 | Stream name | Used for |
 |---|---|
 | `combat.hit` | Evasion roll per incoming shot |
-| `combat.spread` | Fire and flood spread direction per tick |
+| `combat.spread` | Depth charge band selection when depth fix is lost |
 | `combat.crew_panic` | Panic check on stress threshold |
-| `enemy.ai` | Enemy AI choice at each decision point |
+| `enemy.ai` | Enemy AI tie-breaking at decision points |
 
-All streams are sub-streams of the run seed. Replay requires recording the seed only, not individual rolls.
+All streams are sub-streams of the run seed. Replay requires recording the seed only.
