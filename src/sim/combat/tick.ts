@@ -274,6 +274,7 @@ export function tickCombat(
     playerWantsTorpedo &&
     torpedoInRange(s.range) &&
     s.player.torpedoCooldown === 0 &&
+    s.player.torpedoCount > 0 &&
     contactQuality(s.player, s.enemy, s.range) >= TRACKING_THRESHOLD
   ) {
     const accuracy = TORPEDO_ACCURACY[s.range] ?? 0;
@@ -283,6 +284,7 @@ export function tickCombat(
       payload: { by: "player", weapon: "torpedo", range: s.range },
     });
     s.player.torpedoCooldown = TORPEDO_COOLDOWN_TICKS;
+    s.player.torpedoCount -= 1;
     s.player.acousticSigOverride = 1;
     s.playerFiredTicks = 5;
     if (hit) {
@@ -359,6 +361,7 @@ export function buildSurfaceBattleState(): CombatState {
     rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
+    torpedoCount: 4,
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 10,
@@ -375,6 +378,7 @@ export function buildSurfaceBattleState(): CombatState {
     rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
+    torpedoCount: 0,
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 5,
@@ -384,6 +388,8 @@ export function buildSurfaceBattleState(): CombatState {
   const rooms: Room[] = [
     { id: "bridge", type: RoomType.BRIDGE, crewIds: ["mate"] },
     { id: "deck_gun", type: RoomType.DECK_GUN, crewIds: [] },
+    { id: "engine", type: RoomType.ENGINE, crewIds: [] },
+    { id: "torpedo", type: RoomType.TORPEDO, crewIds: [] },
   ];
 
   return {
@@ -413,6 +419,7 @@ export function buildDestroyerDiveState(): CombatState {
     rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
+    torpedoCount: 4,
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 10,
@@ -429,6 +436,7 @@ export function buildDestroyerDiveState(): CombatState {
     rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
+    torpedoCount: 0,
     acousticSig: 5,
     acousticSigOverride: 0,
     evasion: 8,
@@ -440,6 +448,7 @@ export function buildDestroyerDiveState(): CombatState {
   ];
   const rooms: Room[] = [
     { id: "bridge", type: RoomType.BRIDGE, crewIds: ["mate"] },
+    { id: "deck_gun", type: RoomType.DECK_GUN, crewIds: [] },
     { id: "engine", type: RoomType.ENGINE, crewIds: ["engineer"] },
     { id: "torpedo", type: RoomType.TORPEDO, crewIds: [] },
   ];

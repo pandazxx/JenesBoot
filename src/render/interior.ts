@@ -7,27 +7,38 @@
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import type { ISimEngine } from "../sim/index.js";
 import type { CombatState } from "../sim/combat/types.js";
-import { DepthBand, RoomType } from "../sim/combat/types.js";
+import { DepthBand, RoomType, SpeedSetting } from "../sim/combat/types.js";
 import type { TutorialStep } from "./tutorial.js";
 import { TUTORIAL_TEXT } from "./tutorial.js";
 
 const PANEL_W = 460;
 const PANEL_H = 540;
 
-const ROOM_Y = 50;
-const ROOM_H = 110;
+// Rooms
+const ROOM_Y = 40;
+const ROOM_H = 95;
 const ROOM_MARGIN_X = 20;
-const ROOM_GAP = 8;
+const ROOM_GAP = 5;
 
-const HP_LABEL_Y = 182;
-const HP_BAR_Y = 197;
-const HP_BAR_W = 420;
-const HP_BAR_H = 14;
-const HP_TEXT_Y = 218;
+// Dashboard stat block
+const DASH_LABEL_X = 20;
+const DASH_VALUE_X = 118;
+const DASH_HP_BAR_X = 118;
+const DASH_HP_BAR_W = 302;
+const DASH_HP_BAR_H = 12;
 
-const DEPTH_LABEL_Y = 242;
-const DEPTH_BTN_Y = 257;
-const DEPTH_BTN_H = 28;
+const ROW_HP_LABEL = 150;
+const ROW_HP_BAR = 165;
+const ROW_HP_VALUE = 180;
+const ROW_DEPTH = 203;
+const ROW_SPEED = 226;
+const ROW_COURSE = 249;
+const ROW_TORPEDO = 272;
+
+// Depth selector
+const DEPTH_CTRL_Y = 304;
+const DEPTH_BTN_Y = 319;
+const DEPTH_BTN_H = 26;
 const DEPTH_BTN_GAP = 5;
 
 const DEPTH_BANDS = [
@@ -40,12 +51,28 @@ const DEPTH_BANDS = [
 
 const DEPTH_LABELS = ["SURFACE", "PERISCP", "SHALLOW", "DEEP", "ABYSSAL"] as const;
 
+const DEPTH_NAMES: Record<number, string> = {
+  [DepthBand.SURFACE]: "SURFACE",
+  [DepthBand.PERISCOPE]: "PERISCOPE",
+  [DepthBand.SHALLOW]: "SHALLOW",
+  [DepthBand.DEEP]: "DEEP",
+  [DepthBand.ABYSSAL]: "ABYSSAL",
+};
+
+const SPEED_NAMES: Record<number, string> = {
+  [SpeedSetting.SILENT]: "SILENT",
+  [SpeedSetting.STANDARD]: "STANDARD",
+  [SpeedSetting.AHEAD_FULL]: "AHEAD FULL",
+};
+
 const ROOM_LABELS: Record<RoomType, string> = {
   BRIDGE: "BRIDGE",
   DECK_GUN: "DECK GUN",
   ENGINE: "ENGINE",
   TORPEDO: "TORPEDO",
 };
+
+const TORPEDO_MAX = 4;
 
 interface RoomLayout {
   id: string;
@@ -79,6 +106,14 @@ function buildRoomLayout(rooms: readonly { id: string; type: RoomType }[]): Room
   }));
 }
 
+function makeLabelStyle(): TextStyle {
+  return new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x8899aa });
+}
+
+function makeValueStyle(): TextStyle {
+  return new TextStyle({ fontFamily: "monospace", fontSize: 11, fill: 0xffffff });
+}
+
 export class InteriorView {
   readonly container: Container;
   private engine: ISimEngine;
@@ -89,11 +124,15 @@ export class InteriorView {
   private crewGraphics: Map<string, Graphics> = new Map();
   private pulseGfx: Graphics;
 
+  // Dashboard
   private hpBar: Graphics;
-  private hpText: Text;
+  private hpValue: Text;
+  private depthValue: Text;
+  private speedValue: Text;
+  private torpedoValue: Text;
 
+  // Depth selector
   private depthBtns: DepthBtn[] = [];
-  private depthLabel: Text;
   private depthPulseGfx: Graphics;
 
   private tutorialText: Text;
@@ -117,7 +156,7 @@ export class InteriorView {
     header.y = 12;
     this.container.addChild(header);
 
-    // Pulse outline for attention rooms
+    // Attention pulse overlay (rooms)
     this.pulseGfx = new Graphics();
     this.container.addChild(this.pulseGfx);
 
@@ -127,10 +166,9 @@ export class InteriorView {
       this.container.addChild(gfx);
       this.roomGraphics.set(def.id, gfx);
 
-      const labelStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x8899aa });
-      const label = new Text({ text: def.label, style: labelStyle });
-      label.x = def.x + 6;
-      label.y = def.y + 6;
+      const label = new Text({ text: def.label, style: makeLabelStyle() });
+      label.x = def.x + 5;
+      label.y = def.y + 5;
       this.container.addChild(label);
 
       const hitArea = new Graphics();
@@ -147,36 +185,76 @@ export class InteriorView {
       this.container.addChild(hitArea);
     }
 
-    // Hull HP display
-    const hpLabelStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x8899aa });
-    const hpLabel = new Text({ text: "HULL HP", style: hpLabelStyle });
-    hpLabel.x = ROOM_MARGIN_X;
-    hpLabel.y = HP_LABEL_Y;
+    // ── Dashboard ────────────────────────────────────────────────────────────
+
+    // HULL HP
+    const hpLabel = new Text({ text: "HULL HP", style: makeLabelStyle() });
+    hpLabel.x = DASH_LABEL_X;
+    hpLabel.y = ROW_HP_LABEL;
     this.container.addChild(hpLabel);
 
     const hpBarBg = new Graphics();
-    hpBarBg.rect(ROOM_MARGIN_X, HP_BAR_Y, HP_BAR_W, HP_BAR_H).fill(0x1a2030);
+    hpBarBg.rect(DASH_HP_BAR_X, ROW_HP_BAR, DASH_HP_BAR_W, DASH_HP_BAR_H).fill(0x1a2030);
     this.container.addChild(hpBarBg);
 
     this.hpBar = new Graphics();
     this.container.addChild(this.hpBar);
 
-    const hpTextStyle = new TextStyle({ fontFamily: "monospace", fontSize: 11, fill: 0xffffff });
-    this.hpText = new Text({ text: "", style: hpTextStyle });
-    this.hpText.x = ROOM_MARGIN_X;
-    this.hpText.y = HP_TEXT_Y;
-    this.container.addChild(this.hpText);
+    this.hpValue = new Text({ text: "", style: makeValueStyle() });
+    this.hpValue.x = DASH_VALUE_X;
+    this.hpValue.y = ROW_HP_VALUE;
+    this.container.addChild(this.hpValue);
 
-    // Depth band selector
-    const depthLabelStyle = new TextStyle({
-      fontFamily: "monospace",
-      fontSize: 10,
-      fill: 0x8899aa,
-    });
-    this.depthLabel = new Text({ text: "DEPTH", style: depthLabelStyle });
-    this.depthLabel.x = ROOM_MARGIN_X;
-    this.depthLabel.y = DEPTH_LABEL_Y;
-    this.container.addChild(this.depthLabel);
+    // DEPTH stat row
+    const depthLabel = new Text({ text: "DEPTH", style: makeLabelStyle() });
+    depthLabel.x = DASH_LABEL_X;
+    depthLabel.y = ROW_DEPTH;
+    this.container.addChild(depthLabel);
+
+    this.depthValue = new Text({ text: "", style: makeValueStyle() });
+    this.depthValue.x = DASH_VALUE_X;
+    this.depthValue.y = ROW_DEPTH;
+    this.container.addChild(this.depthValue);
+
+    // SPEED stat row
+    const speedLabel = new Text({ text: "SPEED", style: makeLabelStyle() });
+    speedLabel.x = DASH_LABEL_X;
+    speedLabel.y = ROW_SPEED;
+    this.container.addChild(speedLabel);
+
+    this.speedValue = new Text({ text: "", style: makeValueStyle() });
+    this.speedValue.x = DASH_VALUE_X;
+    this.speedValue.y = ROW_SPEED;
+    this.container.addChild(this.speedValue);
+
+    // COURSE stat row (fixed for now)
+    const courseLabel = new Text({ text: "COURSE", style: makeLabelStyle() });
+    courseLabel.x = DASH_LABEL_X;
+    courseLabel.y = ROW_COURSE;
+    this.container.addChild(courseLabel);
+
+    const courseValue = new Text({ text: "270°", style: makeValueStyle() });
+    courseValue.x = DASH_VALUE_X;
+    courseValue.y = ROW_COURSE;
+    this.container.addChild(courseValue);
+
+    // TORPEDO count row
+    const torpLabel = new Text({ text: "TORPEDO", style: makeLabelStyle() });
+    torpLabel.x = DASH_LABEL_X;
+    torpLabel.y = ROW_TORPEDO;
+    this.container.addChild(torpLabel);
+
+    this.torpedoValue = new Text({ text: "", style: makeValueStyle() });
+    this.torpedoValue.x = DASH_VALUE_X;
+    this.torpedoValue.y = ROW_TORPEDO;
+    this.container.addChild(this.torpedoValue);
+
+    // ── Depth selector ───────────────────────────────────────────────────────
+
+    const depthCtrlLabel = new Text({ text: "DIVE CTRL", style: makeLabelStyle() });
+    depthCtrlLabel.x = DASH_LABEL_X;
+    depthCtrlLabel.y = DEPTH_CTRL_Y;
+    this.container.addChild(depthCtrlLabel);
 
     const btnCount = DEPTH_BANDS.length;
     const totalW = PANEL_W - ROOM_MARGIN_X * 2;
@@ -192,14 +270,10 @@ export class InteriorView {
       const gfx = new Graphics();
       this.container.addChild(gfx);
 
-      const btnLabelStyle = new TextStyle({
-        fontFamily: "monospace",
-        fontSize: 9,
-        fill: 0x668899,
-      });
+      const btnLabelStyle = new TextStyle({ fontFamily: "monospace", fontSize: 9, fill: 0x668899 });
       const btnLabel = new Text({ text: DEPTH_LABELS[i] ?? "", style: btnLabelStyle });
       btnLabel.x = bx + 4;
-      btnLabel.y = DEPTH_BTN_Y + 9;
+      btnLabel.y = DEPTH_BTN_Y + 8;
       this.container.addChild(btnLabel);
 
       const hitArea = new Graphics();
@@ -224,7 +298,7 @@ export class InteriorView {
     });
     this.tutorialText = new Text({ text: "", style: tutStyle });
     this.tutorialText.x = 16;
-    this.tutorialText.y = 480;
+    this.tutorialText.y = 460;
     this.container.addChild(this.tutorialText);
   }
 
@@ -236,13 +310,15 @@ export class InteriorView {
 
       const room = state.rooms.find((r) => r.id === def.id);
       const hasCrew = room !== undefined && room.crewIds.length > 0;
-      const strokeColor = hasCrew ? 0x00ff88 : 0x334455;
 
       gfx.clear();
-      gfx.rect(def.x, def.y, def.w, def.h).fill(0x0a1420).stroke({ color: strokeColor, width: 2 });
+      gfx
+        .rect(def.x, def.y, def.w, def.h)
+        .fill(0x0a1420)
+        .stroke({ color: hasCrew ? 0x00ff88 : 0x334455, width: 2 });
     }
 
-    // Pulse on the attention room for the current tutorial step
+    // Attention pulse on room that needs crew for this tutorial step
     this.pulseGfx.clear();
     const pulseTarget =
       step === 0
@@ -254,8 +330,7 @@ export class InteriorView {
     if (pulseTarget !== undefined) {
       const room = state.rooms.find((r) => r.id === pulseTarget.id);
       if (room === undefined || room.crewIds.length === 0) {
-        const alpha = 0.4 + 0.6 * Math.abs(Math.sin(elapsed / 400));
-        this.pulseGfx.alpha = alpha;
+        this.pulseGfx.alpha = 0.4 + 0.6 * Math.abs(Math.sin(elapsed / 400));
         this.pulseGfx
           .rect(pulseTarget.x, pulseTarget.y, pulseTarget.w, pulseTarget.h)
           .stroke({ color: 0xff8800, width: 3 });
@@ -279,35 +354,50 @@ export class InteriorView {
       }
 
       gfx.clear();
-
-      const roomId = crewMember.roomId;
-      if (roomId === null) continue;
-
-      const def = this.roomDefs.find((d) => d.id === roomId);
+      if (crewMember.roomId === null) continue;
+      const def = this.roomDefs.find((d) => d.id === crewMember.roomId);
       if (def === undefined) continue;
 
       const cx = def.x + def.w / 2;
-      const cy = def.y + 60;
-      const color = this.selectedCrewId === crewMember.id ? 0xffff00 : 0x00ff88;
-      gfx.circle(cx, cy, 10).fill(color);
+      const cy = def.y + 58;
+      gfx.circle(cx, cy, 9).fill(this.selectedCrewId === crewMember.id ? 0xffff00 : 0x00ff88);
     }
 
-    // Hull HP bar
+    // ── Dashboard updates ────────────────────────────────────────────────────
+
+    // HP bar
     const hpFrac = state.player.maxHullHP > 0 ? state.player.hullHP / state.player.maxHullHP : 0;
     const hpColor = hpFrac > 0.6 ? 0x00ff88 : hpFrac > 0.3 ? 0xffcc00 : 0xff3333;
     this.hpBar.clear();
     if (hpFrac > 0) {
       this.hpBar
-        .rect(ROOM_MARGIN_X, HP_BAR_Y, Math.round(HP_BAR_W * hpFrac), HP_BAR_H)
+        .rect(DASH_HP_BAR_X, ROW_HP_BAR, Math.round(DASH_HP_BAR_W * hpFrac), DASH_HP_BAR_H)
         .fill(hpColor);
     }
-    this.hpText.text = `${state.player.hullHP} / ${state.player.maxHullHP}`;
+    this.hpValue.text = `${state.player.hullHP} / ${state.player.maxHullHP}`;
 
-    // Depth band buttons
+    // Depth
+    const depthName = DEPTH_NAMES[state.player.depth] ?? "?";
+    const targetName =
+      state.player.depthTarget !== state.player.depth
+        ? ` → ${DEPTH_NAMES[state.player.depthTarget] ?? "?"}`
+        : "";
+    this.depthValue.text = `${depthName}${targetName}`;
+
+    // Speed
+    this.speedValue.text = SPEED_NAMES[state.player.speed] ?? "?";
+
+    // Torpedo count (course is static, set once in constructor)
+    const count = state.player.torpedoCount;
+    const full = Math.min(count, TORPEDO_MAX);
+    const empty = TORPEDO_MAX - full;
+    this.torpedoValue.text = `${"◆".repeat(full)}${"◇".repeat(empty)}  ${count}`;
+
+    // ── Depth selector ───────────────────────────────────────────────────────
+
     const bridgeCrewed = state.rooms.some(
       (r) => r.type === RoomType.BRIDGE && r.crewIds.length > 0,
     );
-    const isDiving = step === 5; // pulse when player needs to dive
 
     this.depthPulseGfx.clear();
 
@@ -332,12 +422,11 @@ export class InteriorView {
         .stroke({ color: strokeColor, width: 1 });
     }
 
-    // Pulse the PERISCOPE button when step 5 wants the player to dive
-    if (isDiving) {
+    // Pulse PERISCOPE button when step 5 needs player to dive
+    if (step === 5 && state.player.depthTarget === DepthBand.SURFACE) {
       const periscopeBtn = this.depthBtns.find((b) => b.band === DepthBand.PERISCOPE);
-      if (periscopeBtn !== undefined && state.player.depthTarget === DepthBand.SURFACE) {
-        const alpha = 0.4 + 0.6 * Math.abs(Math.sin(elapsed / 400));
-        this.depthPulseGfx.alpha = alpha;
+      if (periscopeBtn !== undefined) {
+        this.depthPulseGfx.alpha = 0.4 + 0.6 * Math.abs(Math.sin(elapsed / 400));
         this.depthPulseGfx
           .rect(periscopeBtn.x, DEPTH_BTN_Y, periscopeBtn.w, DEPTH_BTN_H)
           .stroke({ color: 0x00eebb, width: 3 });

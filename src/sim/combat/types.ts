@@ -67,6 +67,7 @@ export interface ShipState {
   rangeTicksAccumulator: number;
   deckGunCooldown: number;
   torpedoCooldown: number;
+  torpedoCount: number;
   acousticSig: number;
   acousticSigOverride: number;
   evasion: number;

@@ -58,8 +58,9 @@ function formatEvent(type: string, payload: unknown): string {
 
     case "shot_fired": {
       const by = String(p["by"]);
+      const weapon = String(p["weapon"] ?? "deck gun");
       const range = RANGE_NAMES[p["range"] as number] ?? String(p["range"]);
-      return `Shot fired -- ${by} deck gun at ${range}`;
+      return `Shot fired -- ${by} ${weapon} at ${range}`;
     }
 
     case "shot_hit": {
@@ -72,7 +73,8 @@ function formatEvent(type: string, payload: unknown): string {
 
     case "shot_miss": {
       const by = String(p["by"]);
-      return `Miss -- ${by} deck gun`;
+      const weapon = String(p["weapon"] ?? "deck gun");
+      return `Miss -- ${by} ${weapon}`;
     }
 
     case "depth_change": {
