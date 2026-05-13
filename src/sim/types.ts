@@ -5,6 +5,8 @@
  * touches window / document. Keep it that way.
  */
 
+import type { CombatState } from "./combat/types.js";
+
 /** A single structured event emitted by the simulation. */
 export interface SimEvent {
   tick: number;
@@ -20,4 +22,6 @@ export interface SimState {
   log: SimEvent[];
   /** Current value of the PRNG state (for reproducibility checks). */
   rngState: number;
+  /** Active combat state, or null when not in combat. */
+  combat: CombatState | null;
 }

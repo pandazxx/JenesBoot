@@ -110,6 +110,7 @@ export function tickCombat(
   state: CombatState,
   currentTick: number,
   rng: Mulberry32,
+  playerCmd?: PlayerCommand | null,
 ): { newState: CombatState; events: CombatEvent[] } {
   if (state.result !== "ongoing") {
     return { newState: cloneState(state), events: [] };
@@ -155,11 +156,14 @@ export function tickCombat(
   }
 
   // -------------------------------------------------------------------------
-  // Step 3: Process player command (auto-scripted for surface battle)
+  // Step 3: Process player command (human-queued takes priority over auto)
   // -------------------------------------------------------------------------
-  const playerCmd = autoPlayerCommand(s.player, s.range);
-  if (playerCmd.type === "SET_SPEED") {
-    applyCommand(s.player, playerCmd);
+  const resolvedPlayerCmd: PlayerCommand =
+    playerCmd != null && playerCmd.type !== "NONE"
+      ? playerCmd
+      : autoPlayerCommand(s.player, s.range);
+  if (resolvedPlayerCmd.type === "SET_SPEED") {
+    applyCommand(s.player, resolvedPlayerCmd);
   }
 
   // -------------------------------------------------------------------------
@@ -216,8 +220,12 @@ export function tickCombat(
   // Step 7: Fire weapons — player then enemy
   // -------------------------------------------------------------------------
 
-  // Player fires
+  // Player fires — triggered by human command or auto-fire when cooldown is ready
+  const playerWantsToFire =
+    resolvedPlayerCmd.type === "FIRE_DECK_GUN" ||
+    (resolvedPlayerCmd.type !== "SET_SPEED" && autoPlayerCommand(s.player, s.range).type === "FIRE_DECK_GUN");
   if (
+    playerWantsToFire &&
     deckGunInRange(s.range) &&
     s.player.deckGunCooldown === 0 &&
     contactQuality(s.player, s.enemy, s.range) >= TRACKING_THRESHOLD

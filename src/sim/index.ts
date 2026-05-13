@@ -20,14 +20,17 @@ import { Mulberry32 } from "./prng.js";
 import type { SimEvent, SimState } from "./types.js";
 import type { CombatState } from "./combat/types.js";
 import { tickCombat, buildSurfaceBattleState } from "./combat/tick.js";
+import type { PlayerCommand } from "./combat/tick.js";
 
 export type { SimEvent, SimState } from "./types.js";
+export type { PlayerCommand } from "./combat/tick.js";
 
 /** Public interface for the simulation engine. */
 export interface ISimEngine {
   tick(): void;
   getState(): SimState;
   startCombat(scenario: "surface_battle"): void;
+  queueCommand(cmd: PlayerCommand): void;
 }
 
 /** Internal class — use the SimEngine factory/constructor export below. */
@@ -38,6 +41,7 @@ class SimEngineImpl implements ISimEngine {
   private seed: number;
   private combatState: CombatState | null = null;
   private combatRng: Mulberry32 | null = null;
+  private pendingCommand: PlayerCommand | null = null;
 
   constructor(seed: number) {
     this.seed = seed;
@@ -52,6 +56,11 @@ class SimEngineImpl implements ISimEngine {
       // without sharing state with the main RNG stream.
       this.combatRng = new Mulberry32((this.seed ^ 0xdead) >>> 0);
     }
+  }
+
+  /** Queue a player command to be consumed on the next tick. */
+  queueCommand(cmd: PlayerCommand): void {
+    this.pendingCommand = cmd;
   }
 
   /** Advance simulation by one tick. */
@@ -72,12 +81,15 @@ class SimEngineImpl implements ISimEngine {
 
     if (this.combatState !== null && this.combatState.result === "ongoing") {
       const rng = this.combatRng ?? this.rng;
-      const { newState, events } = tickCombat(this.combatState, this.currentTick, rng);
+      const cmd = this.pendingCommand ?? null;
+      this.pendingCommand = null;
+      const { newState, events } = tickCombat(this.combatState, this.currentTick, rng, cmd);
       this.combatState = newState;
       for (const ev of events) {
         this.emit(ev.type, ev.payload);
       }
     } else {
+      this.pendingCommand = null;
       // Consume one RNG value per tick to keep main RNG state advancing
       void this.rng.next();
     }
@@ -89,6 +101,7 @@ class SimEngineImpl implements ISimEngine {
       tick: this.currentTick,
       log: [...this.eventLog],
       rngState: this.rng.getState(),
+      combat: this.combatState !== null ? { ...this.combatState, player: { ...this.combatState.player }, enemy: { ...this.combatState.enemy }, inFlight: [...this.combatState.inFlight] } : null,
     };
   }
 
