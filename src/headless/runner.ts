@@ -55,10 +55,12 @@ function main(): void {
 
   if (scenario === "surface_battle") {
     engine.startCombat("surface_battle");
-    // Assign crew to deck gun so the surface battle plays out as expected.
-    // In the real game this is a player action; in the headless scenario we
-    // pre-assign so the combat reaches its conclusion deterministically.
     engine.queueCommand({ type: "ASSIGN_CREW", crewId: "mate", roomId: "deck_gun" });
+  } else if (scenario === "destroyer_dive") {
+    engine.startCombat("destroyer_dive");
+    // Pre-assign engineer to torpedo room and order dive so combat resolves headlessly.
+    engine.queueCommand({ type: "SET_DEPTH", target: 1 }); // DepthBand.PERISCOPE = 1
+    engine.queueCommand({ type: "ASSIGN_CREW", crewId: "engineer", roomId: "torpedo" });
   } else if (scenario !== null) {
     console.error(`Unknown scenario: ${scenario}`);
     process.exit(1);

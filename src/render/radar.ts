@@ -6,7 +6,7 @@
 
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import type { CombatState } from "../sim/combat/types.js";
-import { RangeBand } from "../sim/combat/types.js";
+import { DepthBand, RangeBand } from "../sim/combat/types.js";
 import type { SimState } from "../sim/index.js";
 
 const RADAR_CX = 250;
@@ -33,6 +33,14 @@ const RANGE_NAMES: Record<number, string> = {
   [RangeBand.SHORT]: "SHORT",
   [RangeBand.POINT_BLANK]: "POINT_BLANK",
   [RangeBand.RAMMING]: "RAMMING",
+};
+
+const DEPTH_NAMES: Record<number, string> = {
+  [DepthBand.SURFACE]: "SURFACE",
+  [DepthBand.PERISCOPE]: "PERISCOPE",
+  [DepthBand.SHALLOW]: "SHALLOW",
+  [DepthBand.DEEP]: "DEEP",
+  [DepthBand.ABYSSAL]: "ABYSSAL",
 };
 
 function formatEvent(type: string, payload: unknown): string {
@@ -67,6 +75,12 @@ function formatEvent(type: string, payload: unknown): string {
       return `Miss -- ${by} deck gun`;
     }
 
+    case "depth_change": {
+      const who = String(p["who"]);
+      const depth = DEPTH_NAMES[p["depth"] as number] ?? String(p["depth"]);
+      return `${who} depth: ${depth}`;
+    }
+
     case "combat_end": {
       const result = String(p["result"]);
       return `Combat ended: ${result}`;
@@ -82,6 +96,7 @@ export class RadarView {
   private radarGfx: Graphics;
   private enemyGfx: Graphics;
   private hpGfx: Graphics;
+  private depthText: Text;
   private logTexts: Text[];
 
   constructor() {
@@ -111,6 +126,13 @@ export class RadarView {
     // HP bar — redrawn each update
     this.hpGfx = new Graphics();
     this.container.addChild(this.hpGfx);
+
+    // Depth indicator — top right of panel
+    const depthStyle = new TextStyle({ fontFamily: "monospace", fontSize: 11, fill: 0x00ccaa });
+    this.depthText = new Text({ text: "DEPTH: SURFACE", style: depthStyle });
+    this.depthText.x = 300;
+    this.depthText.y = 12;
+    this.container.addChild(this.depthText);
 
     // Event log — 6 lines
     const logStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x8899aa });
@@ -149,6 +171,14 @@ export class RadarView {
   }
 
   update(state: CombatState, simState: SimState): void {
+    // Depth indicator
+    const depthName = DEPTH_NAMES[state.player.depth] ?? "?";
+    const targetName =
+      state.player.depthTarget !== state.player.depth
+        ? ` -> ${DEPTH_NAMES[state.player.depthTarget] ?? "?"}`
+        : "";
+    this.depthText.text = `DEPTH: ${depthName}${targetName}`;
+
     // Enemy position based on range band
     const ringRadius = RING_RADII[state.range] ?? 0;
     const ex = RADAR_CX + ringRadius;

@@ -6,18 +6,21 @@
  *
  * Reads state exclusively through engine.getState() and engine.queueCommand().
  * No direct access to sim internals.
+ *
+ * Scenario is selected via ?scenario=<name> URL parameter.
+ * Defaults to surface_battle.
  */
 
 import { Application, Graphics } from "pixi.js";
-import { SimEngine } from "../sim/index.js";
+import { SimEngine, type CombatScenario } from "../sim/index.js";
 import type { ISimEngine } from "../sim/index.js";
-import { SpeedSetting, SpeedDirection } from "../sim/combat/types.js";
+import { DepthBand, SpeedSetting, SpeedDirection } from "../sim/combat/types.js";
 import type { CombatState } from "../sim/combat/types.js";
 import { InteriorView } from "./interior.js";
 import { RadarView } from "./radar.js";
 import { getTutorialStep } from "./tutorial.js";
 
-const TICK_MS = 100; // 10 ticks/sec at 1× speed
+const TICK_MS = 100;
 
 const SPEED_ORDER: SpeedSetting[] = [
   SpeedSetting.SILENT,
@@ -30,7 +33,13 @@ const DIRECTION_ORDER: SpeedDirection[] = [
   SpeedDirection.CLOSE,
 ];
 
-export function showCombat(app: Application, engine: ISimEngine): void {
+function readScenario(): CombatScenario {
+  const param = new URLSearchParams(window.location.search).get("scenario");
+  if (param === "destroyer_dive") return "destroyer_dive";
+  return "surface_battle";
+}
+
+export function showCombat(app: Application, engine: ISimEngine, scenario: CombatScenario): void {
   app.stage.removeChildren();
 
   const interiorView = new InteriorView(engine);
@@ -39,7 +48,6 @@ export function showCombat(app: Application, engine: ISimEngine): void {
   interiorView.container.x = 0;
   radarView.container.x = 460;
 
-  // Vertical divider
   const divider = new Graphics();
   divider.rect(459, 0, 2, 540).fill(0x334455);
 
@@ -47,7 +55,6 @@ export function showCombat(app: Application, engine: ISimEngine): void {
   app.stage.addChild(radarView.container);
   app.stage.addChild(divider);
 
-  // Enable interactivity on stage so pointer events reach children
   app.stage.eventMode = "static";
 
   let timeSinceLastTick = 0;
@@ -67,7 +74,7 @@ export function showCombat(app: Application, engine: ISimEngine): void {
     const state = engine.getState();
     const combat: CombatState | null = state.combat ?? null;
     if (combat !== null) {
-      const step = getTutorialStep(combat);
+      const step = getTutorialStep(combat, scenario);
       interiorView.update(combat, step, elapsed);
       radarView.update(combat, state);
     }
@@ -82,6 +89,23 @@ export function showCombat(app: Application, engine: ISimEngine): void {
     switch (e.key.toLowerCase()) {
       case "f": {
         engine.queueCommand({ type: "FIRE_DECK_GUN" });
+        break;
+      }
+
+      case "t": {
+        engine.queueCommand({ type: "FIRE_TORPEDO" });
+        break;
+      }
+
+      case "z": {
+        const currentDepth = combat?.player.depth ?? DepthBand.SURFACE;
+        const nextDepth = Math.min(DepthBand.ABYSSAL, currentDepth + 1) as DepthBand;
+        engine.queueCommand({ type: "SET_DEPTH", target: nextDepth });
+        break;
+      }
+
+      case "x": {
+        engine.queueCommand({ type: "SET_DEPTH", target: DepthBand.SURFACE });
         break;
       }
 
@@ -151,7 +175,9 @@ export function showCombat(app: Application, engine: ISimEngine): void {
     const seed = urlSeed !== null ? parseInt(urlSeed, 10) : 0;
 
     const newEngine = new SimEngine(seed);
-    newEngine.startCombat("surface_battle");
-    showCombat(app, newEngine);
+    newEngine.startCombat(scenario);
+    showCombat(app, newEngine, scenario);
   }
 }
+
+export { readScenario };

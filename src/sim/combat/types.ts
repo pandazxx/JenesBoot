@@ -7,6 +7,8 @@
 export const RoomType = {
   BRIDGE: "BRIDGE",
   DECK_GUN: "DECK_GUN",
+  ENGINE: "ENGINE",
+  TORPEDO: "TORPEDO",
 } as const;
 export type RoomType = (typeof RoomType)[keyof typeof RoomType];
 
@@ -64,12 +66,14 @@ export interface ShipState {
   direction: SpeedDirection;
   rangeTicksAccumulator: number;
   deckGunCooldown: number;
+  torpedoCooldown: number;
   acousticSig: number;
   acousticSigOverride: number;
   evasion: number;
 }
 
 export interface CombatState {
+  scenario: "surface_battle" | "destroyer_dive";
   range: RangeBand;
   player: ShipState;
   enemy: ShipState;
@@ -90,6 +94,7 @@ export interface InFlightProjectile {
 export type CombatEventType =
   | "combat_start"
   | "range_change"
+  | "depth_change"
   | "shot_fired"
   | "shot_hit"
   | "shot_miss"
