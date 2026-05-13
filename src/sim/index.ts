@@ -65,17 +65,23 @@ class SimEngineImpl implements ISimEngine {
    * the HUD updates even during pause and the setting is never overridden by
    * the auto-pilot.
    *
+   * ASSIGN_CREW is applied immediately and mutates crew/room state in place.
+   *
    * FIRE_DECK_GUN is one-shot: consumed on the next tick and then cleared.
    */
   queueCommand(cmd: PlayerCommand): void {
-    if (
-      cmd.type === "SET_SPEED" &&
-      cmd.speed !== undefined &&
-      cmd.direction !== undefined &&
-      this.combatState !== null
-    ) {
+    if (cmd.type === "SET_SPEED" && this.combatState !== null) {
       this.combatState.player.speed = cmd.speed;
       this.combatState.player.direction = cmd.direction;
+    } else if (cmd.type === "ASSIGN_CREW" && this.combatState !== null) {
+      const crew = this.combatState.crew.find((c) => c.id === cmd.crewId);
+      if (crew) {
+        const oldRoom = this.combatState.rooms.find((r) => r.crewIds.includes(cmd.crewId));
+        if (oldRoom) oldRoom.crewIds = oldRoom.crewIds.filter((id) => id !== cmd.crewId);
+        crew.roomId = cmd.roomId;
+        const newRoom = this.combatState.rooms.find((r) => r.id === cmd.roomId);
+        if (newRoom && !newRoom.crewIds.includes(cmd.crewId)) newRoom.crewIds.push(cmd.crewId);
+      }
     } else {
       this.pendingCommand = cmd;
     }
@@ -126,6 +132,8 @@ class SimEngineImpl implements ISimEngine {
               player: { ...this.combatState.player },
               enemy: { ...this.combatState.enemy },
               inFlight: [...this.combatState.inFlight],
+              crew: this.combatState.crew.map((c) => ({ ...c })),
+              rooms: this.combatState.rooms.map((r) => ({ ...r, crewIds: [...r.crewIds] })),
             }
           : null,
     };

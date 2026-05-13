@@ -5,11 +5,14 @@
 // and destroy the merchant before tick 150.
 //
 // Seed: 42. Ticks: 150. Scenario: surface_battle.
+//
+// Also contains in-process unit tests for crew assignment mechanics.
 
 import { describe, it, expect } from "vitest";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { SimEngine } from "../../src/sim/index.js";
 
 interface SimEvent {
   tick: number;
@@ -187,5 +190,54 @@ describe(`surface-battle scenario — seed ${SEED}, ${TICKS} ticks`, () => {
       return p["result"] === "player_lose";
     });
     expect(events).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// In-process unit tests for crew / room assignment mechanics
+// ---------------------------------------------------------------------------
+
+describe("crew assignment — in-process unit tests", () => {
+  it("initial state has crew[0].roomId === 'bridge'", () => {
+    const engine = SimEngine(42);
+    engine.startCombat("surface_battle");
+    engine.tick();
+    const combat = engine.getState().combat;
+    expect(combat).not.toBeNull();
+    expect(combat!.crew[0]!.roomId).toBe("bridge");
+  });
+
+  it("ASSIGN_CREW moves mate to deck_gun and updates both rooms", () => {
+    const engine = SimEngine(42);
+    engine.startCombat("surface_battle");
+    engine.tick();
+
+    engine.queueCommand({ type: "ASSIGN_CREW", crewId: "mate", roomId: "deck_gun" });
+    engine.tick();
+
+    const combat = engine.getState().combat!;
+    expect(combat.crew[0]!.roomId).toBe("deck_gun");
+    const deckGunRoom = combat.rooms.find((r) => r.id === "deck_gun");
+    expect(deckGunRoom?.crewIds).toContain("mate");
+    const bridgeRoom = combat.rooms.find((r) => r.id === "bridge");
+    expect(bridgeRoom?.crewIds).not.toContain("mate");
+  });
+
+  it("run 150 ticks with crew at deck_gun — combat ends with player_win", () => {
+    const engine = SimEngine(42);
+    engine.startCombat("surface_battle");
+    engine.queueCommand({ type: "ASSIGN_CREW", crewId: "mate", roomId: "deck_gun" });
+
+    for (let i = 0; i < 150; i++) {
+      engine.tick();
+      const combat = engine.getState().combat;
+      if (combat?.result !== "ongoing") break;
+    }
+
+    const state = engine.getState();
+    const combatEnd = state.log.find((e) => e.type === "combat_end");
+    expect(combatEnd).toBeDefined();
+    const result = (combatEnd!.payload as Record<string, unknown>)["result"];
+    expect(result).toBe("player_win");
   });
 });

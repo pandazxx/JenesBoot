@@ -4,6 +4,24 @@
  * No PixiJS, no DOM, no Math.random(), no wall-clock reads.
  */
 
+export const RoomType = {
+  BRIDGE: "BRIDGE",
+  DECK_GUN: "DECK_GUN",
+} as const;
+export type RoomType = (typeof RoomType)[keyof typeof RoomType];
+
+export interface CrewMember {
+  id: string;
+  name: string;
+  roomId: string | null;
+}
+
+export interface Room {
+  id: string;
+  type: RoomType;
+  crewIds: string[];
+}
+
 export const DepthBand = {
   SURFACE: 0,
   PERISCOPE: 1,
@@ -59,6 +77,8 @@ export interface CombatState {
   result: "ongoing" | "player_win" | "player_lose" | "escaped";
   playerFiredTicks: number;
   enemyFiredTicks: number;
+  crew: CrewMember[];
+  rooms: Room[];
 }
 
 export interface InFlightProjectile {

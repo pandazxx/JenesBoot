@@ -55,6 +55,10 @@ function main(): void {
 
   if (scenario === "surface_battle") {
     engine.startCombat("surface_battle");
+    // Assign crew to deck gun so the surface battle plays out as expected.
+    // In the real game this is a player action; in the headless scenario we
+    // pre-assign so the combat reaches its conclusion deterministically.
+    engine.queueCommand({ type: "ASSIGN_CREW", crewId: "mate", roomId: "deck_gun" });
   } else if (scenario !== null) {
     console.error(`Unknown scenario: ${scenario}`);
     process.exit(1);

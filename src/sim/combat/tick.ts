@@ -5,8 +5,15 @@
  * No PixiJS, no DOM, no Math.random(), no wall-clock reads.
  */
 
-import { RangeBand, SpeedSetting, SpeedDirection, DepthBand } from "./types.js";
-import type { CombatState, ShipState, CombatEvent, InFlightProjectile } from "./types.js";
+import { RangeBand, RoomType, SpeedSetting, SpeedDirection, DepthBand } from "./types.js";
+import type {
+  CombatState,
+  ShipState,
+  CombatEvent,
+  InFlightProjectile,
+  CrewMember,
+  Room,
+} from "./types.js";
 import type { Mulberry32 } from "../prng.js";
 import { contactQuality } from "./detection.js";
 import {
@@ -39,11 +46,11 @@ const PROJECTILE_FLIGHT_TICKS = 1;
 const TRACKING_THRESHOLD = 4;
 
 /** Scripted player command for the surface-battle scenario. */
-export interface PlayerCommand {
-  type: "SET_SPEED" | "FIRE_DECK_GUN" | "NONE";
-  speed?: SpeedSetting;
-  direction?: SpeedDirection;
-}
+export type PlayerCommand =
+  | { type: "SET_SPEED"; speed: SpeedSetting; direction: SpeedDirection }
+  | { type: "FIRE_DECK_GUN" }
+  | { type: "NONE" }
+  | { type: "ASSIGN_CREW"; crewId: string; roomId: string };
 
 function cloneShip(s: ShipState): ShipState {
   return { ...s };
@@ -55,6 +62,8 @@ function cloneState(s: CombatState): CombatState {
     player: cloneShip(s.player),
     enemy: cloneShip(s.enemy),
     inFlight: s.inFlight.map((p) => ({ ...p })),
+    crew: s.crew.map((c) => ({ ...c })),
+    rooms: s.rooms.map((r) => ({ ...r, crewIds: [...r.crewIds] })),
   };
 }
 
@@ -62,9 +71,9 @@ function applyCommand(
   ship: ShipState,
   cmd: { type: string; speed?: SpeedSetting; direction?: SpeedDirection },
 ): void {
-  if (cmd.type === "SET_SPEED" && cmd.speed !== undefined && cmd.direction !== undefined) {
-    ship.speed = cmd.speed;
-    ship.direction = cmd.direction;
+  if (cmd.type === "SET_SPEED") {
+    if (cmd.speed !== undefined) ship.speed = cmd.speed;
+    if (cmd.direction !== undefined) ship.direction = cmd.direction;
   }
 }
 
@@ -209,10 +218,13 @@ export function tickCombat(
   // Player fires — triggered by explicit fire command or auto-fire when in
   // range and cooldown is ready. Auto-fire is the fallback so the game
   // remains functional even without manual input.
+  // Crew in DECK_GUN room is required to fire.
+  const deckGunCrewed = s.rooms.some((r) => r.type === RoomType.DECK_GUN && r.crewIds.length > 0);
   const playerWantsToFire =
     playerCmd?.type === "FIRE_DECK_GUN" ||
     (s.player.deckGunCooldown === 0 && deckGunInRange(s.range));
   if (
+    deckGunCrewed &&
     playerWantsToFire &&
     deckGunInRange(s.range) &&
     s.player.deckGunCooldown === 0 &&
@@ -328,6 +340,12 @@ export function buildSurfaceBattleState(): CombatState {
     evasion: 5,
   };
 
+  const crew: CrewMember[] = [{ id: "mate", name: "Mate", roomId: "bridge" }];
+  const rooms: Room[] = [
+    { id: "bridge", type: RoomType.BRIDGE, crewIds: ["mate"] },
+    { id: "deck_gun", type: RoomType.DECK_GUN, crewIds: [] },
+  ];
+
   return {
     range: RangeBand.LONG,
     player,
@@ -336,5 +354,7 @@ export function buildSurfaceBattleState(): CombatState {
     result: "ongoing",
     playerFiredTicks: 0,
     enemyFiredTicks: 0,
+    crew,
+    rooms,
   };
 }
