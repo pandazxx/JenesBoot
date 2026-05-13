@@ -96,16 +96,6 @@ function deckGunInRange(range: RangeBand): boolean {
   return range < RangeBand.LONG;
 }
 
-/**
- * Auto-script player command: always AHEAD_FULL CLOSE, fire when ready and in range.
- */
-function autoPlayerCommand(player: ShipState, range: RangeBand): PlayerCommand {
-  if (deckGunInRange(range) && player.deckGunCooldown === 0) {
-    return { type: "FIRE_DECK_GUN" };
-  }
-  return { type: "SET_SPEED", speed: SpeedSetting.AHEAD_FULL, direction: SpeedDirection.CLOSE };
-}
-
 export function tickCombat(
   state: CombatState,
   currentTick: number,
