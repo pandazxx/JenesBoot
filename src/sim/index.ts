@@ -18,6 +18,8 @@
 
 import { Mulberry32 } from "./prng.js";
 import type { SimEvent, SimState } from "./types.js";
+import type { CombatState } from "./combat/types.js";
+import { tickCombat, buildSurfaceBattleState } from "./combat/tick.js";
 
 export type { SimEvent, SimState } from "./types.js";
 
@@ -25,6 +27,7 @@ export type { SimEvent, SimState } from "./types.js";
 export interface ISimEngine {
   tick(): void;
   getState(): SimState;
+  startCombat(scenario: "surface_battle"): void;
 }
 
 /** Internal class — use the SimEngine factory/constructor export below. */
@@ -32,9 +35,23 @@ class SimEngineImpl implements ISimEngine {
   private currentTick: number = 0;
   private eventLog: SimEvent[] = [];
   private rng: Mulberry32;
+  private seed: number;
+  private combatState: CombatState | null = null;
+  private combatRng: Mulberry32 | null = null;
 
   constructor(seed: number) {
+    this.seed = seed;
     this.rng = new Mulberry32(seed);
+  }
+
+  /** Initialise a combat encounter for the named scenario. */
+  startCombat(scenario: "surface_battle"): void {
+    if (scenario === "surface_battle") {
+      this.combatState = buildSurfaceBattleState();
+      // Seed the combat RNG independently so it is deterministic per seed
+      // without sharing state with the main RNG stream.
+      this.combatRng = new Mulberry32((this.seed ^ 0xdead) >>> 0);
+    }
   }
 
   /** Advance simulation by one tick. */
@@ -43,10 +60,31 @@ class SimEngineImpl implements ISimEngine {
 
     if (this.currentTick === 1) {
       this.emit("hello", { message: "sim running" });
+
+      if (this.combatState !== null) {
+        this.emit("combat_start", {
+          playerHP: this.combatState.player.hullHP,
+          enemyHP: this.combatState.enemy.hullHP,
+          range: this.combatState.range,
+        });
+      }
     }
 
-    // Future mechanics go here. Always use this.rng.next() for randomness.
-    void this.rng.next(); // consume one value per tick to keep state advancing
+    if (this.combatState !== null && this.combatState.result === "ongoing") {
+      const rng = this.combatRng ?? this.rng;
+      const { newState, events } = tickCombat(
+        this.combatState,
+        this.currentTick,
+        rng,
+      );
+      this.combatState = newState;
+      for (const ev of events) {
+        this.emit(ev.type, ev.payload);
+      }
+    } else {
+      // Consume one RNG value per tick to keep main RNG state advancing
+      void this.rng.next();
+    }
   }
 
   /** Return a snapshot of current simulation state. */
@@ -80,4 +118,7 @@ SimEngineFactory.prototype = SimEngineImpl.prototype;
 export const SimEngine: {
   (seed: number): ISimEngine;
   new (seed: number): ISimEngine;
-} = SimEngineFactory as unknown as { (seed: number): ISimEngine; new (seed: number): ISimEngine };
+} = SimEngineFactory as unknown as {
+  (seed: number): ISimEngine;
+  new (seed: number): ISimEngine;
+};
