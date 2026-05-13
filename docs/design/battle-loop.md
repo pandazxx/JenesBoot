@@ -2,7 +2,7 @@
 
 **Status:** Revision of v0.1. The room-to-room crew-in-combat layer (FTL's "click sailor, click room") is **rejected** for in-battle play. Crew matter between fights and gate certain systems, but moment-to-moment combat is steered by **range, depth, and speed**. Scope is locked to three MVP scenarios: surface-vs-surface gunfight, surface-contact-then-dive, and submerged ambush.
 
-**Reading order for engineers:** §1 (tactical space), §2 (player actions), §3 (weapon resolution), §4 (enemy AI), §5 (win/lose/escape), §6 (crew contribution), §7 (tick sequence), §8 (tradeoffs), §9 (out of scope).
+**Reading order for engineers:** §1 (tactical space), §2 (detection), §3 (player actions), §4 (weapon resolution), §5 (enemy AI), §6 (win/lose/escape), §7 (crew contribution), §8 (tick sequence), §9 (tradeoffs), §10 (out of scope).
 
 ---
 
@@ -48,7 +48,109 @@ Speed has a **direction**: `CLOSE`, `OPEN`, or `HOLD`. Full command form: `(sett
 
 ---
 
-## §2. Player actions each tick
+## §2. Detection and visibility
+
+Submarine combat is **information warfare**. Before you choose a weapon, you choose what the enemy knows about you and what you know about them. This section defines how that information is computed each tick.
+
+### 2.1 Contact quality — the 0–10 scale
+
+Every potential target carries a per-observer integer `contactQuality` (0–10). Recomputed each tick from the base tables below plus modifiers, then clamped to `[0, 10]`.
+
+| Tier | Range | What the observer can do |
+|---|---|---|
+| `NONE` | 0 | No contact. Target not on tac display. No weapons may fire. |
+| `FAINT` | 1–3 | Blip only. Range ±1 band; depth unknown. Cannot fire torpedoes or depth charges. Deck gun fires at −30 accuracy if otherwise valid. |
+| `TRACKING` | 4–7 | Range exact; depth ±1 band. All weapons valid at normal accuracy. |
+| `LOCKED` | 8–10 | Range and depth exact. All weapons +10 accuracy. Depth-fix acquired (§2.6). |
+
+Contact quality is **per-observer**: the destroyer's quality on you is independent of your quality on the destroyer. This asymmetry is the tactical core of the game.
+
+### 2.2 Table A — Surface vessel detecting submarine
+
+Surface vessels use visual lookout, radar, and active sonar.
+
+| Sub depth ↓ / Range → | `LONG` | `MEDIUM` | `SHORT` | `POINT_BLANK` |
+|---|---|---|---|---|
+| `SURFACE` | 8 | 9 | 10 | 10 |
+| `PERISCOPE` | 3 | 5 | 7 | 8 |
+| `SHALLOW` | 2 | 4 | 6 | 7 |
+| `DEEP` | 1 | 2 | 4 | 5 |
+| `ABYSSAL` | 0 | 1 | 2 | 3 |
+
+A `SURFACE` sub is always at least `TRACKING`. An `ABYSSAL` sub is undetectable at `LONG` and only ever `FAINT`. The destroyer's job is to push you to `SHORT` while you are shallow.
+
+### 2.3 Table B — Submarine detecting surface vessel
+
+Surface vessels are loud. The sub's hydrophone works **better when deep** — cooler, denser, more conductive water. Visual via periscope is only available at `PERISCOPE` depth + `SHORT`/`POINT_BLANK`.
+
+| Sub depth ↓ / Range → | `LONG` | `MEDIUM` | `SHORT` | `POINT_BLANK` |
+|---|---|---|---|---|
+| `SURFACE` | 5 | 7 | 9 | 10 |
+| `PERISCOPE` | 5 | 7 | 9 | 10 |
+| `SHALLOW` | 4 | 6 | 8 | 9 |
+| `DEEP` | 6 | 8 | 9 | 10 |
+| `ABYSSAL` | 7 | 9 | 10 | 10 |
+
+`SHALLOW` is the worst layer — surface noise reflects off the thermocline back upward. `DEEP` and `ABYSSAL` get a hydrophone bonus.
+
+**Compare Table A row `DEEP` (1/2/4/5) against Table B row `DEEP` (6/8/9/10).** That gap is the submarine asymmetry. At `DEEP`/`MEDIUM`: the destroyer reads you at `FAINT` (2); you read the destroyer at `LOCKED` (8).
+
+### 2.4 Table C — Submarine detecting submerged enemy (Scenario 3)
+
+Pure passive acoustic. No active ping in MVP. Rows are the **absolute depth-band differential** between the two subs.
+
+| Δ depth ↓ / Range → | `LONG` | `MEDIUM` | `SHORT` | `POINT_BLANK` |
+|---|---|---|---|---|
+| 0 (same depth) | 4 | 6 | 8 | 9 |
+| 1 band apart | 2 | 4 | 6 | 7 |
+| 2+ bands apart | 0 | 1 | 3 | 4 |
+
+An enemy that ducks one band and goes silent drops you from `TRACKING` to `FAINT` at `LONG`. This is what makes Scenario 3 a stealth chase.
+
+### 2.5 Acoustic signature modifier
+
+The base tables assume the target is at `STANDARD` speed (acoustic sig = 4). Adjust each tick:
+
+```
+contactQuality = baseTableValue + (targetAcousticSig − 4)
+```
+
+Clamp to `[0, 10]`. All integer math.
+
+**What changes `targetAcousticSig`** (additive on base of 4):
+
+| Source | Δ sig | Duration |
+|---|---|---|
+| Speed `SILENT` | −3 | While set |
+| Speed `STANDARD` | +0 | While set |
+| Speed `AHEAD_FULL` | +2 | While set |
+| Fired any weapon | +3 | 5 ticks after shot |
+| `BLOW_BALLAST_EMERGENCY` | +5 | 10 ticks |
+| Hull breach (room HP ≤ 25%) | +2 | Until repaired between encounters |
+| `AHEAD_FULL` during depth transition (cavitation) | +2 | While both conditions hold |
+
+Effects stack. A panicked crew under emergency blow with a hull breach: 4 + 2 + 5 + 2 = **sig 13** — `LOCKED` from any depth at `LONG`. Going `SILENT` from `STANDARD` with no recent firing: **sig 1** — drops the destroyer's quality by 3 across all range bands.
+
+### 2.6 Depth fix
+
+The surface vessel has a `depthFix` boolean per sub target. When set, depth charges are aimed at the sub's **actual** current depth band. When cleared, depth charges drop at a random band.
+
+| Event | Effect |
+|---|---|
+| Observer quality reaches `LOCKED` (≥ 8) for 3 continuous ticks | Fix **acquired** |
+| Sub changes depth band while observer quality < 8 | Fix **cleared** |
+| Sub maintains quality < 6 on the observer for 10 continuous ticks | Fix **cleared** |
+| Sub fires `BLOW_BALLAST_EMERGENCY` | Fix **acquired immediately** |
+
+### 2.7 Key insight
+
+The player sub can almost always hear surface ships before surface ships hear the sub — except when the sub is at `SURFACE`, which is the whole reason diving exists. The tactical lever is not "scan harder" but **"decide what they get to hear."** Every action that matters — speed setting, depth choice, weapon timing, emergency blow — is a choice about your own acoustic signature.
+
+If a future mechanic does not interact with this asymmetry, it probably belongs in a different game.
+
+---
+
+## §3. Player actions each tick
 
 Commands queue while paused; apply on unpause. Only one command per category may be queued (queuing a new one replaces the prior).
 
@@ -66,11 +168,11 @@ Eight commands. Resist adding a ninth before the first playable.
 
 ---
 
-## §3. Weapon resolution
+## §4. Weapon resolution
 
 Hit chance formula: `base_accuracy × range_modifier × depth_modifier × evasion_modifier`, clamped to `[5, 95]`. All values are integers.
 
-### 3.1 Deck Gun
+### 4.1 Deck Gun
 
 **Depth required:** player at `SURFACE`. Target at `SURFACE` (full accuracy) or `PERISCOPE` (½ accuracy).
 
@@ -84,7 +186,7 @@ Hit chance formula: `base_accuracy × range_modifier × depth_modifier × evasio
 - **Damage:** 2 hull HP per hit.
 - **Reload:** 12 ticks (modified by Gunnery crew — see §6).
 
-### 3.2 Torpedo
+### 4.2 Torpedo
 
 Depth differential between player and target determines validity. A torpedo runs at the player's current depth ±1 band.
 
@@ -117,7 +219,7 @@ Apply −20 if target depth differs by 1 band from the torpedo run depth (edge o
 - **Damage:** 5 hull HP per hit.
 - **Reload:** 30 ticks (modified by Torpedo Room crew — see §6).
 
-### 3.3 Depth Charges (enemy weapon — Patrol Destroyer only in MVP)
+### 4.3 Depth Charges (enemy weapon — Patrol Destroyer only in MVP)
 
 **Enemy depth required:** `SURFACE`. Target bands: `PERISCOPE`–`DEEP`.
 
@@ -125,9 +227,9 @@ Each charge is aimed at a depth band. Hit if player's current depth matches **an
 
 Miss conditions: player at `SURFACE` (charges sink too slow), player at `ABYSSAL` (out of reach), or range `MEDIUM`+.
 
-If the player has been rigged for silent for 10+ continuous ticks the destroyer loses depth fix — subsequent charges drop to a random band (low hit chance).
+Depth fix is acquired and lost per §2.6. When fix is cleared, charges drop to a random band (low hit chance).
 
-### 3.4 Range × depth quick-reference
+### 4.4 Range × depth quick-reference
 
 | Player depth | Enemy depth | Available weapon |
 |---|---|---|
@@ -143,11 +245,11 @@ If neither side has a valid weapon vs the other's current depth, the encounter i
 
 ---
 
-## §4. Enemy AI
+## §5. Enemy AI
 
 Each archetype is 2–3 priority rules evaluated in order each AI tick. First true rule fires.
 
-### 4.1 Merchant / Small Boat (Scenario 1)
+### 5.1 Merchant / Small Boat (Scenario 1)
 
 | Priority | Rule |
 |---|---|
@@ -157,7 +259,7 @@ Each archetype is 2–3 priority rules evaluated in order each AI tick. First tr
 
 Speed: 1 band per 20 ticks (slower than player). Cannot dive.
 
-### 4.2 Patrol Destroyer (Scenario 2)
+### 5.2 Patrol Destroyer (Scenario 2)
 
 | Priority | Rule |
 |---|---|
@@ -166,9 +268,9 @@ Speed: 1 band per 20 ticks (slower than player). Cannot dive.
 | 3 | If player at `SURFACE` and range ≤ `SHORT` → fire deck gun. |
 | 4 | Otherwise → `STANDARD, CLOSE` and ping sonar. |
 
-Loses depth fix after player rigs for silent 10+ continuous ticks; subsequent charges drop to random band.
+Acquires and loses depth fix per §2.6.
 
-### 4.3 Submerged Hostile (Scenario 3)
+### 5.3 Submerged Hostile (Scenario 3)
 
 | Priority | Rule |
 |---|---|
@@ -180,9 +282,9 @@ Only attacks when it has a firing solution. A missed first shot from the player 
 
 ---
 
-## §5. Win, lose, escape
+## §6. Win, lose, escape
 
-### 5.1 Common conditions
+### 6.1 Common conditions
 
 | Outcome | Condition |
 |---|---|
@@ -190,24 +292,24 @@ Only attacks when it has a firing solution. A missed first shot from the player 
 | **Lose** | Player `hullHP` reaches 0, **or** O2 reaches 0 while submerged with no surface path, **or** all crew dead/panicked |
 | **Escape** | Scenario-specific (below); node marked `EVADED` — no XP, no loot |
 
-### 5.2 Scenario 1 — surface gunfight
+### 6.2 Scenario 1 — surface gunfight
 
 - **Escape:** range reaches `LONG` for 10 continuous ticks with direction `OPEN`. No fuel cost.
 - **Target:** winnable around tick 80 with default loadout. This is the tutorial fight.
 
-### 5.3 Scenario 2 — surface contact, dive decision
+### 6.3 Scenario 2 — surface contact, dive decision
 
 - **Escape:** reach `DEEP` and hold for 15 ticks while range ≥ `MEDIUM`. Geometric — no RNG once conditions are met.
 - **Key decision:** dive to fight with torpedoes vs stay on surface with deck gun. Loadout should make one option clearly better; the player should feel that consequence.
 
-### 5.4 Scenario 3 — submerged ambush
+### 6.4 Scenario 3 — submerged ambush
 
 - **Escape:** rig for silent for 30 continuous ticks while range ≥ `MEDIUM`. Hostile breaks contact.
 - **Key decision:** first-shot accuracy. A missed opening salvo usually means breaking off.
 
 ---
 
-## §6. Crew contribution during combat (passive only)
+## §7. Crew contribution during combat (passive only)
 
 Crew are assigned to rooms **before** the encounter. They do not move during combat. Room effectiveness is a function of the assigned crew's skill and alive/panic status.
 
@@ -225,7 +327,7 @@ Crew are assigned to rooms **before** the encounter. They do not move during com
 
 ---
 
-## §7. Tick sequence
+## §8. Tick sequence
 
 10 steps. Fires at 10 ticks per real-time second at 1× speed.
 
@@ -246,7 +348,7 @@ Crew are assigned to rooms **before** the encounter. They do not move during com
 
 ---
 
-## §8. Design tradeoffs
+## §9. Design tradeoffs
 
 1. **Discrete range bands vs continuous distance.** Bands are testable, pixel-art-displayable, and AI-legible. Cost: fights can feel snappy at transitions. Recommendation: take the bands. Revisit if MVP playtest shows fights feel binary.
 
@@ -256,7 +358,7 @@ Crew are assigned to rooms **before** the encounter. They do not move during com
 
 ---
 
-## §9. Out of scope for MVP
+## §10. Out of scope for MVP
 
 The following are noted but not implemented for the three MVP scenarios:
 
@@ -266,13 +368,12 @@ The following are noted but not implemented for the three MVP scenarios:
 - Crew movement during combat
 - Damage Control room active during combat
 - Alien weapons (Arc-Lance, Harmonic Charge) — kept as a future loadout layer
-- Hydrophone Bonus and full acoustic-signature math beyond the speed modifier
 
 Ship the three scenarios first. Balance them. Then expand.
 
 ---
 
-## §10. RNG streams used in combat
+## §11. RNG streams used in combat
 
 | Stream name | Used for |
 |---|---|
