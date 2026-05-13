@@ -59,8 +59,8 @@ export function destroyerAi(enemy: ShipState, range: RangeBand, playerDepth: Dep
     return { type: "FIRE_DECK_GUN" };
   }
 
-  // Close to MEDIUM then hold
-  if (range > RangeBand.MEDIUM) {
+  // Close aggressively until SHORT range — stops at MEDIUM only if already firing
+  if (range > RangeBand.SHORT) {
     return {
       type: "SET_SPEED",
       speed: SpeedSetting.AHEAD_FULL,
