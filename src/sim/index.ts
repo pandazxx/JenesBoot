@@ -72,11 +72,7 @@ class SimEngineImpl implements ISimEngine {
 
     if (this.combatState !== null && this.combatState.result === "ongoing") {
       const rng = this.combatRng ?? this.rng;
-      const { newState, events } = tickCombat(
-        this.combatState,
-        this.currentTick,
-        rng,
-      );
+      const { newState, events } = tickCombat(this.combatState, this.currentTick, rng);
       this.combatState = newState;
       for (const ev of events) {
         this.emit(ev.type, ev.payload);

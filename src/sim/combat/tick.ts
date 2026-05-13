@@ -5,18 +5,8 @@
  * No PixiJS, no DOM, no Math.random(), no wall-clock reads.
  */
 
-import {
-  RangeBand,
-  SpeedSetting,
-  SpeedDirection,
-  DepthBand,
-} from "./types.js";
-import type {
-  CombatState,
-  ShipState,
-  CombatEvent,
-  InFlightProjectile,
-} from "./types.js";
+import { RangeBand, SpeedSetting, SpeedDirection, DepthBand } from "./types.js";
+import type { CombatState, ShipState, CombatEvent, InFlightProjectile } from "./types.js";
 import type { Mulberry32 } from "../prng.js";
 import { contactQuality } from "./detection.js";
 import {
@@ -109,10 +99,7 @@ function deckGunInRange(range: RangeBand): boolean {
 /**
  * Auto-script player command: always AHEAD_FULL CLOSE, fire when ready and in range.
  */
-function autoPlayerCommand(
-  player: ShipState,
-  range: RangeBand,
-): PlayerCommand {
+function autoPlayerCommand(player: ShipState, range: RangeBand): PlayerCommand {
   if (deckGunInRange(range) && player.deckGunCooldown === 0) {
     return { type: "FIRE_DECK_GUN" };
   }

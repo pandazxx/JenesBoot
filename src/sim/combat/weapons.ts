@@ -34,11 +34,7 @@ export const DECK_GUN_COOLDOWN_TICKS = 10;
  * Returns true if the shot hits.
  * hit_chance = clamp(5, 95, accuracy - evasion)
  */
-export function resolveDeckGun(
-  accuracy: number,
-  evasion: number,
-  rng: Mulberry32,
-): boolean {
+export function resolveDeckGun(accuracy: number, evasion: number, rng: Mulberry32): boolean {
   const hitChance = Math.max(5, Math.min(95, accuracy - evasion));
   return rng.next() * 100 < hitChance;
 }

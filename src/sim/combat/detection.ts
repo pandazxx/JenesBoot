@@ -90,22 +90,13 @@ const TABLE_B: Record<DepthBand, Record<RangeBand, number>> = {
 
 function effectiveAcousticSig(ship: ShipState): number {
   const speedMod =
-    ship.speed === SpeedSetting.AHEAD_FULL
-      ? 2
-      : ship.speed === SpeedSetting.SILENT
-        ? -3
-        : 0;
+    ship.speed === SpeedSetting.AHEAD_FULL ? 2 : ship.speed === SpeedSetting.SILENT ? -3 : 0;
   const fireMod = ship.acousticSigOverride > 0 ? 3 : 0;
   return 4 + speedMod + fireMod;
 }
 
-export function contactQuality(
-  observer: ShipState,
-  target: ShipState,
-  range: RangeBand,
-): number {
-  const bothSurface =
-    observer.depth === DepthBand.SURFACE && target.depth === DepthBand.SURFACE;
+export function contactQuality(observer: ShipState, target: ShipState, range: RangeBand): number {
+  const bothSurface = observer.depth === DepthBand.SURFACE && target.depth === DepthBand.SURFACE;
 
   let base: number;
   if (observer.depth === DepthBand.SURFACE) {
