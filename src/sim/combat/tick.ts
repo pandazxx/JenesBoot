@@ -40,6 +40,13 @@ const PLAYER_RANGE_TICKS: Record<SpeedSetting, number> = {
   [SpeedSetting.AHEAD_FULL]: 10,
 };
 
+// Speed weight for net-direction calculation: faster ships exert more force.
+const SPEED_WEIGHT: Record<SpeedSetting, number> = {
+  [SpeedSetting.SILENT]: 1,
+  [SpeedSetting.STANDARD]: 2,
+  [SpeedSetting.AHEAD_FULL]: 3,
+};
+
 const DECK_GUN_FLIGHT_TICKS = 1;
 const TRACKING_THRESHOLD = 4;
 const DEPTH_TICKS_PER_BAND = 6;
@@ -186,7 +193,11 @@ export function tickCombat(
   // -------------------------------------------------------------------------
   // Step 5: Advance range
   // -------------------------------------------------------------------------
-  const netDirectionRaw = s.player.direction + s.enemy.direction;
+  // Speed-weighted net direction: AHEAD_FULL beats STANDARD beats SILENT.
+  // This lets a destroyer outrun a standard-speed submarine.
+  const playerWeight = (SPEED_WEIGHT[s.player.speed] ?? 2) * s.player.direction;
+  const enemyWeight = (SPEED_WEIGHT[s.enemy.speed] ?? 2) * s.enemy.direction;
+  const netDirectionRaw = playerWeight + enemyWeight;
   const netDirection: SpeedDirection =
     netDirectionRaw > 0
       ? SpeedDirection.CLOSE

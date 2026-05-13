@@ -100,6 +100,10 @@ export class RadarView {
   private hpGfx: Graphics;
   private depthText: Text;
   private logTexts: Text[];
+  private exportBtn: Text;
+  private exportFeedback: Text;
+  private feedbackTimer: number = 0;
+  private fullLog: SimState["log"] = [];
 
   constructor() {
     this.container = new Container();
@@ -145,6 +149,32 @@ export class RadarView {
       this.container.addChild(t);
       return t;
     });
+
+    // Export log button
+    const btnStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x446688 });
+    this.exportBtn = new Text({ text: "[ EXPORT LOG ]", style: btnStyle });
+    this.exportBtn.x = 370;
+    this.exportBtn.y = 518;
+    this.exportBtn.eventMode = "static";
+    this.exportBtn.cursor = "pointer";
+    this.exportBtn.on("pointerover", () => {
+      (this.exportBtn.style as TextStyle).fill = 0x88aacc;
+    });
+    this.exportBtn.on("pointerout", () => {
+      (this.exportBtn.style as TextStyle).fill = 0x446688;
+    });
+    this.exportBtn.on("pointerdown", () => {
+      this._exportLog();
+    });
+    this.container.addChild(this.exportBtn);
+
+    // "Copied!" feedback label
+    const fbStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x00ff88 });
+    this.exportFeedback = new Text({ text: "COPIED!", style: fbStyle });
+    this.exportFeedback.x = 370;
+    this.exportFeedback.y = 502;
+    this.exportFeedback.visible = false;
+    this.container.addChild(this.exportFeedback);
   }
 
   private _drawRadarBase(): void {
@@ -200,6 +230,9 @@ export class RadarView {
       this.hpGfx.rect(barX, barY, Math.round(60 * frac), 6).fill(0xff4444);
     }
 
+    // Keep a reference to the full log for export
+    this.fullLog = simState.log;
+
     // Event log — last 6 non-hello events, newest first
     const filtered = simState.log
       .filter((e) => e.type !== "hello")
@@ -218,5 +251,28 @@ export class RadarView {
       const tickStr = `[${String(ev.tick).padStart(3, "0")}]`;
       t.text = `${tickStr} ${formatEvent(ev.type, ev.payload)}`;
     }
+
+    // Feedback timer for "COPIED!" label
+    if (this.feedbackTimer > 0) {
+      this.feedbackTimer -= 1;
+      if (this.feedbackTimer === 0) this.exportFeedback.visible = false;
+    }
+  }
+
+  private _exportLog(): void {
+    const lines = this.fullLog.map((e) => {
+      const tickStr = `[${String(e.tick).padStart(3, "0")}]`;
+      const summary = formatEvent(e.type, e.payload);
+      const raw = JSON.stringify(e.payload);
+      return `${tickStr} ${e.type.padEnd(16)} ${summary}  ${raw}`;
+    });
+
+    const text =
+      `=== JenesBoot Combat Log  (${this.fullLog.length} events) ===\n` + lines.join("\n");
+
+    void navigator.clipboard.writeText(text).then(() => {
+      this.exportFeedback.visible = true;
+      this.feedbackTimer = 30;
+    });
   }
 }

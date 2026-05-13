@@ -48,8 +48,8 @@ export function merchantAi(
 }
 
 /**
- * Destroyer AI — closes aggressively, fires deck gun only at surface targets.
- * Never flees. playerDepth is used to decide whether the deck gun can acquire.
+ * Destroyer AI — closes aggressively at all times, fires deck gun on surface targets.
+ * Never holds back. playerDepth is used to decide whether the deck gun can acquire.
  */
 export function destroyerAi(enemy: ShipState, range: RangeBand, playerDepth: DepthBand): AiCommand {
   // Deck gun only works against surface targets
@@ -59,18 +59,10 @@ export function destroyerAi(enemy: ShipState, range: RangeBand, playerDepth: Dep
     return { type: "FIRE_DECK_GUN" };
   }
 
-  // Close aggressively until SHORT range — stops at MEDIUM only if already firing
-  if (range > RangeBand.SHORT) {
-    return {
-      type: "SET_SPEED",
-      speed: SpeedSetting.AHEAD_FULL,
-      direction: SpeedDirection.CLOSE,
-    };
-  }
-
+  // Always close — destroyers never back off. Speed weight ensures they outrun a standard sub.
   return {
     type: "SET_SPEED",
-    speed: SpeedSetting.STANDARD,
-    direction: SpeedDirection.HOLD,
+    speed: SpeedSetting.AHEAD_FULL,
+    direction: SpeedDirection.CLOSE,
   };
 }
