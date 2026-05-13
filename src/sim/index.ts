@@ -101,7 +101,15 @@ class SimEngineImpl implements ISimEngine {
       tick: this.currentTick,
       log: [...this.eventLog],
       rngState: this.rng.getState(),
-      combat: this.combatState !== null ? { ...this.combatState, player: { ...this.combatState.player }, enemy: { ...this.combatState.enemy }, inFlight: [...this.combatState.inFlight] } : null,
+      combat:
+        this.combatState !== null
+          ? {
+              ...this.combatState,
+              player: { ...this.combatState.player },
+              enemy: { ...this.combatState.enemy },
+              inFlight: [...this.combatState.inFlight],
+            }
+          : null,
     };
   }
 

@@ -223,7 +223,8 @@ export function tickCombat(
   // Player fires — triggered by human command or auto-fire when cooldown is ready
   const playerWantsToFire =
     resolvedPlayerCmd.type === "FIRE_DECK_GUN" ||
-    (resolvedPlayerCmd.type !== "SET_SPEED" && autoPlayerCommand(s.player, s.range).type === "FIRE_DECK_GUN");
+    (resolvedPlayerCmd.type !== "SET_SPEED" &&
+      autoPlayerCommand(s.player, s.range).type === "FIRE_DECK_GUN");
   if (
     playerWantsToFire &&
     deckGunInRange(s.range) &&

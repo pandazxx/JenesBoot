@@ -68,8 +68,16 @@ const DEPTH_NAMES: Record<number, string> = {
   4: "ABYSSAL",
 };
 
-const SPEED_ORDER: SpeedSetting[] = [SpeedSetting.SILENT, SpeedSetting.STANDARD, SpeedSetting.AHEAD_FULL];
-const DIRECTION_ORDER: SpeedDirection[] = [SpeedDirection.OPEN, SpeedDirection.HOLD, SpeedDirection.CLOSE];
+const SPEED_ORDER: SpeedSetting[] = [
+  SpeedSetting.SILENT,
+  SpeedSetting.STANDARD,
+  SpeedSetting.AHEAD_FULL,
+];
+const DIRECTION_ORDER: SpeedDirection[] = [
+  SpeedDirection.OPEN,
+  SpeedDirection.HOLD,
+  SpeedDirection.CLOSE,
+];
 
 // ---------------------------------------------------------------------------
 // Text factory helpers
@@ -223,13 +231,9 @@ export function showCombat(app: Application, engine: ISimEngine): void {
       const rpos = RANGE_POSITIONS[combat.range];
       if (rpos !== undefined) {
         // Player icon: small filled triangle to the left of the marker
-        rangeGfx
-          .poly([rpos.x - 22, 84, rpos.x - 14, 76, rpos.x - 14, 84])
-          .fill(COLOUR.player);
+        rangeGfx.poly([rpos.x - 22, 84, rpos.x - 14, 76, rpos.x - 14, 84]).fill(COLOUR.player);
         // Enemy icon: small filled triangle to the right of the marker (mirrored)
-        rangeGfx
-          .poly([rpos.x + 22, 84, rpos.x + 14, 76, rpos.x + 14, 84])
-          .fill(COLOUR.enemy);
+        rangeGfx.poly([rpos.x + 22, 84, rpos.x + 14, 76, rpos.x + 14, 84]).fill(COLOUR.enemy);
       }
     }
 
@@ -284,7 +288,11 @@ export function showCombat(app: Application, engine: ISimEngine): void {
     }
 
     // Event log — last 8, newest first, skip "hello"
-    const filtered = state.log.filter((e) => e.type !== "hello").slice().reverse().slice(0, 8);
+    const filtered = state.log
+      .filter((e) => e.type !== "hello")
+      .slice()
+      .reverse()
+      .slice(0, 8);
     for (let i = 0; i < 8; i++) {
       const logText = eventLogTexts[i];
       if (logText === undefined) continue;
@@ -336,7 +344,8 @@ export function showCombat(app: Application, engine: ISimEngine): void {
         const currentDir: SpeedDirection = combat?.player.direction ?? SpeedDirection.HOLD;
         const currentSpd: SpeedSetting = combat?.player.speed ?? SpeedSetting.STANDARD;
         const idx = DIRECTION_ORDER.indexOf(currentDir);
-        const nextDir = DIRECTION_ORDER[Math.min(idx + 1, DIRECTION_ORDER.length - 1)] ?? currentDir;
+        const nextDir =
+          DIRECTION_ORDER[Math.min(idx + 1, DIRECTION_ORDER.length - 1)] ?? currentDir;
         const cmd: PlayerCommand = { type: "SET_SPEED", speed: currentSpd, direction: nextDir };
         engine.queueCommand(cmd);
         break;
