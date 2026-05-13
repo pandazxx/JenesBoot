@@ -1,6 +1,7 @@
-import { Application, Text, TextStyle } from "pixi.js";
+import { Application } from "pixi.js";
 import { SimEngine } from "../sim/index.js";
 import { showLanding } from "./landing.js";
+import { showCombat } from "./combat.js";
 
 async function main(): Promise<void> {
   const app = new Application();
@@ -20,23 +21,9 @@ async function main(): Promise<void> {
   const seed = urlSeed !== null ? parseInt(urlSeed, 10) : 0;
 
   const engine = new SimEngine(seed);
+  engine.startCombat("surface_battle");
 
-  const style = new TextStyle({
-    fontFamily: "monospace",
-    fontSize: 14,
-    fill: 0x00ff88,
-  });
-
-  const tickLabel = new Text({ text: "tick: 0", style });
-  tickLabel.x = 16;
-  tickLabel.y = 16;
-  app.stage.addChild(tickLabel);
-
-  app.ticker.add(() => {
-    engine.tick();
-    const state = engine.getState();
-    tickLabel.text = `tick: ${state.tick}`;
-  });
+  showCombat(app, engine);
 }
 
 main().catch((err: unknown) => {

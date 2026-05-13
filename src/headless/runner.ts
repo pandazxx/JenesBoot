@@ -2,7 +2,7 @@
  * Headless runner — Node CLI entry.
  *
  * Usage:
- *   node dist-node/runner.js --seed <n> --ticks <n>
+ *   node dist-node/runner.js --seed <n> --ticks <n> [--scenario <name>]
  *
  * Runs the SimEngine for the requested number of ticks and prints the full
  * event log as JSON to stdout, then exits 0.
@@ -12,10 +12,15 @@
 
 import { SimEngine } from "../sim/index.js";
 
-function parseArgs(argv: string[]): { seed: number; ticks: number } {
+function parseArgs(argv: string[]): {
+  seed: number;
+  ticks: number;
+  scenario: string | null;
+} {
   const args = argv.slice(2);
   let seed = 0;
   let ticks = 10;
+  let scenario: string | null = null;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--seed" && args[i + 1] !== undefined) {
@@ -34,16 +39,30 @@ function parseArgs(argv: string[]): { seed: number; ticks: number } {
       }
       ticks = parsed;
       i++;
+    } else if (args[i] === "--scenario" && args[i + 1] !== undefined) {
+      scenario = args[i + 1] as string;
+      i++;
     }
   }
 
-  return { seed, ticks };
+  return { seed, ticks, scenario };
 }
 
 function main(): void {
-  const { seed, ticks } = parseArgs(process.argv);
+  const { seed, ticks, scenario } = parseArgs(process.argv);
 
   const engine = new SimEngine(seed);
+
+  if (scenario === "surface_battle") {
+    engine.startCombat("surface_battle");
+    // Assign crew to deck gun so the surface battle plays out as expected.
+    // In the real game this is a player action; in the headless scenario we
+    // pre-assign so the combat reaches its conclusion deterministically.
+    engine.queueCommand({ type: "ASSIGN_CREW", crewId: "mate", roomId: "deck_gun" });
+  } else if (scenario !== null) {
+    console.error(`Unknown scenario: ${scenario}`);
+    process.exit(1);
+  }
 
   for (let i = 0; i < ticks; i++) {
     engine.tick();
