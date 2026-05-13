@@ -58,9 +58,27 @@ class SimEngineImpl implements ISimEngine {
     }
   }
 
-  /** Queue a player command to be consumed on the next tick. */
+  /** Queue a player command.
+   *
+   * SET_SPEED is applied immediately and sticks across ticks — the player's
+   * chosen speed and direction persist until they change it again. This means
+   * the HUD updates even during pause and the setting is never overridden by
+   * the auto-pilot.
+   *
+   * FIRE_DECK_GUN is one-shot: consumed on the next tick and then cleared.
+   */
   queueCommand(cmd: PlayerCommand): void {
-    this.pendingCommand = cmd;
+    if (
+      cmd.type === "SET_SPEED" &&
+      cmd.speed !== undefined &&
+      cmd.direction !== undefined &&
+      this.combatState !== null
+    ) {
+      this.combatState.player.speed = cmd.speed;
+      this.combatState.player.direction = cmd.direction;
+    } else {
+      this.pendingCommand = cmd;
+    }
   }
 
   /** Advance simulation by one tick. */

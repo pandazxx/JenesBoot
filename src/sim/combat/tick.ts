@@ -156,15 +156,11 @@ export function tickCombat(
   }
 
   // -------------------------------------------------------------------------
-  // Step 3: Process player command (human-queued takes priority over auto)
+  // Step 3: Process player command
+  // Speed/direction is already sticky — SET_SPEED is applied immediately in
+  // SimEngine.queueCommand() and persists in s.player across ticks. Nothing
+  // to do here for movement. Only fire commands arrive as playerCmd.
   // -------------------------------------------------------------------------
-  const resolvedPlayerCmd: PlayerCommand =
-    playerCmd != null && playerCmd.type !== "NONE"
-      ? playerCmd
-      : autoPlayerCommand(s.player, s.range);
-  if (resolvedPlayerCmd.type === "SET_SPEED") {
-    applyCommand(s.player, resolvedPlayerCmd);
-  }
 
   // -------------------------------------------------------------------------
   // Step 4: Process enemy AI
@@ -220,11 +216,12 @@ export function tickCombat(
   // Step 7: Fire weapons — player then enemy
   // -------------------------------------------------------------------------
 
-  // Player fires — triggered by human command or auto-fire when cooldown is ready
+  // Player fires — triggered by explicit fire command or auto-fire when in
+  // range and cooldown is ready. Auto-fire is the fallback so the game
+  // remains functional even without manual input.
   const playerWantsToFire =
-    resolvedPlayerCmd.type === "FIRE_DECK_GUN" ||
-    (resolvedPlayerCmd.type !== "SET_SPEED" &&
-      autoPlayerCommand(s.player, s.range).type === "FIRE_DECK_GUN");
+    playerCmd?.type === "FIRE_DECK_GUN" ||
+    (s.player.deckGunCooldown === 0 && deckGunInRange(s.range));
   if (
     playerWantsToFire &&
     deckGunInRange(s.range) &&
