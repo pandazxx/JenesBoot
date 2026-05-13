@@ -1,7 +1,7 @@
 import { Application } from "pixi.js";
 import { SimEngine } from "../sim/index.js";
 import { showLanding } from "./landing.js";
-import { showCombat, readScenario } from "./combat.js";
+import { showCombat } from "./combat.js";
 
 async function main(): Promise<void> {
   const app = new Application();
@@ -15,12 +15,11 @@ async function main(): Promise<void> {
 
   document.body.appendChild(app.canvas);
 
-  await showLanding(app);
+  const scenario = await showLanding(app);
 
   const urlSeed = new URLSearchParams(window.location.search).get("seed");
   const seed = urlSeed !== null ? parseInt(urlSeed, 10) : 0;
 
-  const scenario = readScenario();
   const engine = new SimEngine(seed);
   engine.startCombat(scenario);
 
