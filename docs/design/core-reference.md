@@ -271,6 +271,53 @@ Currency: **Scrap**. Some upgrades also require a tech token (alien artifact, sa
 
 Each streamed from `seed_root + hash(stream_name)`.
 
+### 7.6 Detection / contact-quality system
+
+Each ship carries a `detectionMethods` list (enum values: `VISUAL`, `SONAR`, `RADAR`). Contact quality (CQ) for a given observer/target/range triple is the **maximum** score across all methods on the observer, clamped 0–10.
+
+**CQ ≥ 4 = TRACKING.** Weapons may only fire (player or AI) when the firer has CQ ≥ 4 on the target. The gunboat AI uses this threshold to switch between TRACKING and SEARCHING states.
+
+#### Visual detection
+
+| Observer depth | Target depth | LONG | MEDIUM | SHORT | POINT_BLANK | RAMMING |
+|---|---|---|---|---|---|---|
+| SURFACE | SURFACE | 8 | 9 | 10 | 10 | 10 |
+| SURFACE | PERISCOPE | 1 | 2 | 4 | 3 | 4 |
+| SURFACE | SHALLOW / DEEP / ABYSSAL | 0 | 0 | 0 | 0 | 0 |
+| PERISCOPE | SURFACE | 8 | 9 | 10 | 10 | 10 |
+| PERISCOPE | PERISCOPE | 1 | 2 | 4 | 3 | 4 |
+| PERISCOPE | SHALLOW / DEEP / ABYSSAL | 0 | 0 | 0 | 0 | 0 |
+| SHALLOW / DEEP / ABYSSAL | any | 0 | 0 | 0 | 0 | 0 |
+
+Design notes: a periscope tip is barely visible at LONG (CQ 1) and just crosses the TRACKING threshold at SHORT (CQ 4). Diving to SHALLOW removes all visual contact immediately.
+
+#### Sonar detection
+
+Sonar CQ = `sonarBase[observerDepth][range] + (effectiveAcousticSig(target) − 4)`, clamped 0–10.
+
+**Sonar base** (observerDepth × range):
+
+| Observer depth | LONG | MEDIUM | SHORT | POINT_BLANK | RAMMING |
+|---|---|---|---|---|---|
+| SURFACE | 5 | 7 | 9 | 10 | 10 |
+| PERISCOPE | 5 | 7 | 9 | 10 | 10 |
+| SHALLOW | 4 | 6 | 8 | 9 | 10 |
+| DEEP | 6 | 8 | 9 | 10 | 10 |
+| ABYSSAL | 7 | 9 | 10 | 10 | 10 |
+
+DEEP and ABYSSAL observers have stronger sonar than surface ships — this is the deep-sea archetype's detection advantage.
+
+**Effective acoustic signature** of target = `4 + speedMod + fireMod`
+
+| Condition | Modifier |
+|---|---|
+| Speed AHEAD_FULL | +2 |
+| Speed STANDARD | 0 |
+| Speed SILENT | −3 |
+| Fired within last 5 ticks | +3 |
+
+A SILENT sub at `DEEP` has effective sig = 1, making it nearly undetectable beyond SHORT range even to a sonar-equipped pursuer.
+
 ### 7.5 Required event log entries
 
 Schema: `{ tick, kind, actor_id?, target_id?, payload }`
