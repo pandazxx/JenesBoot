@@ -11,7 +11,7 @@
  * Defaults to surface_battle.
  */
 
-import { Application, Graphics } from "pixi.js";
+import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
 import { SimEngine, type CombatScenario } from "../sim/index.js";
 import type { ISimEngine } from "../sim/index.js";
 import { DepthBand, SpeedSetting, SpeedDirection } from "../sim/combat/types.js";
@@ -57,6 +57,51 @@ export function showCombat(app: Application, engine: ISimEngine, scenario: Comba
   app.stage.addChild(radarView.container);
   app.stage.addChild(divider);
 
+  // Game-over overlay — shown when combat ends; absorbs taps so nothing below fires
+  const overlay = new Container();
+  overlay.visible = false;
+
+  const overlayBg = new Graphics();
+  overlayBg.rect(0, 0, 960, 540).fill({ color: 0x000011, alpha: 0.88 });
+  overlayBg.eventMode = "static";
+  overlay.addChild(overlayBg);
+
+  const resultStyle = new TextStyle({
+    fontFamily: "monospace",
+    fontSize: 40,
+    fill: 0xffffff,
+    align: "center",
+  });
+  const resultLabel = new Text({ text: "", style: resultStyle });
+  resultLabel.anchor.set(0.5);
+  resultLabel.x = 480;
+  resultLabel.y = 200;
+  overlay.addChild(resultLabel);
+
+  const restartBg = new Graphics();
+  restartBg.rect(330, 275, 300, 54).fill(0x0a2030).stroke({ color: 0x00ccff, width: 2 });
+  overlay.addChild(restartBg);
+
+  const restartLabelStyle = new TextStyle({
+    fontFamily: "monospace",
+    fontSize: 14,
+    fill: 0x00ccff,
+  });
+  const restartLabelText = new Text({ text: "[ TAP TO RESTART ]", style: restartLabelStyle });
+  restartLabelText.anchor.set(0.5);
+  restartLabelText.x = 480;
+  restartLabelText.y = 302;
+  overlay.addChild(restartLabelText);
+
+  const restartHit = new Graphics();
+  restartHit.rect(330, 275, 300, 54).fill({ color: 0, alpha: 0 });
+  restartHit.eventMode = "static";
+  restartHit.cursor = "pointer";
+  restartHit.on("pointertap", () => restart());
+  overlay.addChild(restartHit);
+
+  app.stage.addChild(overlay); // last → on top of everything
+
   app.stage.eventMode = "static";
 
   let timeSinceLastTick = 0;
@@ -79,6 +124,23 @@ export function showCombat(app: Application, engine: ISimEngine, scenario: Comba
       const step = getTutorialStep(combat, scenario);
       interiorView.update(combat, step, elapsed, paused);
       radarView.update(combat, state);
+
+      if (combat.result !== "ongoing" && !overlay.visible) {
+        overlay.visible = true;
+        paused = true;
+        const labels: Record<string, string> = {
+          player_win: "VICTORY!",
+          escaped: "ESCAPED!",
+          player_lose: "DEFEATED",
+        };
+        const colors: Record<string, number> = {
+          player_win: 0x00ff88,
+          escaped: 0xffdd44,
+          player_lose: 0xff3333,
+        };
+        resultLabel.text = labels[combat.result] ?? combat.result;
+        (resultLabel.style as TextStyle).fill = colors[combat.result] ?? 0xffffff;
+      }
     }
   }
 

@@ -1,4 +1,4 @@
-import { Application, Assets, Container, Sprite, Text, TextStyle } from "pixi.js";
+import { Application, Assets, Container, Graphics, Sprite, Text, TextStyle } from "pixi.js";
 import type { CombatScenario } from "../sim/index.js";
 
 const BLINK_INTERVAL_MS = 800;
@@ -53,6 +53,23 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
     container.addChild(choice1);
     container.addChild(choice2);
     container.addChild(choice3);
+
+    app.stage.eventMode = "static";
+
+    const addTapTarget = (text: Text, scenario: CombatScenario): void => {
+      const hit = new Graphics();
+      hit.rect(text.x - text.width / 2 - 40, text.y - 36, text.width + 80, 36).fill({
+        color: 0xffffff,
+        alpha: 0,
+      });
+      hit.eventMode = "static";
+      hit.cursor = "pointer";
+      hit.on("pointertap", () => cleanup(scenario));
+      container.addChild(hit);
+    };
+    addTapTarget(choice1, "surface_battle");
+    addTapTarget(choice2, "destroyer_dive");
+    addTapTarget(choice3, "gunboat_hunt");
 
     const buildStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x445566 });
     const buildLabel = new Text({ text: `build ${__GIT_COMMIT__}`, style: buildStyle });

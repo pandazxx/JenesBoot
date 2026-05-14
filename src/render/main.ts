@@ -14,6 +14,26 @@ async function main(): Promise<void> {
   });
 
   document.body.appendChild(app.canvas);
+  document.body.style.overflow = "hidden";
+
+  function fitCanvas(canvas: HTMLCanvasElement): void {
+    const aspect = 960 / 540;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    if (vw / vh > aspect) {
+      canvas.style.height = `${vh}px`;
+      canvas.style.width = `${vh * aspect}px`;
+    } else {
+      canvas.style.width = `${vw}px`;
+      canvas.style.height = `${vw / aspect}px`;
+    }
+    canvas.style.position = "absolute";
+    canvas.style.left = `${(window.innerWidth - parseFloat(canvas.style.width)) / 2}px`;
+    canvas.style.top = `${(window.innerHeight - parseFloat(canvas.style.height)) / 2}px`;
+  }
+
+  fitCanvas(app.canvas);
+  window.addEventListener("resize", () => fitCanvas(app.canvas));
 
   const scenario = await showLanding(app);
 

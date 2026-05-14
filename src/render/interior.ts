@@ -33,28 +33,29 @@ const ROW_HP_VALUE = 178;
 const ROW_DEPTH = 197;
 const ROW_TORPEDO = 215;
 
-// Speed control buttons
-const SPEED_CTRL_Y = 237;
-const SPEED_BTN_Y = 251;
-const SPEED_BTN_H = 24;
+// Control buttons — 32px tall for touch-friendly targets
+const SPEED_CTRL_Y = 235;
+const SPEED_BTN_Y = 247;
+const SPEED_BTN_H = 32;
 
-// Direction control buttons
-const DIR_CTRL_Y = 285;
-const DIR_BTN_Y = 299;
-const DIR_BTN_H = 24;
+const DIR_CTRL_Y = 283;
+const DIR_BTN_Y = 295;
+const DIR_BTN_H = 32;
 
-// Pause button
-const PAUSE_BTN_Y = 333;
-const PAUSE_BTN_H = 24;
+const PAUSE_BTN_Y = 331;
+const PAUSE_BTN_H = 32;
 
-// Depth selector
 const DEPTH_CTRL_Y = 367;
-const DEPTH_BTN_Y = 381;
-const DEPTH_BTN_H = 24;
+const DEPTH_BTN_Y = 379;
+const DEPTH_BTN_H = 32;
 const DEPTH_BTN_GAP = 5;
 
-// Tutorial text
-const TUTORIAL_Y = 430;
+// Weapon fire buttons — 36px tall, red/orange theme
+const WEAPON_CTRL_Y = 415;
+const WEAPON_BTN_Y = 427;
+const WEAPON_BTN_H = 36;
+
+const TUTORIAL_Y = 468;
 
 const DEPTH_BANDS = [
   DepthBand.SURFACE,
@@ -157,7 +158,7 @@ function buildThreeButtons(
 
     const labelText = new Text({ text: labels[i] ?? "", style: makeBtnLabelStyle(false) });
     labelText.x = bx + 4;
-    labelText.y = btnY + 8;
+    labelText.y = btnY + Math.floor((btnH - 12) / 2);
     container.addChild(labelText);
 
     const hitArea = new Graphics();
@@ -203,6 +204,12 @@ export class InteriorView {
   // Depth selector
   private depthBtns: DepthBtn[] = [];
   private depthPulseGfx: Graphics;
+
+  // Weapon fire buttons
+  private deckGunBtnGfx: Graphics;
+  private deckGunBtnLabel: Text;
+  private torpedoBtnGfx: Graphics;
+  private torpedoBtnLabel: Text;
 
   private tutorialText: Text;
 
@@ -358,7 +365,7 @@ export class InteriorView {
     });
     this.pauseBtnLabel = new Text({ text: "⏸ PAUSE", style: pauseLabelStyle });
     this.pauseBtnLabel.x = ROOM_MARGIN_X + 4;
-    this.pauseBtnLabel.y = PAUSE_BTN_Y + 8;
+    this.pauseBtnLabel.y = PAUSE_BTN_Y + Math.floor((PAUSE_BTN_H - 12) / 2);
     this.container.addChild(this.pauseBtnLabel);
 
     const pauseHitArea = new Graphics();
@@ -393,7 +400,7 @@ export class InteriorView {
       const btnLabelStyle = new TextStyle({ fontFamily: "monospace", fontSize: 9, fill: 0x668899 });
       const btnLabel = new Text({ text: DEPTH_LABELS[i] ?? "", style: btnLabelStyle });
       btnLabel.x = bx + 4;
-      btnLabel.y = DEPTH_BTN_Y + 8;
+      btnLabel.y = DEPTH_BTN_Y + Math.floor((DEPTH_BTN_H - 12) / 2);
       this.container.addChild(btnLabel);
 
       const hitArea = new Graphics();
@@ -407,6 +414,59 @@ export class InteriorView {
 
       this.depthBtns.push({ gfx, x: bx, w: btnW, band });
     }
+
+    // ── Weapon fire buttons ──────────────────────────────────────────────────
+
+    const weaponCtrlLabel = new Text({ text: "WEAPONS", style: makeLabelStyle() });
+    weaponCtrlLabel.x = DASH_LABEL_X;
+    weaponCtrlLabel.y = WEAPON_CTRL_Y;
+    this.container.addChild(weaponCtrlLabel);
+
+    const weaponBtnW = Math.floor((totalW - DEPTH_BTN_GAP) / 2);
+    const deckGunX = ROOM_MARGIN_X;
+    const torpedoX = ROOM_MARGIN_X + weaponBtnW + DEPTH_BTN_GAP;
+
+    this.deckGunBtnGfx = new Graphics();
+    this.container.addChild(this.deckGunBtnGfx);
+    this.deckGunBtnLabel = new Text({
+      text: "◉ DECK GUN",
+      style: new TextStyle({ fontFamily: "monospace", fontSize: 9, fill: 0x442222 }),
+    });
+    this.deckGunBtnLabel.x = deckGunX + 4;
+    this.deckGunBtnLabel.y = WEAPON_BTN_Y + Math.floor((WEAPON_BTN_H - 12) / 2);
+    this.container.addChild(this.deckGunBtnLabel);
+
+    const deckGunHit = new Graphics();
+    deckGunHit
+      .rect(deckGunX, WEAPON_BTN_Y, weaponBtnW, WEAPON_BTN_H)
+      .fill({ color: 0xffffff, alpha: 0 });
+    deckGunHit.eventMode = "static";
+    deckGunHit.cursor = "pointer";
+    deckGunHit.on("pointertap", () => {
+      this.engine.queueCommand({ type: "FIRE_DECK_GUN" });
+    });
+    this.container.addChild(deckGunHit);
+
+    this.torpedoBtnGfx = new Graphics();
+    this.container.addChild(this.torpedoBtnGfx);
+    this.torpedoBtnLabel = new Text({
+      text: "◈ TORPEDO",
+      style: new TextStyle({ fontFamily: "monospace", fontSize: 9, fill: 0x443300 }),
+    });
+    this.torpedoBtnLabel.x = torpedoX + 4;
+    this.torpedoBtnLabel.y = WEAPON_BTN_Y + Math.floor((WEAPON_BTN_H - 12) / 2);
+    this.container.addChild(this.torpedoBtnLabel);
+
+    const torpedoHit = new Graphics();
+    torpedoHit
+      .rect(torpedoX, WEAPON_BTN_Y, weaponBtnW, WEAPON_BTN_H)
+      .fill({ color: 0xffffff, alpha: 0 });
+    torpedoHit.eventMode = "static";
+    torpedoHit.cursor = "pointer";
+    torpedoHit.on("pointertap", () => {
+      this.engine.queueCommand({ type: "FIRE_TORPEDO" });
+    });
+    this.container.addChild(torpedoHit);
 
     // Tutorial text
     const tutStyle = new TextStyle({
@@ -607,6 +667,41 @@ export class InteriorView {
           .stroke({ color: 0x00eebb, width: 3 });
       }
     }
+
+    // ── Weapon buttons ───────────────────────────────────────────────────────
+
+    const deckGunRoom = state.rooms.find((r) => r.type === RoomType.DECK_GUN);
+    const deckGunCrewed = deckGunRoom !== undefined && deckGunRoom.crewIds.length > 0;
+    const deckGunReady =
+      state.player.depth === DepthBand.SURFACE &&
+      state.player.deckGunCooldown === 0 &&
+      deckGunCrewed;
+
+    const torpedoRoom = state.rooms.find((r) => r.type === RoomType.TORPEDO);
+    const torpedoCrewed = torpedoRoom !== undefined && torpedoRoom.crewIds.length > 0;
+    const torpedoReady =
+      state.player.torpedoCooldown === 0 &&
+      state.player.torpedoCount > 0 &&
+      torpedoCrewed &&
+      state.player.depth >= DepthBand.PERISCOPE &&
+      state.player.depth <= DepthBand.DEEP;
+
+    const weaponBtnW = Math.floor((PANEL_W - ROOM_MARGIN_X * 2 - DEPTH_BTN_GAP) / 2);
+
+    this.deckGunBtnGfx.clear();
+    this.deckGunBtnGfx
+      .rect(ROOM_MARGIN_X, WEAPON_BTN_Y, weaponBtnW, WEAPON_BTN_H)
+      .fill(deckGunReady ? 0x1a0808 : 0x0a0808)
+      .stroke({ color: deckGunReady ? 0xff3333 : 0x332222, width: deckGunReady ? 2 : 1 });
+    (this.deckGunBtnLabel.style as TextStyle).fill = deckGunReady ? 0xff8888 : 0x442222;
+
+    const weaponTorpedoX = ROOM_MARGIN_X + weaponBtnW + DEPTH_BTN_GAP;
+    this.torpedoBtnGfx.clear();
+    this.torpedoBtnGfx
+      .rect(weaponTorpedoX, WEAPON_BTN_Y, weaponBtnW, WEAPON_BTN_H)
+      .fill(torpedoReady ? 0x0e0d08 : 0x0a0a08)
+      .stroke({ color: torpedoReady ? 0xff8800 : 0x332200, width: torpedoReady ? 2 : 1 });
+    (this.torpedoBtnLabel.style as TextStyle).fill = torpedoReady ? 0xffaa44 : 0x443300;
 
     // Tutorial text
     this.tutorialText.text = TUTORIAL_TEXT[step];
