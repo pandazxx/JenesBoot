@@ -48,15 +48,7 @@ function runHeadless(
 
   const result = spawnSync(
     process.execPath,
-    [
-      RUNNER_PATH,
-      "--seed",
-      String(seed),
-      "--ticks",
-      String(ticks),
-      "--scenario",
-      scenario,
-    ],
+    [RUNNER_PATH, "--seed", String(seed), "--ticks", String(ticks), "--scenario", scenario],
     {
       encoding: "utf-8",
       timeout: 30_000,
@@ -123,10 +115,7 @@ describe(`surface-battle scenario — seed ${SEED}, ${TICKS} ticks`, () => {
     const log = runResult.parsed.log;
     const events = log.filter((e) => e.type === "range_change");
     if (events.length === 0) {
-      console.error(
-        "No range_change events found. Full log:",
-        JSON.stringify(log, null, 2),
-      );
+      console.error("No range_change events found. Full log:", JSON.stringify(log, null, 2));
     }
     expect(events.length).toBeGreaterThanOrEqual(1);
   });
