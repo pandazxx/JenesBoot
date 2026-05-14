@@ -19,17 +19,20 @@
 import { Mulberry32 } from "./prng.js";
 import type { SimEvent, SimState } from "./types.js";
 import type { CombatState } from "./combat/types.js";
-import { tickCombat, buildSurfaceBattleState } from "./combat/tick.js";
+import { RoomType } from "./combat/types.js";
+import { tickCombat, buildSurfaceBattleState, buildDestroyerDiveState } from "./combat/tick.js";
 import type { PlayerCommand } from "./combat/tick.js";
 
 export type { SimEvent, SimState } from "./types.js";
 export type { PlayerCommand } from "./combat/tick.js";
 
+export type CombatScenario = "surface_battle" | "destroyer_dive";
+
 /** Public interface for the simulation engine. */
 export interface ISimEngine {
   tick(): void;
   getState(): SimState;
-  startCombat(scenario: "surface_battle"): void;
+  startCombat(scenario: CombatScenario): void;
   queueCommand(cmd: PlayerCommand): void;
 }
 
@@ -48,31 +51,36 @@ class SimEngineImpl implements ISimEngine {
     this.rng = new Mulberry32(seed);
   }
 
-  /** Initialise a combat encounter for the named scenario. */
-  startCombat(scenario: "surface_battle"): void {
+  startCombat(scenario: CombatScenario): void {
     if (scenario === "surface_battle") {
       this.combatState = buildSurfaceBattleState();
-      // Seed the combat RNG independently so it is deterministic per seed
-      // without sharing state with the main RNG stream.
-      this.combatRng = new Mulberry32((this.seed ^ 0xdead) >>> 0);
+    } else if (scenario === "destroyer_dive") {
+      this.combatState = buildDestroyerDiveState();
     }
+    this.combatRng = new Mulberry32((this.seed ^ 0xdead) >>> 0);
   }
 
-  /** Queue a player command.
+  /**
+   * Queue a player command.
    *
-   * SET_SPEED is applied immediately and sticks across ticks — the player's
-   * chosen speed and direction persist until they change it again. This means
-   * the HUD updates even during pause and the setting is never overridden by
-   * the auto-pilot.
+   * SET_SPEED, SET_DEPTH, and ASSIGN_CREW are sticky: applied immediately so
+   * state is visible in getState() before the next tick.
    *
-   * ASSIGN_CREW is applied immediately and mutates crew/room state in place.
+   * SET_DEPTH is gated on bridge being crewed — ignored otherwise.
    *
-   * FIRE_DECK_GUN is one-shot: consumed on the next tick and then cleared.
+   * FIRE_* commands are one-shot: consumed on the next tick then cleared.
    */
   queueCommand(cmd: PlayerCommand): void {
     if (cmd.type === "SET_SPEED" && this.combatState !== null) {
       this.combatState.player.speed = cmd.speed;
       this.combatState.player.direction = cmd.direction;
+    } else if (cmd.type === "SET_DEPTH" && this.combatState !== null) {
+      const bridgeCrewed = this.combatState.rooms.some(
+        (r) => r.type === RoomType.BRIDGE && r.crewIds.length > 0,
+      );
+      if (bridgeCrewed) {
+        this.combatState.player.depthTarget = cmd.target;
+      }
     } else if (cmd.type === "ASSIGN_CREW" && this.combatState !== null) {
       const crew = this.combatState.crew.find((c) => c.id === cmd.crewId);
       if (crew) {
@@ -87,7 +95,6 @@ class SimEngineImpl implements ISimEngine {
     }
   }
 
-  /** Advance simulation by one tick. */
   tick(): void {
     this.currentTick += 1;
 
@@ -114,12 +121,10 @@ class SimEngineImpl implements ISimEngine {
       }
     } else {
       this.pendingCommand = null;
-      // Consume one RNG value per tick to keep main RNG state advancing
       void this.rng.next();
     }
   }
 
-  /** Return a snapshot of current simulation state. */
   getState(): SimState {
     return {
       tick: this.currentTick,
@@ -144,18 +149,10 @@ class SimEngineImpl implements ISimEngine {
   }
 }
 
-/**
- * SimEngine factory / constructor.
- *
- * Works both as a plain function call and with `new`:
- *   const engine = SimEngine(42);    // factory style
- *   const engine = new SimEngine(42); // constructor style
- */
 function SimEngineFactory(seed: number): ISimEngine {
   return new SimEngineImpl(seed);
 }
 
-/** Allow `new SimEngine(seed)` to also work. */
 SimEngineFactory.prototype = SimEngineImpl.prototype;
 
 export const SimEngine: {

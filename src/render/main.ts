@@ -15,15 +15,15 @@ async function main(): Promise<void> {
 
   document.body.appendChild(app.canvas);
 
-  await showLanding(app);
+  const scenario = await showLanding(app);
 
   const urlSeed = new URLSearchParams(window.location.search).get("seed");
   const seed = urlSeed !== null ? parseInt(urlSeed, 10) : 0;
 
   const engine = new SimEngine(seed);
-  engine.startCombat("surface_battle");
+  engine.startCombat(scenario);
 
-  showCombat(app, engine);
+  showCombat(app, engine, scenario);
 }
 
 main().catch((err: unknown) => {

@@ -6,7 +6,7 @@
 
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import type { CombatState } from "../sim/combat/types.js";
-import { RangeBand } from "../sim/combat/types.js";
+import { DepthBand, RangeBand } from "../sim/combat/types.js";
 import type { SimState } from "../sim/index.js";
 
 const RADAR_CX = 250;
@@ -35,6 +35,14 @@ const RANGE_NAMES: Record<number, string> = {
   [RangeBand.RAMMING]: "RAMMING",
 };
 
+const DEPTH_NAMES: Record<number, string> = {
+  [DepthBand.SURFACE]: "SURFACE",
+  [DepthBand.PERISCOPE]: "PERISCOPE",
+  [DepthBand.SHALLOW]: "SHALLOW",
+  [DepthBand.DEEP]: "DEEP",
+  [DepthBand.ABYSSAL]: "ABYSSAL",
+};
+
 function formatEvent(type: string, payload: unknown): string {
   const p = payload as Record<string, unknown>;
 
@@ -50,8 +58,9 @@ function formatEvent(type: string, payload: unknown): string {
 
     case "shot_fired": {
       const by = String(p["by"]);
+      const weapon = String(p["weapon"] ?? "deck gun");
       const range = RANGE_NAMES[p["range"] as number] ?? String(p["range"]);
-      return `Shot fired -- ${by} deck gun at ${range}`;
+      return `Shot fired -- ${by} ${weapon} at ${range}`;
     }
 
     case "shot_hit": {
@@ -64,7 +73,14 @@ function formatEvent(type: string, payload: unknown): string {
 
     case "shot_miss": {
       const by = String(p["by"]);
-      return `Miss -- ${by} deck gun`;
+      const weapon = String(p["weapon"] ?? "deck gun");
+      return `Miss -- ${by} ${weapon}`;
+    }
+
+    case "depth_change": {
+      const who = String(p["who"]);
+      const depth = DEPTH_NAMES[p["depth"] as number] ?? String(p["depth"]);
+      return `${who} depth: ${depth}`;
     }
 
     case "combat_end": {
@@ -82,7 +98,12 @@ export class RadarView {
   private radarGfx: Graphics;
   private enemyGfx: Graphics;
   private hpGfx: Graphics;
+  private depthText: Text;
   private logTexts: Text[];
+  private exportBtn: Text;
+  private exportFeedback: Text;
+  private feedbackTimer: number = 0;
+  private fullLog: SimState["log"] = [];
 
   constructor() {
     this.container = new Container();
@@ -112,6 +133,13 @@ export class RadarView {
     this.hpGfx = new Graphics();
     this.container.addChild(this.hpGfx);
 
+    // Depth indicator — top right of panel
+    const depthStyle = new TextStyle({ fontFamily: "monospace", fontSize: 11, fill: 0x00ccaa });
+    this.depthText = new Text({ text: "DEPTH: SURFACE", style: depthStyle });
+    this.depthText.x = 300;
+    this.depthText.y = 12;
+    this.container.addChild(this.depthText);
+
     // Event log — 6 lines
     const logStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x8899aa });
     this.logTexts = Array.from({ length: 6 }, (_, i) => {
@@ -121,6 +149,32 @@ export class RadarView {
       this.container.addChild(t);
       return t;
     });
+
+    // Export log button
+    const btnStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x446688 });
+    this.exportBtn = new Text({ text: "[ EXPORT LOG ]", style: btnStyle });
+    this.exportBtn.x = 370;
+    this.exportBtn.y = 518;
+    this.exportBtn.eventMode = "static";
+    this.exportBtn.cursor = "pointer";
+    this.exportBtn.on("pointerover", () => {
+      (this.exportBtn.style as TextStyle).fill = 0x88aacc;
+    });
+    this.exportBtn.on("pointerout", () => {
+      (this.exportBtn.style as TextStyle).fill = 0x446688;
+    });
+    this.exportBtn.on("pointerdown", () => {
+      this._exportLog();
+    });
+    this.container.addChild(this.exportBtn);
+
+    // "Copied!" feedback label
+    const fbStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x00ff88 });
+    this.exportFeedback = new Text({ text: "COPIED!", style: fbStyle });
+    this.exportFeedback.x = 370;
+    this.exportFeedback.y = 502;
+    this.exportFeedback.visible = false;
+    this.container.addChild(this.exportFeedback);
   }
 
   private _drawRadarBase(): void {
@@ -149,6 +203,14 @@ export class RadarView {
   }
 
   update(state: CombatState, simState: SimState): void {
+    // Depth indicator
+    const depthName = DEPTH_NAMES[state.player.depth] ?? "?";
+    const targetName =
+      state.player.depthTarget !== state.player.depth
+        ? ` -> ${DEPTH_NAMES[state.player.depthTarget] ?? "?"}`
+        : "";
+    this.depthText.text = `DEPTH: ${depthName}${targetName}`;
+
     // Enemy position based on range band
     const ringRadius = RING_RADII[state.range] ?? 0;
     const ex = RADAR_CX + ringRadius;
@@ -168,6 +230,9 @@ export class RadarView {
       this.hpGfx.rect(barX, barY, Math.round(60 * frac), 6).fill(0xff4444);
     }
 
+    // Keep a reference to the full log for export
+    this.fullLog = simState.log;
+
     // Event log — last 6 non-hello events, newest first
     const filtered = simState.log
       .filter((e) => e.type !== "hello")
@@ -186,5 +251,28 @@ export class RadarView {
       const tickStr = `[${String(ev.tick).padStart(3, "0")}]`;
       t.text = `${tickStr} ${formatEvent(ev.type, ev.payload)}`;
     }
+
+    // Feedback timer for "COPIED!" label
+    if (this.feedbackTimer > 0) {
+      this.feedbackTimer -= 1;
+      if (this.feedbackTimer === 0) this.exportFeedback.visible = false;
+    }
+  }
+
+  private _exportLog(): void {
+    const lines = this.fullLog.map((e) => {
+      const tickStr = `[${String(e.tick).padStart(3, "0")}]`;
+      const summary = formatEvent(e.type, e.payload);
+      const raw = JSON.stringify(e.payload);
+      return `${tickStr} ${e.type.padEnd(16)} ${summary}  ${raw}`;
+    });
+
+    const text =
+      `=== JenesBoot Combat Log  (${this.fullLog.length} events) ===\n` + lines.join("\n");
+
+    void navigator.clipboard.writeText(text).then(() => {
+      this.exportFeedback.visible = true;
+      this.feedbackTimer = 30;
+    });
   }
 }

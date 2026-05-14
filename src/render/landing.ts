@@ -1,12 +1,12 @@
 import { Application, Assets, Container, Sprite, Text, TextStyle } from "pixi.js";
+import type { CombatScenario } from "../sim/index.js";
 
 const BLINK_INTERVAL_MS = 800;
-const PROMPT_TEXT = "PRESS ANY KEY";
 
-export async function showLanding(app: Application): Promise<void> {
+export async function showLanding(app: Application): Promise<CombatScenario> {
   const texture = await Assets.load(import.meta.env.BASE_URL + "landing.png");
 
-  return new Promise<void>((resolve) => {
+  return new Promise<CombatScenario>((resolve) => {
     const container = new Container();
     app.stage.addChild(container);
 
@@ -25,25 +25,29 @@ export async function showLanding(app: Application): Promise<void> {
     fitToCanvas();
     container.addChild(sprite);
 
-    const style = new TextStyle({
+    const choiceStyle = new TextStyle({
       fontFamily: "monospace",
-      fontSize: 12,
+      fontSize: 13,
       fill: 0xe8e8e0,
-      letterSpacing: 3,
       align: "center",
     });
 
-    const promptText = new Text({ text: PROMPT_TEXT, style });
-    promptText.anchor.set(0.5, 1);
+    const choice1 = new Text({ text: "[1]  Surface Battle", style: choiceStyle });
+    const choice2 = new Text({ text: "[2]  Destroyer Dive", style: choiceStyle });
 
-    const positionPrompt = (): void => {
+    const positionChoices = (): void => {
       const { width: cw, height: ch } = app.renderer;
-      promptText.x = Math.round(cw / 2);
-      promptText.y = ch - 8;
+      choice1.anchor.set(0.5, 1);
+      choice2.anchor.set(0.5, 1);
+      choice1.x = Math.round(cw / 2);
+      choice1.y = ch - 36;
+      choice2.x = Math.round(cw / 2);
+      choice2.y = ch - 12;
     };
 
-    positionPrompt();
-    container.addChild(promptText);
+    positionChoices();
+    container.addChild(choice1);
+    container.addChild(choice2);
 
     let blinkVisible = true;
     let blinkAccum = 0;
@@ -53,36 +57,33 @@ export async function showLanding(app: Application): Promise<void> {
       if (blinkAccum >= BLINK_INTERVAL_MS) {
         blinkAccum -= BLINK_INTERVAL_MS;
         blinkVisible = !blinkVisible;
-        promptText.visible = blinkVisible;
+        choice1.visible = blinkVisible;
+        choice2.visible = blinkVisible;
       }
     };
 
     app.ticker.add(onTick);
 
-    const onKey = (): void => {
+    const cleanup = (scenario: CombatScenario): void => {
       app.ticker.remove(onTick);
       document.removeEventListener("keydown", onKey);
       app.stage.removeChild(container);
       container.destroy({ children: true });
-      window.dispatchEvent(new CustomEvent("jenesboooot:start"));
-      resolve();
+      resolve(scenario);
     };
 
-    document.addEventListener("keydown", onKey, { once: true });
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === "1") cleanup("surface_battle");
+      else if (e.key === "2") cleanup("destroyer_dive");
+    };
+
+    document.addEventListener("keydown", onKey);
 
     const onResize = (): void => {
       fitToCanvas();
-      positionPrompt();
+      positionChoices();
     };
 
     window.addEventListener("resize", onResize);
-
-    window.addEventListener(
-      "jenesboooot:start",
-      (): void => {
-        window.removeEventListener("resize", onResize);
-      },
-      { once: true },
-    );
   });
 }

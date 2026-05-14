@@ -5,7 +5,7 @@
  * No PixiJS, no DOM, no Math.random(), no wall-clock reads.
  */
 
-import { RangeBand, RoomType, SpeedSetting, SpeedDirection, DepthBand } from "./types.js";
+import { DepthBand, RangeBand, RoomType, SpeedSetting, SpeedDirection } from "./types.js";
 import type {
   CombatState,
   ShipState,
@@ -18,37 +18,44 @@ import type { Mulberry32 } from "../prng.js";
 import { contactQuality } from "./detection.js";
 import {
   resolveDeckGun,
+  resolveTorpedo,
   DECK_GUN_ACCURACY,
   DECK_GUN_DAMAGE,
   DECK_GUN_COOLDOWN_TICKS,
+  TORPEDO_ACCURACY,
+  TORPEDO_DAMAGE,
+  TORPEDO_COOLDOWN_TICKS,
+  TORPEDO_FLIGHT_TICKS,
 } from "./weapons.js";
-import { merchantAi, MERCHANT_RANGE_TICKS_PER_BAND } from "./ai.js";
+import {
+  merchantAi,
+  destroyerAi,
+  MERCHANT_RANGE_TICKS_PER_BAND,
+  DESTROYER_RANGE_TICKS_PER_BAND,
+} from "./ai.js";
 
-/**
- * How many ticks it takes to close/open one range band for each speed setting.
- * Player uses these values; enemy merchant uses MERCHANT_RANGE_TICKS_PER_BAND.
- */
 const PLAYER_RANGE_TICKS: Record<SpeedSetting, number> = {
   [SpeedSetting.SILENT]: 25,
   [SpeedSetting.STANDARD]: 15,
   [SpeedSetting.AHEAD_FULL]: 10,
 };
 
-/**
- * Ticks for a projectile to fly from one ship to the other.
- * Flat value — we resolve on the following tick.
- */
-const PROJECTILE_FLIGHT_TICKS = 1;
+// Speed weight for net-direction calculation: faster ships exert more force.
+const SPEED_WEIGHT: Record<SpeedSetting, number> = {
+  [SpeedSetting.SILENT]: 1,
+  [SpeedSetting.STANDARD]: 2,
+  [SpeedSetting.AHEAD_FULL]: 3,
+};
 
-/**
- * Minimum contact quality required to fire weapons.
- */
+const DECK_GUN_FLIGHT_TICKS = 1;
 const TRACKING_THRESHOLD = 4;
+const DEPTH_TICKS_PER_BAND = 6;
 
-/** Scripted player command for the surface-battle scenario. */
 export type PlayerCommand =
   | { type: "SET_SPEED"; speed: SpeedSetting; direction: SpeedDirection }
+  | { type: "SET_DEPTH"; target: DepthBand }
   | { type: "FIRE_DECK_GUN" }
+  | { type: "FIRE_TORPEDO" }
   | { type: "NONE" }
   | { type: "ASSIGN_CREW"; crewId: string; roomId: string };
 
@@ -77,32 +84,48 @@ function applyCommand(
   }
 }
 
-/**
- * Compute effective range ticks needed for a ship to traverse one band.
- * Uses the ship's current speed setting. enemyMerchant flag switches to
- * the slower merchant rate.
- */
-function rangeTicksNeeded(ship: ShipState, isEnemy: boolean): number {
-  if (isEnemy) return MERCHANT_RANGE_TICKS_PER_BAND;
+function rangeTicksNeeded(ship: ShipState, isEnemy: boolean, scenario: string): number {
+  if (isEnemy) {
+    return scenario === "destroyer_dive"
+      ? DESTROYER_RANGE_TICKS_PER_BAND
+      : MERCHANT_RANGE_TICKS_PER_BAND;
+  }
   return PLAYER_RANGE_TICKS[ship.speed] ?? 15;
 }
 
-/**
- * Advance the range band by one step in the given direction.
- * Returns the new range clamped to [RAMMING, LONG].
- */
 function shiftRange(current: RangeBand, direction: SpeedDirection): RangeBand {
-  // direction: CLOSE (+1) reduces range numerically; OPEN (-1) increases it
   const next = current - direction;
   return Math.max(RangeBand.RAMMING, Math.min(RangeBand.LONG, next)) as RangeBand;
 }
 
-/**
- * Determine whether a ship can fire its deck gun at the current range.
- * LONG range is out of range for surface deck guns.
- */
 function deckGunInRange(range: RangeBand): boolean {
   return range < RangeBand.LONG;
+}
+
+function torpedoInRange(range: RangeBand): boolean {
+  return range <= RangeBand.MEDIUM;
+}
+
+/**
+ * Advance one depth band toward depthTarget.
+ * Returns the new depth if a band shift occurred this tick, otherwise null.
+ */
+function advanceDepth(ship: ShipState): DepthBand | null {
+  if (ship.depth === ship.depthTarget) return null;
+
+  if (ship.depthTransitionTicks === 0) {
+    ship.depthTransitionTicks = DEPTH_TICKS_PER_BAND;
+  }
+
+  ship.depthTransitionTicks -= 1;
+
+  if (ship.depthTransitionTicks === 0) {
+    const dir = ship.depthTarget > ship.depth ? 1 : -1;
+    ship.depth = (ship.depth + dir) as DepthBand;
+    return ship.depth;
+  }
+
+  return null;
 }
 
 export function tickCombat(
@@ -128,11 +151,7 @@ export function tickCombat(
       target.hullHP = Math.max(0, target.hullHP - proj.damage);
       events.push({
         type: "shot_hit",
-        payload: {
-          by: proj.firedBy,
-          damage: proj.damage,
-          targetHP: target.hullHP,
-        },
+        payload: { by: proj.firedBy, damage: proj.damage, targetHP: target.hullHP },
       });
     } else {
       stillInFlight.push(proj);
@@ -141,9 +160,10 @@ export function tickCombat(
   s.inFlight = stillInFlight;
 
   // -------------------------------------------------------------------------
-  // Step 2: Apply resource costs — cooldowns tick down
+  // Step 2: Cooldowns tick down
   // -------------------------------------------------------------------------
   if (s.player.deckGunCooldown > 0) s.player.deckGunCooldown -= 1;
+  if (s.player.torpedoCooldown > 0) s.player.torpedoCooldown -= 1;
   if (s.enemy.deckGunCooldown > 0) s.enemy.deckGunCooldown -= 1;
   if (s.playerFiredTicks > 0) {
     s.playerFiredTicks -= 1;
@@ -155,28 +175,29 @@ export function tickCombat(
   }
 
   // -------------------------------------------------------------------------
-  // Step 3: Process player command
-  // Speed/direction is already sticky — SET_SPEED is applied immediately in
-  // SimEngine.queueCommand() and persists in s.player across ticks. Nothing
-  // to do here for movement. Only fire commands arrive as playerCmd.
+  // Step 3: Fire commands arrive via playerCmd; speed/depth are sticky
   // -------------------------------------------------------------------------
 
   // -------------------------------------------------------------------------
-  // Step 4: Process enemy AI
+  // Step 4: Enemy AI
   // -------------------------------------------------------------------------
-  const enemyCmd = merchantAi(s.enemy, s.range, s.enemy.maxHullHP);
+  const enemyCmd =
+    s.scenario === "destroyer_dive"
+      ? destroyerAi(s.enemy, s.range, s.player.depth)
+      : merchantAi(s.enemy, s.range, s.enemy.maxHullHP);
+
   if (enemyCmd.type === "SET_SPEED") {
     applyCommand(s.enemy, enemyCmd);
   }
 
   // -------------------------------------------------------------------------
-  // Step 5: Advance range based on net direction of both ships
+  // Step 5: Advance range
   // -------------------------------------------------------------------------
-  // Net direction: player's direction dominates (they are the active party).
-  // Enemy OPEN cancels player CLOSE partially — simplest: sum directions,
-  // clamp to [-1, 1]. When enemy flees (OPEN), it opposes player CLOSE.
-  const netDirectionRaw = s.player.direction + s.enemy.direction;
-  // Clamp net direction to -1, 0, +1
+  // Speed-weighted net direction: AHEAD_FULL beats STANDARD beats SILENT.
+  // This lets a destroyer outrun a standard-speed submarine.
+  const playerWeight = (SPEED_WEIGHT[s.player.speed] ?? 2) * s.player.direction;
+  const enemyWeight = (SPEED_WEIGHT[s.enemy.speed] ?? 2) * s.enemy.direction;
+  const netDirectionRaw = playerWeight + enemyWeight;
   const netDirection: SpeedDirection =
     netDirectionRaw > 0
       ? SpeedDirection.CLOSE
@@ -185,18 +206,14 @@ export function tickCombat(
         : SpeedDirection.HOLD;
 
   if (netDirection !== SpeedDirection.HOLD) {
-    // Accumulate ticks for the faster of the two ships (AHEAD_FULL player drives)
     s.player.rangeTicksAccumulator += 1;
-    const needed = rangeTicksNeeded(s.player, false);
+    const needed = rangeTicksNeeded(s.player, false, s.scenario);
     if (s.player.rangeTicksAccumulator >= needed) {
       s.player.rangeTicksAccumulator -= needed;
       const prevRange = s.range;
       s.range = shiftRange(s.range, netDirection);
       if (s.range !== prevRange) {
-        events.push({
-          type: "range_change",
-          payload: { from: prevRange, to: s.range },
-        });
+        events.push({ type: "range_change", payload: { from: prevRange, to: s.range } });
       }
     }
   } else {
@@ -204,28 +221,33 @@ export function tickCombat(
   }
 
   // -------------------------------------------------------------------------
-  // Step 6: Advance depth transitions (no-op for surface battle)
+  // Step 6: Advance depth transitions
   // -------------------------------------------------------------------------
-  // Both ships remain at SURFACE — nothing to do here for this scenario.
-  // Depth transition logic placeholder for future submerged scenarios.
-  if (s.player.depthTransitionTicks > 0) s.player.depthTransitionTicks -= 1;
-  if (s.enemy.depthTransitionTicks > 0) s.enemy.depthTransitionTicks -= 1;
+  const playerNewDepth = advanceDepth(s.player);
+  if (playerNewDepth !== null) {
+    events.push({ type: "depth_change", payload: { who: "player", depth: playerNewDepth } });
+  }
+
+  const enemyNewDepth = advanceDepth(s.enemy);
+  if (enemyNewDepth !== null) {
+    events.push({ type: "depth_change", payload: { who: "enemy", depth: enemyNewDepth } });
+  }
 
   // -------------------------------------------------------------------------
-  // Step 7: Fire weapons — player then enemy
+  // Step 7: Fire weapons
   // -------------------------------------------------------------------------
 
-  // Player fires — triggered by explicit fire command or auto-fire when in
-  // range and cooldown is ready. Auto-fire is the fallback so the game
-  // remains functional even without manual input.
-  // Crew in DECK_GUN room is required to fire.
+  // Player deck gun — surface only, requires DECK_GUN room crew
   const deckGunCrewed = s.rooms.some((r) => r.type === RoomType.DECK_GUN && r.crewIds.length > 0);
-  const playerWantsToFire =
+  const playerAtSurface = s.player.depth === DepthBand.SURFACE;
+  const playerWantsDeckGun =
     playerCmd?.type === "FIRE_DECK_GUN" ||
-    (s.player.deckGunCooldown === 0 && deckGunInRange(s.range));
+    (s.player.deckGunCooldown === 0 && deckGunInRange(s.range) && playerAtSurface);
+
   if (
     deckGunCrewed &&
-    playerWantsToFire &&
+    playerAtSurface &&
+    playerWantsDeckGun &&
     deckGunInRange(s.range) &&
     s.player.deckGunCooldown === 0 &&
     contactQuality(s.player, s.enemy, s.range) >= TRACKING_THRESHOLD
@@ -239,21 +261,59 @@ export function tickCombat(
     s.player.deckGunCooldown = DECK_GUN_COOLDOWN_TICKS;
     s.player.acousticSigOverride = 1;
     s.playerFiredTicks = 5;
-
     if (hit) {
       s.inFlight.push({
         firedBy: "player",
         damage: DECK_GUN_DAMAGE,
-        arrivesOnTick: currentTick + PROJECTILE_FLIGHT_TICKS,
+        arrivesOnTick: currentTick + DECK_GUN_FLIGHT_TICKS,
       });
     } else {
-      events.push({ type: "shot_miss", payload: { by: "player" } });
+      events.push({ type: "shot_miss", payload: { by: "player", weapon: "deck_gun" } });
     }
   }
 
-  // Enemy fires
+  // Player torpedo — requires TORPEDO room crew, depth PERISCOPE–DEEP, range ≤ MEDIUM
+  const torpedoCrewed = s.rooms.some((r) => r.type === RoomType.TORPEDO && r.crewIds.length > 0);
+  const playerSubmerged = s.player.depth >= DepthBand.PERISCOPE && s.player.depth <= DepthBand.DEEP;
+  const playerWantsTorpedo =
+    playerCmd?.type === "FIRE_TORPEDO" ||
+    (s.player.torpedoCooldown === 0 && torpedoInRange(s.range) && playerSubmerged);
+
+  if (
+    torpedoCrewed &&
+    playerSubmerged &&
+    playerWantsTorpedo &&
+    torpedoInRange(s.range) &&
+    s.player.torpedoCooldown === 0 &&
+    s.player.torpedoCount > 0 &&
+    contactQuality(s.player, s.enemy, s.range) >= TRACKING_THRESHOLD
+  ) {
+    const accuracy = TORPEDO_ACCURACY[s.range] ?? 0;
+    const hit = resolveTorpedo(accuracy, s.enemy.evasion, rng);
+    events.push({
+      type: "shot_fired",
+      payload: { by: "player", weapon: "torpedo", range: s.range },
+    });
+    s.player.torpedoCooldown = TORPEDO_COOLDOWN_TICKS;
+    s.player.torpedoCount -= 1;
+    s.player.acousticSigOverride = 1;
+    s.playerFiredTicks = 5;
+    if (hit) {
+      s.inFlight.push({
+        firedBy: "player",
+        damage: TORPEDO_DAMAGE,
+        arrivesOnTick: currentTick + TORPEDO_FLIGHT_TICKS,
+      });
+    } else {
+      events.push({ type: "shot_miss", payload: { by: "player", weapon: "torpedo" } });
+    }
+  }
+
+  // Enemy deck gun — fires only when player is at SURFACE
+  const enemyTargetSurface = s.player.depth === DepthBand.SURFACE;
   if (
     enemyCmd.type === "FIRE_DECK_GUN" &&
+    enemyTargetSurface &&
     deckGunInRange(s.range) &&
     s.enemy.deckGunCooldown === 0 &&
     contactQuality(s.enemy, s.player, s.range) >= TRACKING_THRESHOLD
@@ -267,37 +327,30 @@ export function tickCombat(
     s.enemy.deckGunCooldown = DECK_GUN_COOLDOWN_TICKS;
     s.enemy.acousticSigOverride = 1;
     s.enemyFiredTicks = 5;
-
     if (hit) {
       s.inFlight.push({
         firedBy: "enemy",
         damage: DECK_GUN_DAMAGE,
-        arrivesOnTick: currentTick + PROJECTILE_FLIGHT_TICKS,
+        arrivesOnTick: currentTick + DECK_GUN_FLIGHT_TICKS,
       });
     } else {
-      events.push({ type: "shot_miss", payload: { by: "enemy" } });
+      events.push({ type: "shot_miss", payload: { by: "enemy", weapon: "deck_gun" } });
     }
   }
 
   // -------------------------------------------------------------------------
-  // Step 8: Apply damage — already applied in step 1 when projectiles landed
+  // Step 8: Damage applied in step 1
   // -------------------------------------------------------------------------
 
   // -------------------------------------------------------------------------
-  // Step 9: Check win/lose conditions
+  // Step 9: Win/lose conditions
   // -------------------------------------------------------------------------
   if (s.player.hullHP <= 0) {
     s.result = "player_lose";
-    events.push({
-      type: "combat_end",
-      payload: { result: "player_lose", atTick: currentTick },
-    });
+    events.push({ type: "combat_end", payload: { result: "player_lose", atTick: currentTick } });
   } else if (s.enemy.hullHP <= 0) {
     s.result = "player_win";
-    events.push({
-      type: "combat_end",
-      payload: { result: "player_win", atTick: currentTick },
-    });
+    events.push({ type: "combat_end", payload: { result: "player_win", atTick: currentTick } });
   }
 
   // -------------------------------------------------------------------------
@@ -306,9 +359,7 @@ export function tickCombat(
   return { newState: s, events };
 }
 
-/**
- * Build the initial CombatState for the surface_battle scenario.
- */
+/** Build the initial CombatState for the surface_battle scenario. */
 export function buildSurfaceBattleState(): CombatState {
   const player: ShipState = {
     hullHP: 20,
@@ -320,6 +371,8 @@ export function buildSurfaceBattleState(): CombatState {
     direction: SpeedDirection.CLOSE,
     rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
+    torpedoCooldown: 0,
+    torpedoCount: 4,
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 10,
@@ -335,6 +388,8 @@ export function buildSurfaceBattleState(): CombatState {
     direction: SpeedDirection.HOLD,
     rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
+    torpedoCooldown: 0,
+    torpedoCount: 0,
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 5,
@@ -344,9 +399,73 @@ export function buildSurfaceBattleState(): CombatState {
   const rooms: Room[] = [
     { id: "bridge", type: RoomType.BRIDGE, crewIds: ["mate"] },
     { id: "deck_gun", type: RoomType.DECK_GUN, crewIds: [] },
+    { id: "engine", type: RoomType.ENGINE, crewIds: [] },
+    { id: "torpedo", type: RoomType.TORPEDO, crewIds: [] },
   ];
 
   return {
+    scenario: "surface_battle",
+    range: RangeBand.LONG,
+    player,
+    enemy,
+    inFlight: [],
+    result: "ongoing",
+    playerFiredTicks: 0,
+    enemyFiredTicks: 0,
+    crew,
+    rooms,
+  };
+}
+
+/** Build the initial CombatState for the destroyer_dive scenario. */
+export function buildDestroyerDiveState(): CombatState {
+  const player: ShipState = {
+    hullHP: 20,
+    maxHullHP: 20,
+    depth: DepthBand.SURFACE,
+    depthTarget: DepthBand.SURFACE,
+    depthTransitionTicks: 0,
+    speed: SpeedSetting.STANDARD,
+    direction: SpeedDirection.HOLD,
+    rangeTicksAccumulator: 0,
+    deckGunCooldown: 0,
+    torpedoCooldown: 0,
+    torpedoCount: 4,
+    acousticSig: 4,
+    acousticSigOverride: 0,
+    evasion: 10,
+  };
+
+  const enemy: ShipState = {
+    hullHP: 10,
+    maxHullHP: 10,
+    depth: DepthBand.SURFACE,
+    depthTarget: DepthBand.SURFACE,
+    depthTransitionTicks: 0,
+    speed: SpeedSetting.AHEAD_FULL,
+    direction: SpeedDirection.CLOSE,
+    rangeTicksAccumulator: 0,
+    deckGunCooldown: 0,
+    torpedoCooldown: 0,
+    torpedoCount: 0,
+    acousticSig: 5,
+    acousticSigOverride: 0,
+    evasion: 8,
+  };
+
+  const crew: CrewMember[] = [
+    { id: "mate", name: "Mate", roomId: "bridge" },
+    { id: "engineer", name: "Engineer", roomId: "engine" },
+  ];
+  const rooms: Room[] = [
+    { id: "bridge", type: RoomType.BRIDGE, crewIds: ["mate"] },
+    { id: "deck_gun", type: RoomType.DECK_GUN, crewIds: [] },
+    { id: "engine", type: RoomType.ENGINE, crewIds: ["engineer"] },
+    { id: "torpedo", type: RoomType.TORPEDO, crewIds: [] },
+  ];
+
+  return {
+    scenario: "destroyer_dive",
     range: RangeBand.LONG,
     player,
     enemy,
