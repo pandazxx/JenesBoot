@@ -231,6 +231,9 @@ export function tickCombat(
 
   if (enemyCmd.type === "SET_SPEED") {
     applyCommand(s.enemy, enemyCmd);
+  } else if (enemyCmd.type === "FIRE_BLIND_SHOT") {
+    // Blind shots are fired from a stationary search pattern — stop closing.
+    s.enemy.direction = SpeedDirection.HOLD;
   }
 
   // -------------------------------------------------------------------------
