@@ -91,15 +91,17 @@ export function gunboatAi(
     };
   }
 
-  // Searching: lost contact — close toward lastKnownRange, fire blind if at that range
+  // Searching: lost contact — always close in to regain visual.
+  // Fire blind shots when passing through lastKnownRange (periscope tip may still be there).
   if (range === lastKnownRange && blindShotsFired < 3 && enemy.deckGunCooldown === 0) {
     return { type: "FIRE_BLIND_SHOT" };
   }
 
-  const moveDirection = range > lastKnownRange ? SpeedDirection.CLOSE : SpeedDirection.OPEN;
+  // Never back off — keep pressing in regardless of lastKnownRange.
+  // At SHORT the periscope becomes visible again (CQ=4) and TRACKING resumes.
   return {
     type: "SET_SPEED",
     speed: SpeedSetting.AHEAD_FULL,
-    direction: moveDirection,
+    direction: SpeedDirection.CLOSE,
   };
 }
