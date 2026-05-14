@@ -192,9 +192,25 @@ export function tickCombat(
   // -------------------------------------------------------------------------
   const enemyCQ = contactQuality(s.enemy, s.player, s.range);
 
-  if (enemyCQ >= 4) {
+  const wasTracking = s.enemyTracking;
+  if (enemyCQ >= TRACKING_THRESHOLD) {
     s.enemyLastKnownRange = s.range;
     s.enemyBlindShotsFired = 0;
+    s.enemyTracking = true;
+    if (!wasTracking) {
+      events.push({
+        type: "enemy_spotted",
+        payload: { range: s.range, playerDepth: s.player.depth },
+      });
+    }
+  } else {
+    s.enemyTracking = false;
+    if (wasTracking) {
+      events.push({
+        type: "enemy_contact_lost",
+        payload: { lastKnownRange: s.enemyLastKnownRange },
+      });
+    }
   }
 
   let enemyCmd;
@@ -504,6 +520,7 @@ export function buildSurfaceBattleState(): CombatState {
     rooms,
     enemyLastKnownRange: RangeBand.LONG,
     enemyBlindShotsFired: 0,
+    enemyTracking: false,
     escapeAccumulator: 0,
   };
 }
@@ -570,6 +587,7 @@ export function buildDestroyerDiveState(): CombatState {
     rooms,
     enemyLastKnownRange: RangeBand.LONG,
     enemyBlindShotsFired: 0,
+    enemyTracking: false,
     escapeAccumulator: 0,
   };
 }
@@ -637,6 +655,7 @@ export function buildGunboatHuntState(): CombatState {
     rooms,
     enemyLastKnownRange: RangeBand.LONG,
     enemyBlindShotsFired: 0,
+    enemyTracking: false,
     escapeAccumulator: 0,
   };
 }

@@ -11,7 +11,7 @@
  * Defaults to surface_battle.
  */
 
-import { Application, Graphics, Text, TextStyle } from "pixi.js";
+import { Application, Graphics } from "pixi.js";
 import { SimEngine, type CombatScenario } from "../sim/index.js";
 import type { ISimEngine } from "../sim/index.js";
 import { DepthBand, SpeedSetting, SpeedDirection } from "../sim/combat/types.js";
@@ -42,7 +42,9 @@ function readScenario(): CombatScenario {
 export function showCombat(app: Application, engine: ISimEngine, scenario: CombatScenario): void {
   app.stage.removeChildren();
 
-  const interiorView = new InteriorView(engine);
+  const interiorView = new InteriorView(engine, () => {
+    paused = !paused;
+  });
   const radarView = new RadarView();
 
   interiorView.container.x = 0;
@@ -51,23 +53,15 @@ export function showCombat(app: Application, engine: ISimEngine, scenario: Comba
   const divider = new Graphics();
   divider.rect(459, 0, 2, 540).fill(0x334455);
 
-  const pauseStyle = new TextStyle({ fontFamily: "monospace", fontSize: 16, fill: 0xffdd44 });
-  const pauseLabel = new Text({ text: "|| PAUSED  [SPACE to resume]", style: pauseStyle });
-  pauseLabel.x = 8;
-  pauseLabel.y = 520;
-  pauseLabel.visible = false;
-  app.stage.addChild(pauseLabel);
-
   app.stage.addChild(interiorView.container);
   app.stage.addChild(radarView.container);
   app.stage.addChild(divider);
-  app.stage.addChild(pauseLabel);
 
   app.stage.eventMode = "static";
 
   let timeSinceLastTick = 0;
   let elapsed = 0;
-  let paused = false;
+  let paused = true;
 
   function tickerCallback(ticker: { deltaMS: number }): void {
     if (!paused) {
@@ -79,13 +73,11 @@ export function showCombat(app: Application, engine: ISimEngine, scenario: Comba
       }
     }
 
-    pauseLabel.visible = paused;
-
     const state = engine.getState();
     const combat: CombatState | null = state.combat ?? null;
     if (combat !== null) {
       const step = getTutorialStep(combat, scenario);
-      interiorView.update(combat, step, elapsed);
+      interiorView.update(combat, step, elapsed, paused);
       radarView.update(combat, state);
     }
   }

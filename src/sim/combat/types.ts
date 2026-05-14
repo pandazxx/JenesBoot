@@ -95,6 +95,7 @@ export interface CombatState {
   rooms: Room[];
   enemyLastKnownRange: RangeBand;
   enemyBlindShotsFired: number;
+  enemyTracking: boolean;
   escapeAccumulator: number;
 }
 
@@ -111,7 +112,9 @@ export type CombatEventType =
   | "shot_fired"
   | "shot_hit"
   | "shot_miss"
-  | "combat_end";
+  | "combat_end"
+  | "enemy_spotted"
+  | "enemy_contact_lost";
 
 export interface CombatEvent {
   type: CombatEventType;

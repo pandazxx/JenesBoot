@@ -7,7 +7,7 @@
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import type { ISimEngine } from "../sim/index.js";
 import type { CombatState } from "../sim/combat/types.js";
-import { DepthBand, RoomType, SpeedSetting } from "../sim/combat/types.js";
+import { DepthBand, RoomType, SpeedSetting, SpeedDirection } from "../sim/combat/types.js";
 import type { TutorialStep } from "./tutorial.js";
 import { TUTORIAL_TEXT } from "./tutorial.js";
 
@@ -28,18 +28,33 @@ const DASH_HP_BAR_W = 302;
 const DASH_HP_BAR_H = 12;
 
 const ROW_HP_LABEL = 150;
-const ROW_HP_BAR = 165;
-const ROW_HP_VALUE = 180;
-const ROW_DEPTH = 203;
-const ROW_SPEED = 226;
-const ROW_COURSE = 249;
-const ROW_TORPEDO = 272;
+const ROW_HP_BAR = 163;
+const ROW_HP_VALUE = 178;
+const ROW_DEPTH = 197;
+const ROW_TORPEDO = 215;
+
+// Speed control buttons
+const SPEED_CTRL_Y = 237;
+const SPEED_BTN_Y = 251;
+const SPEED_BTN_H = 24;
+
+// Direction control buttons
+const DIR_CTRL_Y = 285;
+const DIR_BTN_Y = 299;
+const DIR_BTN_H = 24;
+
+// Pause button
+const PAUSE_BTN_Y = 333;
+const PAUSE_BTN_H = 24;
 
 // Depth selector
-const DEPTH_CTRL_Y = 304;
-const DEPTH_BTN_Y = 319;
-const DEPTH_BTN_H = 26;
+const DEPTH_CTRL_Y = 367;
+const DEPTH_BTN_Y = 381;
+const DEPTH_BTN_H = 24;
 const DEPTH_BTN_GAP = 5;
+
+// Tutorial text
+const TUTORIAL_Y = 430;
 
 const DEPTH_BANDS = [
   DepthBand.SURFACE,
@@ -57,12 +72,6 @@ const DEPTH_NAMES: Record<number, string> = {
   [DepthBand.SHALLOW]: "SHALLOW",
   [DepthBand.DEEP]: "DEEP",
   [DepthBand.ABYSSAL]: "ABYSSAL",
-};
-
-const SPEED_NAMES: Record<number, string> = {
-  [SpeedSetting.SILENT]: "SILENT",
-  [SpeedSetting.STANDARD]: "STANDARD",
-  [SpeedSetting.AHEAD_FULL]: "AHEAD FULL",
 };
 
 const ROOM_LABELS: Record<RoomType, string> = {
@@ -91,6 +100,13 @@ interface DepthBtn {
   band: DepthBand;
 }
 
+interface TripleBtn {
+  gfx: Graphics;
+  label: Text;
+  x: number;
+  w: number;
+}
+
 function buildRoomLayout(rooms: readonly { id: string; type: RoomType }[]): RoomLayout[] {
   const count = rooms.length;
   const totalW = PANEL_W - ROOM_MARGIN_X * 2;
@@ -114,6 +130,50 @@ function makeValueStyle(): TextStyle {
   return new TextStyle({ fontFamily: "monospace", fontSize: 11, fill: 0xffffff });
 }
 
+function makeBtnLabelStyle(active: boolean): TextStyle {
+  return new TextStyle({
+    fontFamily: "monospace",
+    fontSize: 9,
+    fill: active ? 0xffffff : 0x668899,
+  });
+}
+
+function buildThreeButtons(
+  container: Container,
+  btnY: number,
+  btnH: number,
+  labels: [string, string, string],
+  onTap: (index: number) => void,
+): TripleBtn[] {
+  const totalW = PANEL_W - ROOM_MARGIN_X * 2;
+  const btnW = Math.floor((totalW - DEPTH_BTN_GAP * 2) / 3);
+  const btns: TripleBtn[] = [];
+
+  for (let i = 0; i < 3; i++) {
+    const bx = ROOM_MARGIN_X + i * (btnW + DEPTH_BTN_GAP);
+
+    const gfx = new Graphics();
+    container.addChild(gfx);
+
+    const labelText = new Text({ text: labels[i] ?? "", style: makeBtnLabelStyle(false) });
+    labelText.x = bx + 4;
+    labelText.y = btnY + 8;
+    container.addChild(labelText);
+
+    const hitArea = new Graphics();
+    hitArea.rect(bx, btnY, btnW, btnH).fill({ color: 0xffffff, alpha: 0 });
+    hitArea.eventMode = "static";
+    hitArea.cursor = "pointer";
+    const idx = i;
+    hitArea.on("pointertap", () => onTap(idx));
+    container.addChild(hitArea);
+
+    btns.push({ gfx, label: labelText, x: bx, w: btnW });
+  }
+
+  return btns;
+}
+
 export class InteriorView {
   readonly container: Container;
   private engine: ISimEngine;
@@ -128,8 +188,17 @@ export class InteriorView {
   private hpBar: Graphics;
   private hpValue: Text;
   private depthValue: Text;
-  private speedValue: Text;
   private torpedoValue: Text;
+
+  // Speed buttons
+  private speedBtns: TripleBtn[];
+
+  // Direction buttons
+  private dirBtns: TripleBtn[];
+
+  // Pause button
+  private pauseBtnGfx: Graphics;
+  private pauseBtnLabel: Text;
 
   // Depth selector
   private depthBtns: DepthBtn[] = [];
@@ -137,7 +206,7 @@ export class InteriorView {
 
   private tutorialText: Text;
 
-  constructor(engine: ISimEngine) {
+  constructor(engine: ISimEngine, onPauseToggle: () => void) {
     this.engine = engine;
     this.container = new Container();
 
@@ -216,28 +285,6 @@ export class InteriorView {
     this.depthValue.y = ROW_DEPTH;
     this.container.addChild(this.depthValue);
 
-    // SPEED stat row
-    const speedLabel = new Text({ text: "SPEED", style: makeLabelStyle() });
-    speedLabel.x = DASH_LABEL_X;
-    speedLabel.y = ROW_SPEED;
-    this.container.addChild(speedLabel);
-
-    this.speedValue = new Text({ text: "", style: makeValueStyle() });
-    this.speedValue.x = DASH_VALUE_X;
-    this.speedValue.y = ROW_SPEED;
-    this.container.addChild(this.speedValue);
-
-    // COURSE stat row (fixed for now)
-    const courseLabel = new Text({ text: "COURSE", style: makeLabelStyle() });
-    courseLabel.x = DASH_LABEL_X;
-    courseLabel.y = ROW_COURSE;
-    this.container.addChild(courseLabel);
-
-    const courseValue = new Text({ text: "270°", style: makeValueStyle() });
-    courseValue.x = DASH_VALUE_X;
-    courseValue.y = ROW_COURSE;
-    this.container.addChild(courseValue);
-
     // TORPEDO count row
     const torpLabel = new Text({ text: "TORPEDO", style: makeLabelStyle() });
     torpLabel.x = DASH_LABEL_X;
@@ -249,6 +296,80 @@ export class InteriorView {
     this.torpedoValue.y = ROW_TORPEDO;
     this.container.addChild(this.torpedoValue);
 
+    // ── Speed control buttons ────────────────────────────────────────────────
+
+    const speedCtrlLabel = new Text({ text: "SPEED", style: makeLabelStyle() });
+    speedCtrlLabel.x = DASH_LABEL_X;
+    speedCtrlLabel.y = SPEED_CTRL_Y;
+    this.container.addChild(speedCtrlLabel);
+
+    const speedValues: SpeedSetting[] = [
+      SpeedSetting.SILENT,
+      SpeedSetting.STANDARD,
+      SpeedSetting.AHEAD_FULL,
+    ];
+    this.speedBtns = buildThreeButtons(
+      this.container,
+      SPEED_BTN_Y,
+      SPEED_BTN_H,
+      ["SILENT", "STANDARD", "AHEAD FULL"],
+      (idx) => {
+        const speed = speedValues[idx] ?? SpeedSetting.STANDARD;
+        const direction = this.engine.getState().combat?.player.direction ?? SpeedDirection.HOLD;
+        this.engine.queueCommand({ type: "SET_SPEED", speed, direction });
+      },
+    );
+
+    // ── Direction control buttons ────────────────────────────────────────────
+
+    const dirCtrlLabel = new Text({ text: "DIRECTION", style: makeLabelStyle() });
+    dirCtrlLabel.x = DASH_LABEL_X;
+    dirCtrlLabel.y = DIR_CTRL_Y;
+    this.container.addChild(dirCtrlLabel);
+
+    const dirValues: SpeedDirection[] = [
+      SpeedDirection.OPEN,
+      SpeedDirection.HOLD,
+      SpeedDirection.CLOSE,
+    ];
+    this.dirBtns = buildThreeButtons(
+      this.container,
+      DIR_BTN_Y,
+      DIR_BTN_H,
+      ["◄ OPEN", "● HOLD", "► CLOSE"],
+      (idx) => {
+        const direction = dirValues[idx] ?? SpeedDirection.HOLD;
+        const speed = this.engine.getState().combat?.player.speed ?? SpeedSetting.STANDARD;
+        this.engine.queueCommand({ type: "SET_SPEED", speed, direction });
+      },
+    );
+
+    // ── Pause button ─────────────────────────────────────────────────────────
+
+    const totalW = PANEL_W - ROOM_MARGIN_X * 2;
+
+    this.pauseBtnGfx = new Graphics();
+    this.container.addChild(this.pauseBtnGfx);
+
+    const pauseLabelStyle = new TextStyle({
+      fontFamily: "monospace",
+      fontSize: 9,
+      fill: 0x668899,
+    });
+    this.pauseBtnLabel = new Text({ text: "⏸ PAUSE", style: pauseLabelStyle });
+    this.pauseBtnLabel.x = ROOM_MARGIN_X + 4;
+    this.pauseBtnLabel.y = PAUSE_BTN_Y + 8;
+    this.container.addChild(this.pauseBtnLabel);
+
+    const pauseHitArea = new Graphics();
+    pauseHitArea
+      .rect(ROOM_MARGIN_X, PAUSE_BTN_Y, totalW, PAUSE_BTN_H)
+      .fill({ color: 0xffffff, alpha: 0 });
+    pauseHitArea.eventMode = "static";
+    pauseHitArea.cursor = "pointer";
+    pauseHitArea.on("pointertap", () => onPauseToggle());
+    this.container.addChild(pauseHitArea);
+
     // ── Depth selector ───────────────────────────────────────────────────────
 
     const depthCtrlLabel = new Text({ text: "DIVE CTRL", style: makeLabelStyle() });
@@ -257,7 +378,6 @@ export class InteriorView {
     this.container.addChild(depthCtrlLabel);
 
     const btnCount = DEPTH_BANDS.length;
-    const totalW = PANEL_W - ROOM_MARGIN_X * 2;
     const btnW = Math.floor((totalW - DEPTH_BTN_GAP * (btnCount - 1)) / btnCount);
 
     this.depthPulseGfx = new Graphics();
@@ -298,11 +418,11 @@ export class InteriorView {
     });
     this.tutorialText = new Text({ text: "", style: tutStyle });
     this.tutorialText.x = 16;
-    this.tutorialText.y = 460;
+    this.tutorialText.y = TUTORIAL_Y;
     this.container.addChild(this.tutorialText);
   }
 
-  update(state: CombatState, step: TutorialStep, elapsed: number): void {
+  update(state: CombatState, step: TutorialStep, elapsed: number, paused: boolean): void {
     // Room boxes
     for (const def of this.roomDefs) {
       const gfx = this.roomGraphics.get(def.id);
@@ -384,14 +504,69 @@ export class InteriorView {
         : "";
     this.depthValue.text = `${depthName}${targetName}`;
 
-    // Speed
-    this.speedValue.text = SPEED_NAMES[state.player.speed] ?? "?";
-
-    // Torpedo count (course is static, set once in constructor)
+    // Torpedo count
     const count = state.player.torpedoCount;
     const full = Math.min(count, TORPEDO_MAX);
     const empty = TORPEDO_MAX - full;
     this.torpedoValue.text = `${"◆".repeat(full)}${"◇".repeat(empty)}  ${count}`;
+
+    // ── Speed buttons ────────────────────────────────────────────────────────
+
+    const speedValues: SpeedSetting[] = [
+      SpeedSetting.SILENT,
+      SpeedSetting.STANDARD,
+      SpeedSetting.AHEAD_FULL,
+    ];
+    for (let i = 0; i < this.speedBtns.length; i++) {
+      const btn = this.speedBtns[i];
+      if (btn === undefined) continue;
+      const isActive = state.player.speed === speedValues[i];
+      btn.gfx.clear();
+      btn.gfx
+        .rect(btn.x, SPEED_BTN_Y, btn.w, SPEED_BTN_H)
+        .fill(isActive ? 0x0d2030 : 0x0a1420)
+        .stroke({ color: isActive ? 0x00ccff : 0x334455, width: 1 });
+      (btn.label.style as TextStyle).fill = isActive ? 0xffffff : 0x668899;
+    }
+
+    // ── Direction buttons ────────────────────────────────────────────────────
+
+    const dirValues: SpeedDirection[] = [
+      SpeedDirection.OPEN,
+      SpeedDirection.HOLD,
+      SpeedDirection.CLOSE,
+    ];
+    for (let i = 0; i < this.dirBtns.length; i++) {
+      const btn = this.dirBtns[i];
+      if (btn === undefined) continue;
+      const isActive = state.player.direction === dirValues[i];
+      btn.gfx.clear();
+      btn.gfx
+        .rect(btn.x, DIR_BTN_Y, btn.w, DIR_BTN_H)
+        .fill(isActive ? 0x0d2030 : 0x0a1420)
+        .stroke({ color: isActive ? 0x00ccff : 0x334455, width: 1 });
+      (btn.label.style as TextStyle).fill = isActive ? 0xffffff : 0x668899;
+    }
+
+    // ── Pause button ─────────────────────────────────────────────────────────
+
+    const totalW = PANEL_W - ROOM_MARGIN_X * 2;
+    this.pauseBtnGfx.clear();
+    if (paused) {
+      this.pauseBtnGfx
+        .rect(ROOM_MARGIN_X, PAUSE_BTN_Y, totalW, PAUSE_BTN_H)
+        .fill(0x1a1a08)
+        .stroke({ color: 0xffdd44, width: 1 });
+      this.pauseBtnLabel.text = "▶ RESUME";
+      (this.pauseBtnLabel.style as TextStyle).fill = 0xffdd44;
+    } else {
+      this.pauseBtnGfx
+        .rect(ROOM_MARGIN_X, PAUSE_BTN_Y, totalW, PAUSE_BTN_H)
+        .fill(0x0a1420)
+        .stroke({ color: 0x334455, width: 1 });
+      this.pauseBtnLabel.text = "⏸ PAUSE";
+      (this.pauseBtnLabel.style as TextStyle).fill = 0x668899;
+    }
 
     // ── Depth selector ───────────────────────────────────────────────────────
 

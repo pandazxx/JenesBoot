@@ -88,6 +88,16 @@ function formatEvent(type: string, payload: unknown): string {
       return `Combat ended: ${result}`;
     }
 
+    case "enemy_spotted": {
+      const range = RANGE_NAMES[p["range"] as number] ?? String(p["range"]);
+      return `Enemy spotted sub at ${range}`;
+    }
+
+    case "enemy_contact_lost": {
+      const last = RANGE_NAMES[p["lastKnownRange"] as number] ?? String(p["lastKnownRange"]);
+      return `Enemy lost contact (last: ${last})`;
+    }
+
     default:
       return type;
   }
