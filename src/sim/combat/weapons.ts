@@ -4,7 +4,7 @@
  * No PixiJS, no DOM, no Math.random(), no wall-clock reads.
  */
 
-import { RangeBand } from "./types.js";
+import { DepthBand, RangeBand } from "./types.js";
 import type { Mulberry32 } from "../prng.js";
 
 /**
@@ -50,4 +50,10 @@ export function resolveDeckGun(accuracy: number, evasion: number, rng: Mulberry3
 export function resolveTorpedo(accuracy: number, evasion: number, rng: Mulberry32): boolean {
   const hitChance = Math.max(5, Math.min(95, accuracy - evasion));
   return rng.next() * 100 < hitChance;
+}
+
+export function deckGunDepthDamageMultiplier(targetDepth: DepthBand): number {
+  if (targetDepth === DepthBand.SURFACE) return 1.0;
+  if (targetDepth === DepthBand.PERISCOPE) return 0.6;
+  return 0;
 }

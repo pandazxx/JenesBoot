@@ -20,13 +20,18 @@ import { Mulberry32 } from "./prng.js";
 import type { SimEvent, SimState } from "./types.js";
 import type { CombatState } from "./combat/types.js";
 import { RoomType } from "./combat/types.js";
-import { tickCombat, buildSurfaceBattleState, buildDestroyerDiveState } from "./combat/tick.js";
+import {
+  tickCombat,
+  buildSurfaceBattleState,
+  buildDestroyerDiveState,
+  buildGunboatHuntState,
+} from "./combat/tick.js";
 import type { PlayerCommand } from "./combat/tick.js";
 
 export type { SimEvent, SimState } from "./types.js";
 export type { PlayerCommand } from "./combat/tick.js";
 
-export type CombatScenario = "surface_battle" | "destroyer_dive";
+export type CombatScenario = "surface_battle" | "destroyer_dive" | "gunboat_hunt";
 
 /** Public interface for the simulation engine. */
 export interface ISimEngine {
@@ -56,6 +61,8 @@ class SimEngineImpl implements ISimEngine {
       this.combatState = buildSurfaceBattleState();
     } else if (scenario === "destroyer_dive") {
       this.combatState = buildDestroyerDiveState();
+    } else if (scenario === "gunboat_hunt") {
+      this.combatState = buildGunboatHuntState();
     }
     this.combatRng = new Mulberry32((this.seed ^ 0xdead) >>> 0);
   }
