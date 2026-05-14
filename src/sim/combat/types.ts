@@ -4,6 +4,13 @@
  * No PixiJS, no DOM, no Math.random(), no wall-clock reads.
  */
 
+export const DetectionMethod = {
+  VISUAL: "visual",
+  SONAR: "sonar",
+  RADAR: "radar",
+} as const;
+export type DetectionMethod = (typeof DetectionMethod)[keyof typeof DetectionMethod];
+
 export const RoomType = {
   BRIDGE: "BRIDGE",
   DECK_GUN: "DECK_GUN",
@@ -71,10 +78,12 @@ export interface ShipState {
   acousticSig: number;
   acousticSigOverride: number;
   evasion: number;
+  detectionMethods: DetectionMethod[];
+  speedOverride?: number;
 }
 
 export interface CombatState {
-  scenario: "surface_battle" | "destroyer_dive";
+  scenario: "surface_battle" | "destroyer_dive" | "gunboat_hunt";
   range: RangeBand;
   player: ShipState;
   enemy: ShipState;
@@ -84,6 +93,10 @@ export interface CombatState {
   enemyFiredTicks: number;
   crew: CrewMember[];
   rooms: Room[];
+  enemyLastKnownRange: RangeBand;
+  enemyBlindShotsFired: number;
+  enemyTracking: boolean;
+  escapeAccumulator: number;
 }
 
 export interface InFlightProjectile {
@@ -99,7 +112,9 @@ export type CombatEventType =
   | "shot_fired"
   | "shot_hit"
   | "shot_miss"
-  | "combat_end";
+  | "combat_end"
+  | "enemy_spotted"
+  | "enemy_contact_lost";
 
 export interface CombatEvent {
   type: CombatEventType;

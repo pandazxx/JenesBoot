@@ -5,52 +5,203 @@
  * A value >= 4 is "TRACKING" — sufficient to fire weapons.
  */
 
-import { DepthBand, RangeBand, SpeedSetting } from "./types.js";
+import { DepthBand, DetectionMethod, RangeBand, SpeedSetting } from "./types.js";
 import type { ShipState } from "./types.js";
 
-// Surface vessel detecting submarine (or surface-vs-surface visual detection).
-// Rows = target depth, cols = range.
-const TABLE_A: Record<DepthBand, Record<RangeBand, number>> = {
+// Visual detection: indexed [observerDepth][targetDepth][range].
+// Submerged observers have no visual. Surface/periscope observers cannot see
+// below PERISCOPE depth.
+const VISUAL_TABLE: Record<DepthBand, Record<DepthBand, Record<RangeBand, number>>> = {
   [DepthBand.SURFACE]: {
-    [RangeBand.LONG]: 8,
-    [RangeBand.MEDIUM]: 9,
-    [RangeBand.SHORT]: 10,
-    [RangeBand.POINT_BLANK]: 10,
-    [RangeBand.RAMMING]: 10,
+    [DepthBand.SURFACE]: {
+      [RangeBand.LONG]: 8,
+      [RangeBand.MEDIUM]: 9,
+      [RangeBand.SHORT]: 10,
+      [RangeBand.POINT_BLANK]: 10,
+      [RangeBand.RAMMING]: 10,
+    },
+    [DepthBand.PERISCOPE]: {
+      [RangeBand.LONG]: 1,
+      [RangeBand.MEDIUM]: 2,
+      [RangeBand.SHORT]: 4,
+      [RangeBand.POINT_BLANK]: 3,
+      [RangeBand.RAMMING]: 4,
+    },
+    [DepthBand.SHALLOW]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.DEEP]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.ABYSSAL]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
   },
   [DepthBand.PERISCOPE]: {
-    [RangeBand.LONG]: 3,
-    [RangeBand.MEDIUM]: 5,
-    [RangeBand.SHORT]: 7,
-    [RangeBand.POINT_BLANK]: 3,
-    [RangeBand.RAMMING]: 5,
+    [DepthBand.SURFACE]: {
+      [RangeBand.LONG]: 8,
+      [RangeBand.MEDIUM]: 9,
+      [RangeBand.SHORT]: 10,
+      [RangeBand.POINT_BLANK]: 10,
+      [RangeBand.RAMMING]: 10,
+    },
+    [DepthBand.PERISCOPE]: {
+      [RangeBand.LONG]: 1,
+      [RangeBand.MEDIUM]: 2,
+      [RangeBand.SHORT]: 4,
+      [RangeBand.POINT_BLANK]: 3,
+      [RangeBand.RAMMING]: 4,
+    },
+    [DepthBand.SHALLOW]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.DEEP]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.ABYSSAL]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
   },
   [DepthBand.SHALLOW]: {
-    [RangeBand.LONG]: 2,
-    [RangeBand.MEDIUM]: 4,
-    [RangeBand.SHORT]: 6,
-    [RangeBand.POINT_BLANK]: 2,
-    [RangeBand.RAMMING]: 4,
+    [DepthBand.SURFACE]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.PERISCOPE]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.SHALLOW]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.DEEP]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.ABYSSAL]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
   },
   [DepthBand.DEEP]: {
-    [RangeBand.LONG]: 1,
-    [RangeBand.MEDIUM]: 2,
-    [RangeBand.SHORT]: 4,
-    [RangeBand.POINT_BLANK]: 1,
-    [RangeBand.RAMMING]: 3,
+    [DepthBand.SURFACE]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.PERISCOPE]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.SHALLOW]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.DEEP]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.ABYSSAL]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
   },
   [DepthBand.ABYSSAL]: {
-    [RangeBand.LONG]: 0,
-    [RangeBand.MEDIUM]: 1,
-    [RangeBand.SHORT]: 2,
-    [RangeBand.POINT_BLANK]: 0,
-    [RangeBand.RAMMING]: 2,
+    [DepthBand.SURFACE]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.PERISCOPE]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.SHALLOW]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.DEEP]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
+    [DepthBand.ABYSSAL]: {
+      [RangeBand.LONG]: 0,
+      [RangeBand.MEDIUM]: 0,
+      [RangeBand.SHORT]: 0,
+      [RangeBand.POINT_BLANK]: 0,
+      [RangeBand.RAMMING]: 0,
+    },
   },
 };
 
-// Submarine detecting surface vessel.
-// Rows = observer depth, cols = range.
-const TABLE_B: Record<DepthBand, Record<RangeBand, number>> = {
+// Sonar detection base values per [observerDepth][range] — replicated across all targetDepth rows.
+// These are the old TABLE_B values (acoustic detection regardless of target depth).
+const SONAR_BASE: Record<DepthBand, Record<RangeBand, number>> = {
   [DepthBand.SURFACE]: {
     [RangeBand.LONG]: 5,
     [RangeBand.MEDIUM]: 7,
@@ -96,19 +247,23 @@ function effectiveAcousticSig(ship: ShipState): number {
 }
 
 export function contactQuality(observer: ShipState, target: ShipState, range: RangeBand): number {
-  const bothSurface = observer.depth === DepthBand.SURFACE && target.depth === DepthBand.SURFACE;
+  let best = 0;
 
-  let base: number;
-  if (observer.depth === DepthBand.SURFACE) {
-    base = TABLE_A[target.depth]?.[range] ?? 0;
-  } else {
-    base = TABLE_B[observer.depth]?.[range] ?? 0;
+  for (const method of observer.detectionMethods) {
+    let base: number;
+
+    if (method === DetectionMethod.VISUAL) {
+      base = VISUAL_TABLE[observer.depth]?.[target.depth]?.[range] ?? 0;
+    } else if (method === DetectionMethod.SONAR) {
+      const sonarBase = SONAR_BASE[observer.depth]?.[range] ?? 0;
+      const sig = effectiveAcousticSig(target);
+      base = sonarBase + (sig - 4);
+    } else {
+      base = 0;
+    }
+
+    if (base > best) best = base;
   }
 
-  if (bothSurface) {
-    return Math.min(10, Math.max(0, base));
-  }
-
-  const sig = effectiveAcousticSig(target);
-  return Math.min(10, Math.max(0, base + (sig - 4)));
+  return Math.min(10, Math.max(0, best));
 }

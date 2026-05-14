@@ -42,7 +42,9 @@ describe("destroyer_dive scenario", () => {
     const combat = state.combat;
     expect(combat?.crew.find((c) => c.id === "engineer")?.roomId).toBe("torpedo");
     expect(combat?.rooms.find((r) => r.type === RoomType.TORPEDO)?.crewIds).toContain("engineer");
-    expect(combat?.rooms.find((r) => r.type === RoomType.ENGINE)?.crewIds).not.toContain("engineer");
+    expect(combat?.rooms.find((r) => r.type === RoomType.ENGINE)?.crewIds).not.toContain(
+      "engineer",
+    );
   });
 
   it("depth transitions: player reaches PERISCOPE after 6 ticks", () => {

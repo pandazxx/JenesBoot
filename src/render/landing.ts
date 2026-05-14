@@ -1,4 +1,4 @@
-import { Application, Assets, Container, Sprite, Text, TextStyle } from "pixi.js";
+import { Application, Assets, Container, Graphics, Sprite, Text, TextStyle } from "pixi.js";
 import type { CombatScenario } from "../sim/index.js";
 
 const BLINK_INTERVAL_MS = 800;
@@ -34,20 +34,49 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
 
     const choice1 = new Text({ text: "[1]  Surface Battle", style: choiceStyle });
     const choice2 = new Text({ text: "[2]  Destroyer Dive", style: choiceStyle });
+    const choice3 = new Text({ text: "[3]  Gunboat Hunt", style: choiceStyle });
 
     const positionChoices = (): void => {
       const { width: cw, height: ch } = app.renderer;
       choice1.anchor.set(0.5, 1);
       choice2.anchor.set(0.5, 1);
+      choice3.anchor.set(0.5, 1);
       choice1.x = Math.round(cw / 2);
-      choice1.y = ch - 36;
+      choice1.y = ch - 60;
       choice2.x = Math.round(cw / 2);
-      choice2.y = ch - 12;
+      choice2.y = ch - 36;
+      choice3.x = Math.round(cw / 2);
+      choice3.y = ch - 12;
     };
 
     positionChoices();
     container.addChild(choice1);
     container.addChild(choice2);
+    container.addChild(choice3);
+
+    app.stage.eventMode = "static";
+
+    const addTapTarget = (text: Text, scenario: CombatScenario): void => {
+      const hit = new Graphics();
+      hit.rect(text.x - text.width / 2 - 40, text.y - 36, text.width + 80, 36).fill({
+        color: 0xffffff,
+        alpha: 0,
+      });
+      hit.eventMode = "static";
+      hit.cursor = "pointer";
+      hit.on("pointertap", () => cleanup(scenario));
+      container.addChild(hit);
+    };
+    addTapTarget(choice1, "surface_battle");
+    addTapTarget(choice2, "destroyer_dive");
+    addTapTarget(choice3, "gunboat_hunt");
+
+    const buildStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x445566 });
+    const buildLabel = new Text({ text: `build ${__GIT_COMMIT__}`, style: buildStyle });
+    buildLabel.anchor.set(1, 1);
+    buildLabel.x = app.renderer.width - 6;
+    buildLabel.y = app.renderer.height - 4;
+    container.addChild(buildLabel);
 
     let blinkVisible = true;
     let blinkAccum = 0;
@@ -59,6 +88,7 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
         blinkVisible = !blinkVisible;
         choice1.visible = blinkVisible;
         choice2.visible = blinkVisible;
+        choice3.visible = blinkVisible;
       }
     };
 
@@ -75,6 +105,7 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === "1") cleanup("surface_battle");
       else if (e.key === "2") cleanup("destroyer_dive");
+      else if (e.key === "3") cleanup("gunboat_hunt");
     };
 
     document.addEventListener("keydown", onKey);

@@ -5,7 +5,14 @@
  * No PixiJS, no DOM, no Math.random(), no wall-clock reads.
  */
 
-import { DepthBand, RangeBand, RoomType, SpeedSetting, SpeedDirection } from "./types.js";
+import {
+  DepthBand,
+  DetectionMethod,
+  RangeBand,
+  RoomType,
+  SpeedSetting,
+  SpeedDirection,
+} from "./types.js";
 import type {
   CombatState,
   ShipState,
@@ -26,10 +33,12 @@ import {
   TORPEDO_DAMAGE,
   TORPEDO_COOLDOWN_TICKS,
   TORPEDO_FLIGHT_TICKS,
+  deckGunDepthDamageMultiplier,
 } from "./weapons.js";
 import {
   merchantAi,
   destroyerAi,
+  gunboatAi,
   MERCHANT_RANGE_TICKS_PER_BAND,
   DESTROYER_RANGE_TICKS_PER_BAND,
 } from "./ai.js";
@@ -86,9 +95,9 @@ function applyCommand(
 
 function rangeTicksNeeded(ship: ShipState, isEnemy: boolean, scenario: string): number {
   if (isEnemy) {
-    return scenario === "destroyer_dive"
-      ? DESTROYER_RANGE_TICKS_PER_BAND
-      : MERCHANT_RANGE_TICKS_PER_BAND;
+    if (scenario === "destroyer_dive") return DESTROYER_RANGE_TICKS_PER_BAND;
+    if (scenario === "gunboat_hunt") return DESTROYER_RANGE_TICKS_PER_BAND;
+    return MERCHANT_RANGE_TICKS_PER_BAND;
   }
   return PLAYER_RANGE_TICKS[ship.speed] ?? 15;
 }
@@ -181,13 +190,50 @@ export function tickCombat(
   // -------------------------------------------------------------------------
   // Step 4: Enemy AI
   // -------------------------------------------------------------------------
-  const enemyCmd =
-    s.scenario === "destroyer_dive"
-      ? destroyerAi(s.enemy, s.range, s.player.depth)
-      : merchantAi(s.enemy, s.range, s.enemy.maxHullHP);
+  const enemyCQ = contactQuality(s.enemy, s.player, s.range);
+
+  const wasTracking = s.enemyTracking;
+  if (enemyCQ >= TRACKING_THRESHOLD) {
+    s.enemyLastKnownRange = s.range;
+    s.enemyBlindShotsFired = 0;
+    s.enemyTracking = true;
+    if (!wasTracking) {
+      events.push({
+        type: "enemy_spotted",
+        payload: { range: s.range, playerDepth: s.player.depth },
+      });
+    }
+  } else {
+    s.enemyTracking = false;
+    if (wasTracking) {
+      events.push({
+        type: "enemy_contact_lost",
+        payload: { lastKnownRange: s.enemyLastKnownRange },
+      });
+    }
+  }
+
+  let enemyCmd;
+  if (s.scenario === "destroyer_dive") {
+    enemyCmd = destroyerAi(s.enemy, s.range, s.player.depth);
+  } else if (s.scenario === "gunboat_hunt") {
+    enemyCmd = gunboatAi(
+      s.enemy,
+      s.range,
+      s.player.depth,
+      enemyCQ,
+      s.enemyLastKnownRange,
+      s.enemyBlindShotsFired,
+    );
+  } else {
+    enemyCmd = merchantAi(s.enemy, s.range, s.enemy.maxHullHP);
+  }
 
   if (enemyCmd.type === "SET_SPEED") {
     applyCommand(s.enemy, enemyCmd);
+  } else if (enemyCmd.type === "FIRE_BLIND_SHOT") {
+    // Blind shots are fired from a stationary search pattern — stop closing.
+    s.enemy.direction = SpeedDirection.HOLD;
   }
 
   // -------------------------------------------------------------------------
@@ -195,8 +241,11 @@ export function tickCombat(
   // -------------------------------------------------------------------------
   // Speed-weighted net direction: AHEAD_FULL beats STANDARD beats SILENT.
   // This lets a destroyer outrun a standard-speed submarine.
-  const playerWeight = (SPEED_WEIGHT[s.player.speed] ?? 2) * s.player.direction;
-  const enemyWeight = (SPEED_WEIGHT[s.enemy.speed] ?? 2) * s.enemy.direction;
+  // speedOverride on a ship substitutes for the table lookup (e.g. gunboat at 4).
+  const playerWeight =
+    (s.player.speedOverride ?? SPEED_WEIGHT[s.player.speed] ?? 2) * s.player.direction;
+  const enemyWeight =
+    (s.enemy.speedOverride ?? SPEED_WEIGHT[s.enemy.speed] ?? 2) * s.enemy.direction;
   const netDirectionRaw = playerWeight + enemyWeight;
   const netDirection: SpeedDirection =
     netDirectionRaw > 0
@@ -309,32 +358,70 @@ export function tickCombat(
     }
   }
 
-  // Enemy deck gun — fires only when player is at SURFACE
-  const enemyTargetSurface = s.player.depth === DepthBand.SURFACE;
+  // Enemy deck gun — fires when tracking; depth multiplier applied
   if (
     enemyCmd.type === "FIRE_DECK_GUN" &&
-    enemyTargetSurface &&
     deckGunInRange(s.range) &&
     s.enemy.deckGunCooldown === 0 &&
-    contactQuality(s.enemy, s.player, s.range) >= TRACKING_THRESHOLD
+    enemyCQ >= TRACKING_THRESHOLD
   ) {
-    const accuracy = DECK_GUN_ACCURACY[s.range] ?? 0;
-    const hit = resolveDeckGun(accuracy, s.player.evasion, rng);
-    events.push({
-      type: "shot_fired",
-      payload: { by: "enemy", weapon: "deck_gun", range: s.range },
-    });
+    const dmgMult = deckGunDepthDamageMultiplier(s.player.depth);
+    if (dmgMult > 0) {
+      const accuracy = DECK_GUN_ACCURACY[s.range] ?? 0;
+      const hit = resolveDeckGun(accuracy, s.player.evasion, rng);
+      const damage = Math.max(1, Math.round(DECK_GUN_DAMAGE * dmgMult));
+      events.push({
+        type: "shot_fired",
+        payload: { by: "enemy", weapon: "deck_gun", range: s.range },
+      });
+      s.enemy.deckGunCooldown = DECK_GUN_COOLDOWN_TICKS;
+      s.enemy.acousticSigOverride = 1;
+      s.enemyFiredTicks = 5;
+      if (hit) {
+        s.inFlight.push({
+          firedBy: "enemy",
+          damage,
+          arrivesOnTick: currentTick + DECK_GUN_FLIGHT_TICKS,
+        });
+      } else {
+        events.push({ type: "shot_miss", payload: { by: "enemy", weapon: "deck_gun" } });
+      }
+    }
+  }
+
+  // Enemy blind shot — gunboat fires at last known range without contact quality gate.
+  // AI state updates (counter, cooldown) always apply so the AI exhausts its 3 blind shots.
+  // Actual projectile is skipped silently if depth blocks it (dmgMult === 0).
+  if (
+    enemyCmd.type === "FIRE_BLIND_SHOT" &&
+    deckGunInRange(s.range) &&
+    s.enemy.deckGunCooldown === 0
+  ) {
+    s.enemyBlindShotsFired += 1;
     s.enemy.deckGunCooldown = DECK_GUN_COOLDOWN_TICKS;
     s.enemy.acousticSigOverride = 1;
     s.enemyFiredTicks = 5;
-    if (hit) {
-      s.inFlight.push({
-        firedBy: "enemy",
-        damage: DECK_GUN_DAMAGE,
-        arrivesOnTick: currentTick + DECK_GUN_FLIGHT_TICKS,
+    const dmgMult = deckGunDepthDamageMultiplier(s.player.depth);
+    if (dmgMult > 0) {
+      const accuracy = DECK_GUN_ACCURACY[s.range] ?? 0;
+      const hit = resolveDeckGun(accuracy, s.player.evasion, rng);
+      const damage = Math.max(1, Math.round(DECK_GUN_DAMAGE * dmgMult));
+      events.push({
+        type: "shot_fired",
+        payload: { by: "enemy", weapon: "deck_gun", blind: true, range: s.range },
       });
-    } else {
-      events.push({ type: "shot_miss", payload: { by: "enemy", weapon: "deck_gun" } });
+      if (hit) {
+        s.inFlight.push({
+          firedBy: "enemy",
+          damage,
+          arrivesOnTick: currentTick + DECK_GUN_FLIGHT_TICKS,
+        });
+      } else {
+        events.push({
+          type: "shot_miss",
+          payload: { by: "enemy", weapon: "deck_gun", blind: true },
+        });
+      }
     }
   }
 
@@ -351,6 +438,24 @@ export function tickCombat(
   } else if (s.enemy.hullHP <= 0) {
     s.result = "player_win";
     events.push({ type: "combat_end", payload: { result: "player_win", atTick: currentTick } });
+  }
+
+  // Escape condition — gunboat_hunt only
+  if (s.scenario === "gunboat_hunt" && s.result === "ongoing") {
+    const enemyCQForEscape = contactQuality(s.enemy, s.player, s.range);
+    if (
+      s.range === RangeBand.LONG &&
+      netDirection === SpeedDirection.OPEN &&
+      enemyCQForEscape === 0
+    ) {
+      s.escapeAccumulator += 1;
+    } else {
+      s.escapeAccumulator = 0;
+    }
+    if (s.escapeAccumulator >= 20) {
+      s.result = "escaped";
+      events.push({ type: "combat_end", payload: { result: "escaped", atTick: currentTick } });
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -376,6 +481,7 @@ export function buildSurfaceBattleState(): CombatState {
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 10,
+    detectionMethods: [DetectionMethod.VISUAL, DetectionMethod.SONAR],
   };
 
   const enemy: ShipState = {
@@ -393,6 +499,7 @@ export function buildSurfaceBattleState(): CombatState {
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 5,
+    detectionMethods: [DetectionMethod.VISUAL],
   };
 
   const crew: CrewMember[] = [{ id: "mate", name: "Mate", roomId: "bridge" }];
@@ -414,6 +521,10 @@ export function buildSurfaceBattleState(): CombatState {
     enemyFiredTicks: 0,
     crew,
     rooms,
+    enemyLastKnownRange: RangeBand.LONG,
+    enemyBlindShotsFired: 0,
+    enemyTracking: false,
+    escapeAccumulator: 0,
   };
 }
 
@@ -434,6 +545,7 @@ export function buildDestroyerDiveState(): CombatState {
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 10,
+    detectionMethods: [DetectionMethod.VISUAL, DetectionMethod.SONAR],
   };
 
   const enemy: ShipState = {
@@ -451,6 +563,7 @@ export function buildDestroyerDiveState(): CombatState {
     acousticSig: 5,
     acousticSigOverride: 0,
     evasion: 8,
+    detectionMethods: [DetectionMethod.VISUAL],
   };
 
   const crew: CrewMember[] = [
@@ -475,5 +588,77 @@ export function buildDestroyerDiveState(): CombatState {
     enemyFiredTicks: 0,
     crew,
     rooms,
+    enemyLastKnownRange: RangeBand.LONG,
+    enemyBlindShotsFired: 0,
+    enemyTracking: false,
+    escapeAccumulator: 0,
+  };
+}
+
+/** Build the initial CombatState for the gunboat_hunt scenario. */
+export function buildGunboatHuntState(): CombatState {
+  const player: ShipState = {
+    hullHP: 20,
+    maxHullHP: 20,
+    depth: DepthBand.SURFACE,
+    depthTarget: DepthBand.SURFACE,
+    depthTransitionTicks: 0,
+    speed: SpeedSetting.STANDARD,
+    direction: SpeedDirection.HOLD,
+    rangeTicksAccumulator: 0,
+    deckGunCooldown: 0,
+    torpedoCooldown: 0,
+    torpedoCount: 4,
+    acousticSig: 4,
+    acousticSigOverride: 0,
+    evasion: 10,
+    detectionMethods: [DetectionMethod.VISUAL],
+  };
+
+  const enemy: ShipState = {
+    hullHP: 15,
+    maxHullHP: 15,
+    depth: DepthBand.SURFACE,
+    depthTarget: DepthBand.SURFACE,
+    depthTransitionTicks: 0,
+    speed: SpeedSetting.AHEAD_FULL,
+    direction: SpeedDirection.CLOSE,
+    rangeTicksAccumulator: 0,
+    deckGunCooldown: 0,
+    torpedoCooldown: 0,
+    torpedoCount: 0,
+    acousticSig: 6,
+    acousticSigOverride: 0,
+    evasion: 5,
+    detectionMethods: [DetectionMethod.VISUAL],
+    speedOverride: 4,
+  };
+
+  const crew: CrewMember[] = [
+    { id: "mate", name: "Mate", roomId: "bridge" },
+    { id: "engineer", name: "Engineer", roomId: "torpedo" },
+  ];
+  const rooms: Room[] = [
+    { id: "bridge", type: RoomType.BRIDGE, crewIds: ["mate"] },
+    { id: "deck_gun", type: RoomType.DECK_GUN, crewIds: [] },
+    { id: "engine", type: RoomType.ENGINE, crewIds: [] },
+    { id: "torpedo", type: RoomType.TORPEDO, crewIds: ["engineer"] },
+  ];
+
+  return {
+    scenario: "gunboat_hunt",
+    range: RangeBand.LONG,
+    player,
+    enemy,
+    inFlight: [],
+    result: "ongoing",
+    playerFiredTicks: 0,
+    enemyFiredTicks: 0,
+    crew,
+    rooms,
+    enemyLastKnownRange: RangeBand.LONG,
+    enemyBlindShotsFired: 0,
+    enemyTracking: false,
+    escapeAccumulator: 0,
   };
 }

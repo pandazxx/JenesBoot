@@ -29,7 +29,7 @@ interface SimEvent {
 
 interface HeadlessOutput {
   seed: number;
-  ticks: number;       // equals state.tick — how many ticks elapsed
+  ticks: number; // equals state.tick — how many ticks elapsed
   rngState: number;
   log: SimEvent[];
 }
@@ -134,7 +134,8 @@ describe(`hello-world scenario — headless runner, seed ${SEED}, ${TICKS} ticks
     if (runResult.exitCode !== 0) {
       console.error(
         failureReport("exit code", 0, runResult.exitCode),
-        "\nstderr:", runResult.stderr,
+        "\nstderr:",
+        runResult.stderr,
       );
     }
     expect(runResult.exitCode).toBe(0);
@@ -144,13 +145,7 @@ describe(`hello-world scenario — headless runner, seed ${SEED}, ${TICKS} ticks
   it("stdout is valid JSON", () => {
     if (runResult === null) return;
     if (runResult.parsed === null) {
-      console.error(
-        failureReport(
-          "stdout parse",
-          "<valid JSON>",
-          runResult.stdout.slice(0, 300),
-        ),
-      );
+      console.error(failureReport("stdout parse", "<valid JSON>", runResult.stdout.slice(0, 300)));
     }
     expect(runResult.parsed).not.toBeNull();
   });
@@ -175,7 +170,8 @@ describe(`hello-world scenario — headless runner, seed ${SEED}, ${TICKS} ticks
     if (helloEvents.length !== 1) {
       console.error(
         failureReport("hello event count", 1, helloEvents.length),
-        "\nfull log:", JSON.stringify(log, null, 2),
+        "\nfull log:",
+        JSON.stringify(log, null, 2),
       );
     }
     expect(helloEvents).toHaveLength(1);
@@ -184,7 +180,8 @@ describe(`hello-world scenario — headless runner, seed ${SEED}, ${TICKS} ticks
     if (helloTick !== 1) {
       console.error(
         failureReport("hello event tick", 1, helloTick),
-        "\nevent:", JSON.stringify(helloEvents[0]),
+        "\nevent:",
+        JSON.stringify(helloEvents[0]),
       );
     }
     expect(helloTick).toBe(1);
