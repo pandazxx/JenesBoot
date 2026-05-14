@@ -26,13 +26,14 @@ import {
   buildDestroyerDiveState,
   buildGunboatHuntState,
   buildDestroyerBattleState,
+  buildSubmergedAmbushState,
 } from "./combat/tick.js";
 import type { PlayerCommand } from "./combat/tick.js";
 
 export type { SimEvent, SimState } from "./types.js";
 export type { PlayerCommand } from "./combat/tick.js";
 
-export type CombatScenario = "surface_battle" | "destroyer_dive" | "gunboat_hunt" | "destroyer_battle";
+export type CombatScenario = "surface_battle" | "destroyer_dive" | "gunboat_hunt" | "destroyer_battle" | "submerged_ambush";
 
 /** Public interface for the simulation engine. */
 export interface ISimEngine {
@@ -66,6 +67,8 @@ class SimEngineImpl implements ISimEngine {
       this.combatState = buildGunboatHuntState();
     } else if (scenario === "destroyer_battle") {
       this.combatState = buildDestroyerBattleState();
+    } else if (scenario === "submerged_ambush") {
+      this.combatState = buildSubmergedAmbushState();
     }
     this.combatRng = new Mulberry32((this.seed ^ 0xdead) >>> 0);
   }

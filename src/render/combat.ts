@@ -38,6 +38,7 @@ function readScenario(): CombatScenario {
   if (param === "destroyer_dive") return "destroyer_dive";
   if (param === "gunboat_hunt") return "gunboat_hunt";
   if (param === "destroyer_battle") return "destroyer_battle";
+  if (param === "submerged_ambush") return "submerged_ambush";
   return "surface_battle";
 }
 

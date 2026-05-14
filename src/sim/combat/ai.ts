@@ -12,6 +12,9 @@ export type AiCommand =
   | { type: "FIRE_DECK_GUN" }
   | { type: "FIRE_BLIND_SHOT" }
   | { type: "FIRE_DEPTH_CHARGE" }
+  | { type: "FIRE_TORPEDO" }
+  | { type: "MATCH_AND_CLOSE"; depthTarget: DepthBand }
+  | { type: "EVADE_SILENT"; depthTarget: DepthBand }
   | { type: "SET_SPEED"; speed: SpeedSetting; direction: SpeedDirection }
   | { type: "NONE" };
 
@@ -104,6 +107,48 @@ export function destroyerBattleAi(
     speed: SpeedSetting.STANDARD,
     direction: SpeedDirection.HOLD,
   };
+}
+
+/**
+ * Submarine AI — implements §5.3 Submerged Hostile rules.
+ *
+ * Priority order (highest first):
+ *   1. CQ≥4, range≤MEDIUM, depth diff≤1, torpedo ready → FIRE_TORPEDO
+ *   2. Hit within last 20 ticks + contact lost → EVADE_SILENT (change depth 1 band)
+ *   3. Otherwise → MATCH_AND_CLOSE (match player depth, close at STANDARD)
+ */
+export function submarineAi(
+  enemy: ShipState,
+  range: RangeBand,
+  playerDepth: DepthBand,
+  contactQualityValue: number,
+  enemyRecentlyHitTicks: number,
+): AiCommand {
+  const depthDiff = Math.abs(enemy.depth - playerDepth);
+
+  if (
+    contactQualityValue >= 4 &&
+    range <= RangeBand.MEDIUM &&
+    depthDiff <= 1 &&
+    enemy.torpedoCooldown === 0 &&
+    enemy.torpedoCount > 0
+  ) {
+    return { type: "FIRE_TORPEDO" };
+  }
+
+  if (enemyRecentlyHitTicks > 0 && contactQualityValue < 4) {
+    // Change depth by 1 band only if not already transitioning.
+    if (enemy.depth === enemy.depthTarget) {
+      const newTarget =
+        enemy.depth < DepthBand.ABYSSAL
+          ? ((enemy.depth + 1) as DepthBand)
+          : ((enemy.depth - 1) as DepthBand);
+      return { type: "EVADE_SILENT", depthTarget: newTarget };
+    }
+    return { type: "SET_SPEED", speed: SpeedSetting.SILENT, direction: SpeedDirection.HOLD };
+  }
+
+  return { type: "MATCH_AND_CLOSE", depthTarget: playerDepth };
 }
 
 /**

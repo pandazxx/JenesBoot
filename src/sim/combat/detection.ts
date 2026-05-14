@@ -239,6 +239,14 @@ const SONAR_BASE: Record<DepthBand, Record<RangeBand, number>> = {
   },
 };
 
+// Table C — both subs submerged: pure passive hydrophone, indexed by absolute depth differential.
+// Row 0: same depth band. Row 1: 1 band apart. Row 2: 2+ bands apart (clamped).
+const SUB_VS_SUB_TABLE: Record<RangeBand, number>[] = [
+  { [RangeBand.LONG]: 4, [RangeBand.MEDIUM]: 6, [RangeBand.SHORT]: 8, [RangeBand.POINT_BLANK]: 9, [RangeBand.RAMMING]: 10 },
+  { [RangeBand.LONG]: 2, [RangeBand.MEDIUM]: 4, [RangeBand.SHORT]: 6, [RangeBand.POINT_BLANK]: 7, [RangeBand.RAMMING]: 8 },
+  { [RangeBand.LONG]: 0, [RangeBand.MEDIUM]: 1, [RangeBand.SHORT]: 3, [RangeBand.POINT_BLANK]: 4, [RangeBand.RAMMING]: 5 },
+];
+
 function effectiveAcousticSig(ship: ShipState): number {
   const speedMod =
     ship.speed === SpeedSetting.AHEAD_FULL ? 2 : ship.speed === SpeedSetting.SILENT ? -3 : 0;
@@ -255,9 +263,15 @@ export function contactQuality(observer: ShipState, target: ShipState, range: Ra
     if (method === DetectionMethod.VISUAL) {
       base = VISUAL_TABLE[observer.depth]?.[target.depth]?.[range] ?? 0;
     } else if (method === DetectionMethod.SONAR) {
-      const sonarBase = SONAR_BASE[observer.depth]?.[range] ?? 0;
       const sig = effectiveAcousticSig(target);
-      base = sonarBase + (sig - 4);
+      if (observer.depth >= DepthBand.PERISCOPE && target.depth >= DepthBand.PERISCOPE) {
+        // Both submerged: use Table C (depth differential-based passive hydrophone).
+        const delta = Math.min(2, Math.abs(observer.depth - target.depth));
+        base = (SUB_VS_SUB_TABLE[delta]?.[range] ?? 0) + (sig - 4);
+      } else {
+        const sonarBase = SONAR_BASE[observer.depth]?.[range] ?? 0;
+        base = sonarBase + (sig - 4);
+      }
     } else {
       base = 0;
     }

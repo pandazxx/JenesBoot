@@ -34,25 +34,30 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
 
     const choice1 = new Text({ text: "[1]  Surface Battle", style: choiceStyle });
     const choice2 = new Text({ text: "[2]  Destroyer Dive", style: choiceStyle });
-    const choice3 = new Text({ text: "[3]  Destroyer Battle", style: choiceStyle });
+    const choice3 = new Text({ text: "[3]  Gunboat Hunt", style: choiceStyle });
+    const choice4 = new Text({ text: "[4]  Submerged Ambush", style: choiceStyle });
 
     const positionChoices = (): void => {
       const { width: cw, height: ch } = app.renderer;
       choice1.anchor.set(0.5, 1);
       choice2.anchor.set(0.5, 1);
       choice3.anchor.set(0.5, 1);
+      choice4.anchor.set(0.5, 1);
       choice1.x = Math.round(cw / 2);
-      choice1.y = ch - 60;
+      choice1.y = ch - 84;
       choice2.x = Math.round(cw / 2);
-      choice2.y = ch - 36;
+      choice2.y = ch - 60;
       choice3.x = Math.round(cw / 2);
-      choice3.y = ch - 12;
+      choice3.y = ch - 36;
+      choice4.x = Math.round(cw / 2);
+      choice4.y = ch - 12;
     };
 
     positionChoices();
     container.addChild(choice1);
     container.addChild(choice2);
     container.addChild(choice3);
+    container.addChild(choice4);
 
     app.stage.eventMode = "static";
 
@@ -69,7 +74,8 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
     };
     addTapTarget(choice1, "surface_battle");
     addTapTarget(choice2, "destroyer_dive");
-    addTapTarget(choice3, "destroyer_battle");
+    addTapTarget(choice3, "gunboat_hunt");
+    addTapTarget(choice4, "submerged_ambush");
 
     const buildStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x445566 });
     const buildLabel = new Text({ text: `build ${__GIT_COMMIT__}`, style: buildStyle });
@@ -89,6 +95,7 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
         choice1.visible = blinkVisible;
         choice2.visible = blinkVisible;
         choice3.visible = blinkVisible;
+        choice4.visible = blinkVisible;
       }
     };
 
@@ -105,7 +112,8 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === "1") cleanup("surface_battle");
       else if (e.key === "2") cleanup("destroyer_dive");
-      else if (e.key === "3") cleanup("destroyer_battle");
+      else if (e.key === "3") cleanup("gunboat_hunt");
+      else if (e.key === "4") cleanup("submerged_ambush");
     };
 
     document.addEventListener("keydown", onKey);

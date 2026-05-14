@@ -83,7 +83,7 @@ export interface ShipState {
 }
 
 export interface CombatState {
-  scenario: "surface_battle" | "destroyer_dive" | "gunboat_hunt" | "destroyer_battle";
+  scenario: "surface_battle" | "destroyer_dive" | "gunboat_hunt" | "destroyer_battle" | "submerged_ambush";
   range: RangeBand;
   player: ShipState;
   enemy: ShipState;
@@ -97,6 +97,8 @@ export interface CombatState {
   enemyBlindShotsFired: number;
   enemyTracking: boolean;
   escapeAccumulator: number;
+  /** Ticks remaining since player last hit the enemy — used by submarine AI rule 2. */
+  enemyRecentlyHitTicks: number;
 }
 
 export interface InFlightProjectile {
