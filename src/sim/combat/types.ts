@@ -83,7 +83,7 @@ export interface ShipState {
 }
 
 export interface CombatState {
-  scenario: "surface_battle" | "destroyer_dive" | "gunboat_hunt";
+  scenario: "surface_battle" | "destroyer_dive" | "gunboat_hunt" | "destroyer_battle";
   range: RangeBand;
   player: ShipState;
   enemy: ShipState;

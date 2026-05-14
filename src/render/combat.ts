@@ -36,6 +36,8 @@ const DIRECTION_ORDER: SpeedDirection[] = [
 function readScenario(): CombatScenario {
   const param = new URLSearchParams(window.location.search).get("scenario");
   if (param === "destroyer_dive") return "destroyer_dive";
+  if (param === "gunboat_hunt") return "gunboat_hunt";
+  if (param === "destroyer_battle") return "destroyer_battle";
   return "surface_battle";
 }
 

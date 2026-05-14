@@ -57,3 +57,23 @@ export function deckGunDepthDamageMultiplier(targetDepth: DepthBand): number {
   if (targetDepth === DepthBand.PERISCOPE) return 0.6;
   return 0;
 }
+
+/**
+ * Depth charge accuracy by target depth band.
+ * SURFACE: inapplicable (sub must be submerged). SHORT range only.
+ */
+export const DEPTH_CHARGE_ACCURACY: Record<DepthBand, number> = {
+  [DepthBand.SURFACE]: 0,
+  [DepthBand.PERISCOPE]: 70,
+  [DepthBand.SHALLOW]: 60,
+  [DepthBand.DEEP]: 55,
+  [DepthBand.ABYSSAL]: 35,
+};
+
+export const DEPTH_CHARGE_DAMAGE = 3;
+export const DEPTH_CHARGE_COOLDOWN_TICKS = 10;
+
+export function resolveDepthCharge(accuracy: number, evasion: number, rng: Mulberry32): boolean {
+  const hitChance = Math.max(5, Math.min(95, accuracy - evasion));
+  return rng.next() * 100 < hitChance;
+}

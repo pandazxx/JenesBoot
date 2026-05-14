@@ -26,6 +26,7 @@ import { contactQuality } from "./detection.js";
 import {
   resolveDeckGun,
   resolveTorpedo,
+  resolveDepthCharge,
   DECK_GUN_ACCURACY,
   DECK_GUN_DAMAGE,
   DECK_GUN_COOLDOWN_TICKS,
@@ -33,11 +34,15 @@ import {
   TORPEDO_DAMAGE,
   TORPEDO_COOLDOWN_TICKS,
   TORPEDO_FLIGHT_TICKS,
+  DEPTH_CHARGE_ACCURACY,
+  DEPTH_CHARGE_DAMAGE,
+  DEPTH_CHARGE_COOLDOWN_TICKS,
   deckGunDepthDamageMultiplier,
 } from "./weapons.js";
 import {
   merchantAi,
   destroyerAi,
+  destroyerBattleAi,
   gunboatAi,
   MERCHANT_RANGE_TICKS_PER_BAND,
   DESTROYER_RANGE_TICKS_PER_BAND,
@@ -97,6 +102,7 @@ function rangeTicksNeeded(ship: ShipState, isEnemy: boolean, scenario: string): 
   if (isEnemy) {
     if (scenario === "destroyer_dive") return DESTROYER_RANGE_TICKS_PER_BAND;
     if (scenario === "gunboat_hunt") return DESTROYER_RANGE_TICKS_PER_BAND;
+    if (scenario === "destroyer_battle") return DESTROYER_RANGE_TICKS_PER_BAND;
     return MERCHANT_RANGE_TICKS_PER_BAND;
   }
   return PLAYER_RANGE_TICKS[ship.speed] ?? 15;
@@ -174,6 +180,7 @@ export function tickCombat(
   if (s.player.deckGunCooldown > 0) s.player.deckGunCooldown -= 1;
   if (s.player.torpedoCooldown > 0) s.player.torpedoCooldown -= 1;
   if (s.enemy.deckGunCooldown > 0) s.enemy.deckGunCooldown -= 1;
+  if (s.enemy.torpedoCooldown > 0) s.enemy.torpedoCooldown -= 1;
   if (s.playerFiredTicks > 0) {
     s.playerFiredTicks -= 1;
     if (s.playerFiredTicks === 0) s.player.acousticSigOverride = 0;
@@ -216,6 +223,8 @@ export function tickCombat(
   let enemyCmd;
   if (s.scenario === "destroyer_dive") {
     enemyCmd = destroyerAi(s.enemy, s.range, s.player.depth);
+  } else if (s.scenario === "destroyer_battle") {
+    enemyCmd = destroyerBattleAi(s.enemy, s.range, s.player.depth, enemyCQ);
   } else if (s.scenario === "gunboat_hunt") {
     enemyCmd = gunboatAi(
       s.enemy,
@@ -233,6 +242,9 @@ export function tickCombat(
     applyCommand(s.enemy, enemyCmd);
   } else if (enemyCmd.type === "FIRE_BLIND_SHOT") {
     // Blind shots are fired from a stationary search pattern — stop closing.
+    s.enemy.direction = SpeedDirection.HOLD;
+  } else if (enemyCmd.type === "FIRE_DEPTH_CHARGE") {
+    // Destroyer holds position while dropping charges.
     s.enemy.direction = SpeedDirection.HOLD;
   }
 
@@ -425,6 +437,35 @@ export function tickCombat(
     }
   }
 
+  // Enemy depth charge — destroyer_battle fires at submerged sub at SHORT range.
+  // torpedoCooldown doubles as depth charge cooldown on the destroyer (it has no torpedoes).
+  if (
+    enemyCmd.type === "FIRE_DEPTH_CHARGE" &&
+    s.range === RangeBand.SHORT &&
+    s.enemy.torpedoCooldown === 0 &&
+    enemyCQ >= TRACKING_THRESHOLD &&
+    s.player.depth >= DepthBand.PERISCOPE
+  ) {
+    const accuracy = DEPTH_CHARGE_ACCURACY[s.player.depth] ?? 0;
+    const hit = resolveDepthCharge(accuracy, s.player.evasion, rng);
+    events.push({
+      type: "shot_fired",
+      payload: { by: "enemy", weapon: "depth_charge", range: s.range, playerDepth: s.player.depth },
+    });
+    s.enemy.torpedoCooldown = DEPTH_CHARGE_COOLDOWN_TICKS;
+    s.enemy.acousticSigOverride = 1;
+    s.enemyFiredTicks = 5;
+    if (hit) {
+      s.inFlight.push({
+        firedBy: "enemy",
+        damage: DEPTH_CHARGE_DAMAGE,
+        arrivesOnTick: currentTick + DECK_GUN_FLIGHT_TICKS,
+      });
+    } else {
+      events.push({ type: "shot_miss", payload: { by: "enemy", weapon: "depth_charge" } });
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Step 8: Damage applied in step 1
   // -------------------------------------------------------------------------
@@ -440,8 +481,8 @@ export function tickCombat(
     events.push({ type: "combat_end", payload: { result: "player_win", atTick: currentTick } });
   }
 
-  // Escape condition — gunboat_hunt only
-  if (s.scenario === "gunboat_hunt" && s.result === "ongoing") {
+  // Escape condition — gunboat_hunt and destroyer_battle
+  if ((s.scenario === "gunboat_hunt" || s.scenario === "destroyer_battle") && s.result === "ongoing") {
     const enemyCQForEscape = contactQuality(s.enemy, s.player, s.range);
     if (
       s.range === RangeBand.LONG &&
@@ -647,6 +688,74 @@ export function buildGunboatHuntState(): CombatState {
 
   return {
     scenario: "gunboat_hunt",
+    range: RangeBand.LONG,
+    player,
+    enemy,
+    inFlight: [],
+    result: "ongoing",
+    playerFiredTicks: 0,
+    enemyFiredTicks: 0,
+    crew,
+    rooms,
+    enemyLastKnownRange: RangeBand.LONG,
+    enemyBlindShotsFired: 0,
+    enemyTracking: false,
+    escapeAccumulator: 0,
+  };
+}
+
+/** Build the initial CombatState for the destroyer_battle scenario. */
+export function buildDestroyerBattleState(): CombatState {
+  const player: ShipState = {
+    hullHP: 20,
+    maxHullHP: 20,
+    depth: DepthBand.SURFACE,
+    depthTarget: DepthBand.SURFACE,
+    depthTransitionTicks: 0,
+    speed: SpeedSetting.STANDARD,
+    direction: SpeedDirection.HOLD,
+    rangeTicksAccumulator: 0,
+    deckGunCooldown: 0,
+    torpedoCooldown: 0,
+    torpedoCount: 4,
+    acousticSig: 4,
+    acousticSigOverride: 0,
+    evasion: 10,
+    detectionMethods: [DetectionMethod.VISUAL, DetectionMethod.SONAR],
+  };
+
+  const enemy: ShipState = {
+    hullHP: 10,
+    maxHullHP: 10,
+    depth: DepthBand.SURFACE,
+    depthTarget: DepthBand.SURFACE,
+    depthTransitionTicks: 0,
+    speed: SpeedSetting.AHEAD_FULL,
+    direction: SpeedDirection.CLOSE,
+    rangeTicksAccumulator: 0,
+    deckGunCooldown: 0,
+    torpedoCooldown: 0,
+    torpedoCount: 0,
+    acousticSig: 5,
+    acousticSigOverride: 0,
+    evasion: 8,
+    detectionMethods: [DetectionMethod.VISUAL, DetectionMethod.SONAR],
+    speedOverride: 4,
+  };
+
+  const crew: CrewMember[] = [
+    { id: "mate", name: "Mate", roomId: "bridge" },
+    { id: "engineer", name: "Engineer", roomId: "torpedo" },
+  ];
+  const rooms: Room[] = [
+    { id: "bridge", type: RoomType.BRIDGE, crewIds: ["mate"] },
+    { id: "deck_gun", type: RoomType.DECK_GUN, crewIds: [] },
+    { id: "engine", type: RoomType.ENGINE, crewIds: [] },
+    { id: "torpedo", type: RoomType.TORPEDO, crewIds: ["engineer"] },
+  ];
+
+  return {
+    scenario: "destroyer_battle",
     range: RangeBand.LONG,
     player,
     enemy,

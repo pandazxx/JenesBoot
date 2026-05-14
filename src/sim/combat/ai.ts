@@ -11,6 +11,7 @@ import type { ShipState } from "./types.js";
 export type AiCommand =
   | { type: "FIRE_DECK_GUN" }
   | { type: "FIRE_BLIND_SHOT" }
+  | { type: "FIRE_DEPTH_CHARGE" }
   | { type: "SET_SPEED"; speed: SpeedSetting; direction: SpeedDirection }
   | { type: "NONE" };
 
@@ -63,6 +64,45 @@ export function destroyerAi(enemy: ShipState, range: RangeBand, playerDepth: Dep
     type: "SET_SPEED",
     speed: SpeedSetting.AHEAD_FULL,
     direction: SpeedDirection.CLOSE,
+  };
+}
+
+/**
+ * Destroyer Battle AI — closes with sonar tracking, fires depth charges on submerged sub,
+ * deck gun on surface sub, holds at last known position when contact lost.
+ *
+ * Priority order (highest first):
+ *   1. CQ≥4, sub submerged, SHORT → FIRE_DEPTH_CHARGE
+ *   2. CQ≥4, sub surface, range≤MEDIUM → FIRE_DECK_GUN
+ *   3. CQ≥4, range>SHORT → close at AHEAD_FULL
+ *   4. CQ<4 → hold at last known position
+ */
+export function destroyerBattleAi(
+  enemy: ShipState,
+  range: RangeBand,
+  playerDepth: DepthBand,
+  contactQualityValue: number,
+): AiCommand {
+  const playerSubmerged = playerDepth >= DepthBand.PERISCOPE;
+
+  if (contactQualityValue >= 4) {
+    if (playerSubmerged && range === RangeBand.SHORT && enemy.torpedoCooldown === 0) {
+      return { type: "FIRE_DEPTH_CHARGE" };
+    }
+    if (!playerSubmerged && range <= RangeBand.MEDIUM && enemy.deckGunCooldown === 0) {
+      return { type: "FIRE_DECK_GUN" };
+    }
+    return {
+      type: "SET_SPEED",
+      speed: SpeedSetting.AHEAD_FULL,
+      direction: SpeedDirection.CLOSE,
+    };
+  }
+
+  return {
+    type: "SET_SPEED",
+    speed: SpeedSetting.STANDARD,
+    direction: SpeedDirection.HOLD,
   };
 }
 

@@ -34,7 +34,7 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
 
     const choice1 = new Text({ text: "[1]  Surface Battle", style: choiceStyle });
     const choice2 = new Text({ text: "[2]  Destroyer Dive", style: choiceStyle });
-    const choice3 = new Text({ text: "[3]  Gunboat Hunt", style: choiceStyle });
+    const choice3 = new Text({ text: "[3]  Destroyer Battle", style: choiceStyle });
 
     const positionChoices = (): void => {
       const { width: cw, height: ch } = app.renderer;
@@ -69,7 +69,7 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
     };
     addTapTarget(choice1, "surface_battle");
     addTapTarget(choice2, "destroyer_dive");
-    addTapTarget(choice3, "gunboat_hunt");
+    addTapTarget(choice3, "destroyer_battle");
 
     const buildStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x445566 });
     const buildLabel = new Text({ text: `build ${__GIT_COMMIT__}`, style: buildStyle });
@@ -105,7 +105,7 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === "1") cleanup("surface_battle");
       else if (e.key === "2") cleanup("destroyer_dive");
-      else if (e.key === "3") cleanup("gunboat_hunt");
+      else if (e.key === "3") cleanup("destroyer_battle");
     };
 
     document.addEventListener("keydown", onKey);
