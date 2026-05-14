@@ -22,6 +22,20 @@
 
 Movement between adjacent bands costs a fixed dive/surface action time (e.g. 20 ticks per band) and electricity per band.
 
+**Range bands.** Engagement range is a discrete enum, not a continuous distance. Five bands, smallest = closest.
+
+| Band | Enum | Meaning | Deck gun | Torpedo |
+|---|---|---|---|---|
+| 0 | `RAMMING` | Contact — collision imminent | 85% acc, ×1.0 dmg | 85% acc |
+| 1 | `POINT_BLANK` | Knife-fight range | 85% acc, ×1.0 dmg | 85% acc |
+| 2 | `SHORT` | Close engagement | 60% acc, ×1.0 dmg | 75% acc |
+| 3 | `MEDIUM` | Standard sea battle | 15% acc, ×1.0 dmg | 55% acc |
+| 4 | `LONG` | Outer edge — no weapons in range | — | — |
+
+Deck gun requires target at `SURFACE` for full damage; firing at a `PERISCOPE`-depth target deals ×0.6 damage; deeper targets are completely blocked. Torpedo requires the firer to be at `PERISCOPE`–`DEEP`. Accuracy floor/ceiling: `clamp(5, 95, baseAcc − targetEvasion)`.
+
+Range moves by one band per N ticks, where N depends on the net speed-weighted direction of both ships (see §7 for the formula).
+
 **Determinism.** Every stochastic outcome routes through a named RNG stream seeded from the run seed. Streams listed in §7.
 
 **Room model.** Submarine is a grid of rooms (FTL-style). Each room has: type, level (1–3), HP (0–`maxHP`), oxygen level (0–100), fire (0–3), flood (0–3), and a list of crew currently inside. Stats below describe ship-wide aggregates derived from room state plus upgrade tier.
