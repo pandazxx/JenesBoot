@@ -54,6 +54,13 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
     container.addChild(choice2);
     container.addChild(choice3);
 
+    const buildStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x445566 });
+    const buildLabel = new Text({ text: `build ${__GIT_COMMIT__}`, style: buildStyle });
+    buildLabel.anchor.set(1, 1);
+    buildLabel.x = app.renderer.width - 6;
+    buildLabel.y = app.renderer.height - 4;
+    container.addChild(buildLabel);
+
     let blinkVisible = true;
     let blinkAccum = 0;
 
