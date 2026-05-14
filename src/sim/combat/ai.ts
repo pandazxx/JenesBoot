@@ -67,8 +67,11 @@ export function destroyerAi(enemy: ShipState, range: RangeBand, playerDepth: Dep
 }
 
 /**
- * Gunboat AI — always closes, fires when tracking, fires blind shots when contact is lost.
- * Never retreats.
+ * Gunboat AI — closes aggressively when tracking, holds position when searching.
+ *
+ * TRACKING (CQ ≥ 4): close and fire.
+ * SEARCHING (CQ < 4): hold at last known position and fire blind shots.
+ *   Holding lets a diving sub open distance and accumulate the escape counter.
  */
 export function gunboatAi(
   enemy: ShipState,
@@ -91,17 +94,15 @@ export function gunboatAi(
     };
   }
 
-  // Searching: lost contact — always close in to regain visual.
-  // Fire blind shots when passing through lastKnownRange (periscope tip may still be there).
+  // Searching: hold at last known position and fire blind shots there.
+  // The sub can outrun the gunboat while it circles the last known location.
   if (range === lastKnownRange && blindShotsFired < 3 && enemy.deckGunCooldown === 0) {
     return { type: "FIRE_BLIND_SHOT" };
   }
 
-  // Never back off — keep pressing in regardless of lastKnownRange.
-  // At SHORT the periscope becomes visible again (CQ=4) and TRACKING resumes.
   return {
     type: "SET_SPEED",
-    speed: SpeedSetting.AHEAD_FULL,
-    direction: SpeedDirection.CLOSE,
+    speed: SpeedSetting.STANDARD,
+    direction: SpeedDirection.HOLD,
   };
 }
