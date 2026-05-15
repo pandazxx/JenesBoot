@@ -41,6 +41,7 @@ Tooling below this layer (package manager, linter, test runner, formatter) is ch
 - **All code is written by an LLM agent.** Optimize for legibility to future-Claude over cleverness; keep modules small and named for what they do.
 - **CI/CD is a requirement from day one.** Every merge should produce a deployable web build the user can open in a browser. Wire this up before mechanics pile up.
 - Keep PRs small and self-contained so each can be reviewed and play-tested independently.
+- **Never commit directly to `master`.** All changes must go on a feature branch and be merged via pull request. No exceptions, including one-liners and doc fixes.
 
 ## PR handoff rule
 
