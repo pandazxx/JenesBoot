@@ -33,7 +33,12 @@ import type { PlayerCommand } from "./combat/tick.js";
 export type { SimEvent, SimState } from "./types.js";
 export type { PlayerCommand } from "./combat/tick.js";
 
-export type CombatScenario = "surface_battle" | "destroyer_dive" | "gunboat_hunt" | "destroyer_battle" | "submerged_ambush";
+export type CombatScenario =
+  | "surface_battle"
+  | "destroyer_dive"
+  | "gunboat_hunt"
+  | "destroyer_battle"
+  | "submerged_ambush";
 
 /** Public interface for the simulation engine. */
 export interface ISimEngine {

@@ -538,7 +538,10 @@ export function tickCombat(
   }
 
   // Escape condition — gunboat_hunt and destroyer_battle
-  if ((s.scenario === "gunboat_hunt" || s.scenario === "destroyer_battle") && s.result === "ongoing") {
+  if (
+    (s.scenario === "gunboat_hunt" || s.scenario === "destroyer_battle") &&
+    s.result === "ongoing"
+  ) {
     const enemyCQForEscape = contactQuality(s.enemy, s.player, s.range);
     if (
       s.range === RangeBand.LONG &&
