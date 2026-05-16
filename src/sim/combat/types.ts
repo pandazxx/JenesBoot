@@ -85,8 +85,12 @@ export interface ShipState {
   evasion: number;
   detectionMethods: DetectionMethod[];
   speedOverride?: number;
-  /** Scales all SpeedSetting movement rates uniformly. 1.0 = base speed. */
-  speedMultiplier?: number;
+  /**
+   * Absolute AHEAD_FULL speed in units/tick for this ship.
+   * When set, STANDARD = aheadFullSpeed*(10/15) and SILENT = aheadFullSpeed*(6/15)
+   * using fixed ratios, independent of the player's xSpeed config values.
+   */
+  aheadFullSpeed?: number;
 }
 
 export interface CombatState {

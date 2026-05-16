@@ -233,8 +233,7 @@ export function tickCombat(
     // Blind shots fired from a stationary search pattern — stop closing.
     s.enemy.direction = SpeedDirection.HOLD;
   } else if (enemyCmd.type === "FIRE_DEPTH_CHARGE") {
-    // Destroyer holds position while dropping charges.
-    s.enemy.direction = SpeedDirection.HOLD;
+    // Destroyer continues on its current heading while dropping charges.
   } else if (enemyCmd.type === "MATCH_AND_CLOSE") {
     s.enemy.speed = SpeedSetting.STANDARD;
     s.enemy.direction = SpeedDirection.CLOSE;
@@ -259,10 +258,23 @@ export function tickCombat(
   s.player.x +=
     (s.player.speedOverride ?? xSpeedMap[s.player.speed] ?? config.xSpeedStandard) *
     s.player.direction;
-  s.enemy.x -=
-    (s.enemy.speedOverride ??
-      (xSpeedMap[s.enemy.speed] ?? config.xSpeedStandard) * (s.enemy.speedMultiplier ?? 1)) *
-    s.enemy.direction;
+  // Enemy speed: if aheadFullSpeed is set, use fixed SILENT/STANDARD/AHEAD_FULL ratios
+  // (10/15, 1) independent of the player's xSpeed config, so tuning player speeds
+  // doesn't accidentally alter enemy speed tiers.
+  const enemyXSpeed = ((): number => {
+    if (s.enemy.speedOverride !== undefined) return s.enemy.speedOverride;
+    if (s.enemy.aheadFullSpeed !== undefined) {
+      const tierRatio =
+        s.enemy.speed === SpeedSetting.AHEAD_FULL
+          ? 1
+          : s.enemy.speed === SpeedSetting.STANDARD
+            ? 10 / 15
+            : 6 / 15;
+      return s.enemy.aheadFullSpeed * tierRatio;
+    }
+    return xSpeedMap[s.enemy.speed] ?? config.xSpeedStandard;
+  })();
+  s.enemy.x -= enemyXSpeed * s.enemy.direction;
   // Ships cannot pass through each other — clamp so player always stays left of enemy.
   if (s.player.x > s.enemy.x) {
     const mid = (s.player.x + s.enemy.x) / 2;
@@ -700,7 +712,7 @@ export function buildDestroyerDiveState(config: SimConfig = defaultSimConfig()):
     acousticSigOverride: 0,
     evasion: 8,
     detectionMethods: [DetectionMethod.VISUAL],
-    speedMultiplier: config.destroyerSpeed / config.xSpeedAheadFull,
+    aheadFullSpeed: config.destroyerSpeed,
   };
 
   const crew: CrewMember[] = [
@@ -774,7 +786,7 @@ export function buildGunboatHuntState(config: SimConfig = defaultSimConfig()): C
     acousticSigOverride: 0,
     evasion: 5,
     detectionMethods: [DetectionMethod.VISUAL],
-    speedMultiplier: config.gunboatSpeed / config.xSpeedAheadFull,
+    aheadFullSpeed: config.gunboatSpeed,
   };
 
   const crew: CrewMember[] = [
@@ -848,7 +860,7 @@ export function buildDestroyerBattleState(config: SimConfig = defaultSimConfig()
     acousticSigOverride: 0,
     evasion: 8,
     detectionMethods: [DetectionMethod.VISUAL, DetectionMethod.SONAR],
-    speedMultiplier: config.destroyerSpeed / config.xSpeedAheadFull,
+    aheadFullSpeed: config.destroyerSpeed,
   };
 
   const crew: CrewMember[] = [
