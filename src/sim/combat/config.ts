@@ -45,10 +45,9 @@ export interface SimConfig {
   enemyHullDestroyerBattle: number;
   enemyHullSubmergedAmbush: number;
 
-  // Enemy initial speed (0=SILENT, 1=STANDARD, 2=AHEAD_FULL)
-  enemySpeedDestroyerDive: number;
-  enemySpeedGunboatHunt: number;
-  enemySpeedDestroyerBattle: number;
+  // Enemy speed (units/tick at AHEAD_FULL; SILENT/STANDARD scale proportionally)
+  gunboatSpeed: number;
+  destroyerSpeed: number;
 
   // Escape thresholds (ticks)
   escapeTicksDestroyerDive: number;
@@ -90,9 +89,8 @@ export function defaultSimConfig(): SimConfig {
     enemyHullDestroyerBattle: 10,
     enemyHullSubmergedAmbush: 10,
 
-    enemySpeedDestroyerDive: 2,
-    enemySpeedGunboatHunt: 2,
-    enemySpeedDestroyerBattle: 2,
+    gunboatSpeed: 15,
+    destroyerSpeed: 15,
 
     escapeTicksDestroyerDive: 40,
     escapeTicksSubmergedAmbush: 30,
