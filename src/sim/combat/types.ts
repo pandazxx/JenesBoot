@@ -66,6 +66,8 @@ export type SpeedDirection = (typeof SpeedDirection)[keyof typeof SpeedDirection
 export interface ShipState {
   hullHP: number;
   maxHullHP: number;
+  oxygen: number;
+  maxOxygen: number;
   depth: DepthBand;
   depthTarget: DepthBand;
   depthTransitionTicks: number;
@@ -104,6 +106,7 @@ export interface CombatState {
   escapeAccumulator: number;
   /** Ticks remaining since player last hit the enemy — used by submarine AI rule 2. */
   enemyRecentlyHitTicks: number;
+  oxygenDepletedTicks: number;
 }
 
 export interface InFlightProjectile {
@@ -121,7 +124,10 @@ export type CombatEventType =
   | "shot_miss"
   | "combat_end"
   | "enemy_spotted"
-  | "enemy_contact_lost";
+  | "enemy_contact_lost"
+  | "oxygen_low"
+  | "oxygen_critical"
+  | "oxygen_depleted";
 
 export interface CombatEvent {
   type: CombatEventType;
