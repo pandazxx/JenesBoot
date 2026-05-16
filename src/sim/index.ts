@@ -141,7 +141,13 @@ class SimEngineImpl implements ISimEngine {
       const rng = this.combatRng ?? this.rng;
       const cmd = this.pendingCommand ?? null;
       this.pendingCommand = null;
-      const { newState, events } = tickCombat(this.combatState, this.currentTick, rng, cmd, this.config);
+      const { newState, events } = tickCombat(
+        this.combatState,
+        this.currentTick,
+        rng,
+        cmd,
+        this.config,
+      );
       this.combatState = newState;
       for (const ev of events) {
         this.emit(ev.type, ev.payload);
