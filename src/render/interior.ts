@@ -35,30 +35,31 @@ const ROW_O2_BAR = 206;
 const ROW_O2_VALUE = 221;
 const ROW_DEPTH = 237;
 const ROW_TORPEDO = 255;
+const ROW_POS = 271;
 
 // Control buttons — 32px tall for touch-friendly targets
-const SPEED_CTRL_Y = 275;
-const SPEED_BTN_Y = 287;
+const SPEED_CTRL_Y = 291;
+const SPEED_BTN_Y = 303;
 const SPEED_BTN_H = 32;
 
-const DIR_CTRL_Y = 323;
-const DIR_BTN_Y = 335;
+const DIR_CTRL_Y = 339;
+const DIR_BTN_Y = 351;
 const DIR_BTN_H = 32;
 
-const PAUSE_BTN_Y = 371;
+const PAUSE_BTN_Y = 387;
 const PAUSE_BTN_H = 32;
 
-const DEPTH_CTRL_Y = 407;
-const DEPTH_BTN_Y = 419;
+const DEPTH_CTRL_Y = 423;
+const DEPTH_BTN_Y = 435;
 const DEPTH_BTN_H = 32;
 const DEPTH_BTN_GAP = 5;
 
 // Weapon fire buttons — 36px tall, red/orange theme
-const WEAPON_CTRL_Y = 455;
-const WEAPON_BTN_Y = 467;
+const WEAPON_CTRL_Y = 471;
+const WEAPON_BTN_Y = 483;
 const WEAPON_BTN_H = 36;
 
-const TUTORIAL_Y = 508;
+const TUTORIAL_Y = 524;
 
 const DEPTH_BANDS = [
   DepthBand.SURFACE,
@@ -197,6 +198,7 @@ export class InteriorView {
   private suffocatingLabel: Text;
   private depthValue: Text;
   private torpedoValue: Text;
+  private positionValue: Text;
 
   // Speed buttons
   private speedBtns: TripleBtn[];
@@ -342,6 +344,17 @@ export class InteriorView {
     this.torpedoValue.x = DASH_VALUE_X;
     this.torpedoValue.y = ROW_TORPEDO;
     this.container.addChild(this.torpedoValue);
+
+    // Position row
+    const posLabel = new Text({ text: "POS", style: makeLabelStyle() });
+    posLabel.x = DASH_LABEL_X;
+    posLabel.y = ROW_POS;
+    this.container.addChild(posLabel);
+
+    this.positionValue = new Text({ text: "", style: makeValueStyle() });
+    this.positionValue.x = DASH_VALUE_X;
+    this.positionValue.y = ROW_POS;
+    this.container.addChild(this.positionValue);
 
     // ── Speed control buttons ────────────────────────────────────────────────
 
@@ -637,6 +650,9 @@ export class InteriorView {
     const full = Math.min(count, TORPEDO_MAX);
     const empty = TORPEDO_MAX - full;
     this.torpedoValue.text = `${"◆".repeat(full)}${"◇".repeat(empty)}  ${count}`;
+
+    // Positions
+    this.positionValue.text = `SUB ${Math.round(state.playerX)}  DES ${Math.round(state.enemyX)}`;
 
     // ── Speed buttons ────────────────────────────────────────────────────────
 

@@ -325,6 +325,11 @@ export function tickCombat(
     s.player.rangeTicksAccumulator = 0;
   }
 
+  // Update absolute 1-D positions (display-only; does not drive range logic).
+  // Player CLOSE → playerX increases; enemy CLOSE → enemyX decreases (they approach).
+  s.playerX += (s.player.speedOverride ?? SPEED_WEIGHT[s.player.speed]) * s.player.direction;
+  s.enemyX -= (s.enemy.speedOverride ?? SPEED_WEIGHT[s.enemy.speed]) * s.enemy.direction;
+
   // -------------------------------------------------------------------------
   // Step 6: Advance depth transitions
   // -------------------------------------------------------------------------
@@ -573,6 +578,20 @@ export function tickCombat(
     }
   }
 
+  // Escape condition — destroyer_dive: hold DEEP or ABYSSAL with enemy CQ=0 for 40 ticks
+  if (s.scenario === "destroyer_dive" && s.result === "ongoing") {
+    const enemyCQForEscape = contactQuality(s.enemy, s.player, s.range);
+    if (s.player.depth >= DepthBand.DEEP && enemyCQForEscape === 0) {
+      s.escapeAccumulator += 1;
+    } else {
+      s.escapeAccumulator = 0;
+    }
+    if (s.escapeAccumulator >= 40) {
+      s.result = "escaped";
+      events.push({ type: "combat_end", payload: { result: "escaped", atTick: currentTick } });
+    }
+  }
+
   // Escape condition — submerged_ambush: SILENT for 30 ticks while range ≥ MEDIUM
   if (s.scenario === "submerged_ambush" && s.result === "ongoing") {
     if (s.player.speed === SpeedSetting.SILENT && s.range >= RangeBand.MEDIUM) {
@@ -680,6 +699,8 @@ export function buildSurfaceBattleState(): CombatState {
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
+    playerX: 0,
+    enemyX: 400,
   };
 }
 
@@ -753,6 +774,8 @@ export function buildDestroyerDiveState(): CombatState {
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
+    playerX: 0,
+    enemyX: 400,
   };
 }
 
@@ -827,6 +850,8 @@ export function buildGunboatHuntState(): CombatState {
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
+    playerX: 0,
+    enemyX: 400,
   };
 }
 
@@ -901,6 +926,8 @@ export function buildDestroyerBattleState(): CombatState {
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
+    playerX: 0,
+    enemyX: 400,
   };
 }
 
@@ -976,5 +1003,7 @@ export function buildSubmergedAmbushState(): CombatState {
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
+    playerX: 0,
+    enemyX: 400,
   };
 }
