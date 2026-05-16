@@ -78,11 +78,15 @@ describe("gunboat_hunt scenario", () => {
   });
 
   it("blind shots: gunboat fires up to 3 blind shots after sub dives from PERISCOPE to SHALLOW", () => {
-    // Set up: sub at PERISCOPE SHORT range so gunboat has contact (CQ = 4), then dive to SHALLOW
+    // Set up: sub at PERISCOPE SHORT range so gunboat has contact (CQ = 4), then dive to SHALLOW.
+    // SHORT range gap = [300, 450) units; player x=350, enemy x=750 → gap=400 → SHORT.
     const state = buildGunboatHuntState();
-    state.range = RangeBand.SHORT;
+    state.player.x = 350;
+    state.player.y = 150; // PERISCOPE band
     state.player.depth = DepthBand.PERISCOPE;
     state.player.depthTarget = DepthBand.PERISCOPE;
+    // Freeze enemy in place to keep range stable during this unit test.
+    state.enemy.direction = SpeedDirection.HOLD;
     // Enemy has had contact — set lastKnownRange = SHORT
     state.enemyLastKnownRange = RangeBand.SHORT;
     state.enemyBlindShotsFired = 0;
@@ -92,6 +96,7 @@ describe("gunboat_hunt scenario", () => {
     expect(cqBefore).toBeGreaterThanOrEqual(4);
 
     // Now dive the player to SHALLOW — gunboat loses contact
+    state.player.y = 300; // SHALLOW band
     state.player.depth = DepthBand.SHALLOW;
     state.player.depthTarget = DepthBand.SHALLOW;
     const cqAfter = contactQuality(state.enemy, state.player, RangeBand.SHORT);
@@ -111,19 +116,19 @@ describe("gunboat_hunt scenario", () => {
   });
 
   it("escape: result = escaped after 20 ticks at LONG range with no contact and OPEN net direction", () => {
-    // Build a state where net direction is OPEN: enemy HOLD so enemy weight=0, player AHEAD_FULL OPEN weight=-3
+    // Build a state where gap is opening: player AHEAD_FULL OPEN, enemy HOLD.
+    // Player at SHALLOW (y=300) so visual-only gunboat has CQ=0.
     const state = buildGunboatHuntState();
-    state.range = RangeBand.LONG;
+    state.player.y = 300; // SHALLOW band — invisible to visual-only gunboat
     state.player.depth = DepthBand.SHALLOW;
     state.player.depthTarget = DepthBand.SHALLOW;
     state.player.speed = SpeedSetting.AHEAD_FULL;
     state.player.direction = SpeedDirection.OPEN;
-    // Enemy holds position so net direction stays OPEN
+    // Enemy holds position so gap keeps opening
     state.enemy.speed = SpeedSetting.SILENT;
     state.enemy.direction = SpeedDirection.HOLD;
-    state.enemy.speedOverride = undefined;
 
-    // Verify enemy has no contact at SHALLOW
+    // Verify enemy has no contact at SHALLOW at LONG range (positions: player=0, enemy=750)
     const cq = contactQuality(state.enemy, state.player, RangeBand.LONG);
     expect(cq).toBe(0);
 

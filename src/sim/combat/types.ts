@@ -68,12 +68,15 @@ export interface ShipState {
   maxHullHP: number;
   oxygen: number;
   maxOxygen: number;
+  /** Absolute horizontal position (x-axis). Player starts at 0; enemy at 750 (LONG range). */
+  x: number;
+  /** Depth position (y-axis). 0 = surface; increases downward. One band = 150 units. */
+  y: number;
+  /** Derived depth band — recomputed each tick from y. Do not set directly; use depthTarget. */
   depth: DepthBand;
   depthTarget: DepthBand;
-  depthTransitionTicks: number;
   speed: SpeedSetting;
   direction: SpeedDirection;
-  rangeTicksAccumulator: number;
   deckGunCooldown: number;
   torpedoCooldown: number;
   torpedoCount: number;
@@ -107,9 +110,6 @@ export interface CombatState {
   /** Ticks remaining since player last hit the enemy — used by submarine AI rule 2. */
   enemyRecentlyHitTicks: number;
   oxygenDepletedTicks: number;
-  /** Absolute 1-D x positions (speed-weight units/tick). Sub=0, enemy=400 at LONG range. */
-  playerX: number;
-  enemyX: number;
 }
 
 export interface InFlightProjectile {
