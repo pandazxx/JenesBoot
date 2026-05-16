@@ -2,6 +2,8 @@ import { Application } from "pixi.js";
 import { SimEngine } from "../sim/index.js";
 import { showLanding } from "./landing.js";
 import { showCombat } from "./combat.js";
+import { SettingsPanel } from "./settings-panel.js";
+import { loadSimConfig, saveSimConfig } from "../sim/combat/config.js";
 
 async function main(): Promise<void> {
   const app = new Application();
@@ -35,12 +37,22 @@ async function main(): Promise<void> {
   fitCanvas(app.canvas);
   window.addEventListener("resize", () => fitCanvas(app.canvas));
 
-  const scenario = await showLanding(app);
+  const settingsPanel = new SettingsPanel();
+  let currentConfig = loadSimConfig();
+
+  settingsPanel.onClose = (config) => {
+    saveSimConfig(config);
+    currentConfig = config;
+  };
+
+  const scenario = await showLanding(app, () => {
+    settingsPanel.show(currentConfig);
+  });
 
   const urlSeed = new URLSearchParams(window.location.search).get("seed");
   const seed = urlSeed !== null ? parseInt(urlSeed, 10) : 0;
 
-  const engine = new SimEngine(seed);
+  const engine = new SimEngine(seed, currentConfig);
   engine.startCombat(scenario);
 
   showCombat(app, engine, scenario);

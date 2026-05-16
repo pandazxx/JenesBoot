@@ -3,7 +3,10 @@ import type { CombatScenario } from "../sim/index.js";
 
 const BLINK_INTERVAL_MS = 800;
 
-export async function showLanding(app: Application): Promise<CombatScenario> {
+export async function showLanding(
+  app: Application,
+  onSettings?: () => void,
+): Promise<CombatScenario> {
   const texture = await Assets.load(import.meta.env.BASE_URL + "landing.png");
 
   return new Promise<CombatScenario>((resolve) => {
@@ -36,6 +39,7 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
     const choice2 = new Text({ text: "[2]  Destroyer Dive (escape)", style: choiceStyle });
     const choice3 = new Text({ text: "[3]  Gunboat Hunt", style: choiceStyle });
     const choice4 = new Text({ text: "[4]  Destroyer Battle", style: choiceStyle });
+    const choice5 = new Text({ text: "[S]  Settings", style: choiceStyle });
 
     const positionChoices = (): void => {
       const { width: cw, height: ch } = app.renderer;
@@ -43,14 +47,17 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
       choice2.anchor.set(0.5, 1);
       choice3.anchor.set(0.5, 1);
       choice4.anchor.set(0.5, 1);
+      choice5.anchor.set(0.5, 1);
       choice1.x = Math.round(cw / 2);
-      choice1.y = ch - 84;
+      choice1.y = ch - 108;
       choice2.x = Math.round(cw / 2);
-      choice2.y = ch - 60;
+      choice2.y = ch - 84;
       choice3.x = Math.round(cw / 2);
-      choice3.y = ch - 36;
+      choice3.y = ch - 60;
       choice4.x = Math.round(cw / 2);
-      choice4.y = ch - 12;
+      choice4.y = ch - 36;
+      choice5.x = Math.round(cw / 2);
+      choice5.y = ch - 12;
     };
 
     positionChoices();
@@ -58,6 +65,7 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
     container.addChild(choice2);
     container.addChild(choice3);
     container.addChild(choice4);
+    container.addChild(choice5);
 
     app.stage.eventMode = "static";
 
@@ -76,6 +84,17 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
     addTapTarget(choice2, "destroyer_dive");
     addTapTarget(choice3, "gunboat_hunt");
     addTapTarget(choice4, "destroyer_battle");
+
+    if (onSettings !== undefined) {
+      const settingsHit = new Graphics();
+      settingsHit
+        .rect(choice5.x - choice5.width / 2 - 40, choice5.y - 36, choice5.width + 80, 36)
+        .fill({ color: 0xffffff, alpha: 0 });
+      settingsHit.eventMode = "static";
+      settingsHit.cursor = "pointer";
+      settingsHit.on("pointertap", () => onSettings());
+      container.addChild(settingsHit);
+    }
 
     const buildStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x445566 });
     const buildLabel = new Text({ text: `build ${__GIT_COMMIT__}`, style: buildStyle });
@@ -96,6 +115,7 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
         choice2.visible = blinkVisible;
         choice3.visible = blinkVisible;
         choice4.visible = blinkVisible;
+        choice5.visible = blinkVisible;
       }
     };
 
@@ -114,6 +134,9 @@ export async function showLanding(app: Application): Promise<CombatScenario> {
       else if (e.key === "2") cleanup("destroyer_dive");
       else if (e.key === "3") cleanup("gunboat_hunt");
       else if (e.key === "4") cleanup("destroyer_battle");
+      else if (e.key === "s" || e.key === "S") {
+        if (onSettings !== undefined) onSettings();
+      }
     };
 
     document.addEventListener("keydown", onKey);
