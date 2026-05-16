@@ -242,9 +242,27 @@ const SONAR_BASE: Record<DepthBand, Record<RangeBand, number>> = {
 // Table C — both subs submerged: pure passive hydrophone, indexed by absolute depth differential.
 // Row 0: same depth band. Row 1: 1 band apart. Row 2: 2+ bands apart (clamped).
 const SUB_VS_SUB_TABLE: Record<RangeBand, number>[] = [
-  { [RangeBand.LONG]: 4, [RangeBand.MEDIUM]: 6, [RangeBand.SHORT]: 8, [RangeBand.POINT_BLANK]: 9, [RangeBand.RAMMING]: 10 },
-  { [RangeBand.LONG]: 2, [RangeBand.MEDIUM]: 4, [RangeBand.SHORT]: 6, [RangeBand.POINT_BLANK]: 7, [RangeBand.RAMMING]: 8 },
-  { [RangeBand.LONG]: 0, [RangeBand.MEDIUM]: 1, [RangeBand.SHORT]: 3, [RangeBand.POINT_BLANK]: 4, [RangeBand.RAMMING]: 5 },
+  {
+    [RangeBand.LONG]: 4,
+    [RangeBand.MEDIUM]: 6,
+    [RangeBand.SHORT]: 8,
+    [RangeBand.POINT_BLANK]: 9,
+    [RangeBand.RAMMING]: 10,
+  },
+  {
+    [RangeBand.LONG]: 2,
+    [RangeBand.MEDIUM]: 4,
+    [RangeBand.SHORT]: 6,
+    [RangeBand.POINT_BLANK]: 7,
+    [RangeBand.RAMMING]: 8,
+  },
+  {
+    [RangeBand.LONG]: 0,
+    [RangeBand.MEDIUM]: 1,
+    [RangeBand.SHORT]: 3,
+    [RangeBand.POINT_BLANK]: 4,
+    [RangeBand.RAMMING]: 5,
+  },
 ];
 
 function effectiveAcousticSig(ship: ShipState): number {

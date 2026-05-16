@@ -66,6 +66,11 @@ const DECK_GUN_FLIGHT_TICKS = 1;
 const TRACKING_THRESHOLD = 4;
 const DEPTH_TICKS_PER_BAND = 6;
 
+const O2_DEPTH_DRAIN: [number, number, number, number, number] = [0, 1, 2, 3, 4];
+const O2_SPEED_DRAIN: [number, number, number] = [0, 1, 2];
+const O2_SURFACE_REGEN = 2;
+const O2_GRACE_TICKS = 100;
+
 export type PlayerCommand =
   | { type: "SET_SPEED"; speed: SpeedSetting; direction: SpeedDirection }
   | { type: "SET_DEPTH"; target: DepthBand }
@@ -192,6 +197,31 @@ export function tickCombat(
   if (s.enemyFiredTicks > 0) {
     s.enemyFiredTicks -= 1;
     if (s.enemyFiredTicks === 0) s.enemy.acousticSigOverride = 0;
+  }
+
+  // O2 drain / regen — player sub only
+  if (s.player.maxOxygen > 0) {
+    const oxygenBefore = s.player.oxygen;
+    if (s.player.depth === DepthBand.SURFACE) {
+      s.player.oxygen = Math.min(s.player.maxOxygen, s.player.oxygen + O2_SURFACE_REGEN);
+    } else {
+      const drain = (O2_DEPTH_DRAIN[s.player.depth] ?? 0) + (O2_SPEED_DRAIN[s.player.speed] ?? 0);
+      s.player.oxygen = Math.max(0, s.player.oxygen - drain);
+    }
+    const halfMax = s.player.maxOxygen * 0.5;
+    const quarterMax = s.player.maxOxygen * 0.25;
+    if (oxygenBefore > halfMax && s.player.oxygen <= halfMax) {
+      events.push({
+        type: "oxygen_low",
+        payload: { oxygen: s.player.oxygen, maxOxygen: s.player.maxOxygen },
+      });
+    }
+    if (oxygenBefore > quarterMax && s.player.oxygen <= quarterMax) {
+      events.push({
+        type: "oxygen_critical",
+        payload: { oxygen: s.player.oxygen, maxOxygen: s.player.maxOxygen },
+      });
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -524,6 +554,23 @@ export function tickCombat(
     events.push({ type: "combat_end", payload: { result: "player_win", atTick: currentTick } });
   }
 
+  // O2 suffocation lose condition
+  if (s.result === "ongoing") {
+    if (s.player.oxygen <= 0 && s.player.depth > DepthBand.SURFACE) {
+      s.oxygenDepletedTicks += 1;
+      events.push({ type: "oxygen_depleted", payload: { graceTicks: s.oxygenDepletedTicks } });
+      if (s.oxygenDepletedTicks >= O2_GRACE_TICKS) {
+        s.result = "player_lose";
+        events.push({
+          type: "combat_end",
+          payload: { result: "player_lose", reason: "suffocation", atTick: currentTick },
+        });
+      }
+    } else {
+      s.oxygenDepletedTicks = 0;
+    }
+  }
+
   // Escape condition — submerged_ambush: SILENT for 30 ticks while range ≥ MEDIUM
   if (s.scenario === "submerged_ambush" && s.result === "ongoing") {
     if (s.player.speed === SpeedSetting.SILENT && s.range >= RangeBand.MEDIUM) {
@@ -538,7 +585,10 @@ export function tickCombat(
   }
 
   // Escape condition — gunboat_hunt and destroyer_battle
-  if ((s.scenario === "gunboat_hunt" || s.scenario === "destroyer_battle") && s.result === "ongoing") {
+  if (
+    (s.scenario === "gunboat_hunt" || s.scenario === "destroyer_battle") &&
+    s.result === "ongoing"
+  ) {
     const enemyCQForEscape = contactQuality(s.enemy, s.player, s.range);
     if (
       s.range === RangeBand.LONG &&
@@ -566,6 +616,8 @@ export function buildSurfaceBattleState(): CombatState {
   const player: ShipState = {
     hullHP: 20,
     maxHullHP: 20,
+    oxygen: 1800,
+    maxOxygen: 1800,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
     depthTransitionTicks: 0,
@@ -584,6 +636,8 @@ export function buildSurfaceBattleState(): CombatState {
   const enemy: ShipState = {
     hullHP: 8,
     maxHullHP: 8,
+    oxygen: 0,
+    maxOxygen: 0,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
     depthTransitionTicks: 0,
@@ -623,6 +677,7 @@ export function buildSurfaceBattleState(): CombatState {
     enemyTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
+    oxygenDepletedTicks: 0,
   };
 }
 
@@ -631,6 +686,8 @@ export function buildDestroyerDiveState(): CombatState {
   const player: ShipState = {
     hullHP: 20,
     maxHullHP: 20,
+    oxygen: 1800,
+    maxOxygen: 1800,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
     depthTransitionTicks: 0,
@@ -649,6 +706,8 @@ export function buildDestroyerDiveState(): CombatState {
   const enemy: ShipState = {
     hullHP: 10,
     maxHullHP: 10,
+    oxygen: 0,
+    maxOxygen: 0,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
     depthTransitionTicks: 0,
@@ -691,6 +750,7 @@ export function buildDestroyerDiveState(): CombatState {
     enemyTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
+    oxygenDepletedTicks: 0,
   };
 }
 
@@ -699,6 +759,8 @@ export function buildGunboatHuntState(): CombatState {
   const player: ShipState = {
     hullHP: 20,
     maxHullHP: 20,
+    oxygen: 1800,
+    maxOxygen: 1800,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
     depthTransitionTicks: 0,
@@ -717,6 +779,8 @@ export function buildGunboatHuntState(): CombatState {
   const enemy: ShipState = {
     hullHP: 15,
     maxHullHP: 15,
+    oxygen: 0,
+    maxOxygen: 0,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
     depthTransitionTicks: 0,
@@ -760,6 +824,7 @@ export function buildGunboatHuntState(): CombatState {
     enemyTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
+    oxygenDepletedTicks: 0,
   };
 }
 
@@ -768,6 +833,8 @@ export function buildDestroyerBattleState(): CombatState {
   const player: ShipState = {
     hullHP: 20,
     maxHullHP: 20,
+    oxygen: 1800,
+    maxOxygen: 1800,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
     depthTransitionTicks: 0,
@@ -786,6 +853,8 @@ export function buildDestroyerBattleState(): CombatState {
   const enemy: ShipState = {
     hullHP: 10,
     maxHullHP: 10,
+    oxygen: 0,
+    maxOxygen: 0,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
     depthTransitionTicks: 0,
@@ -829,6 +898,7 @@ export function buildDestroyerBattleState(): CombatState {
     enemyTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
+    oxygenDepletedTicks: 0,
   };
 }
 
@@ -839,6 +909,8 @@ export function buildSubmergedAmbushState(): CombatState {
   const player: ShipState = {
     hullHP: 20,
     maxHullHP: 20,
+    oxygen: 1800,
+    maxOxygen: 1800,
     depth: DepthBand.PERISCOPE,
     depthTarget: DepthBand.PERISCOPE,
     depthTransitionTicks: 0,
@@ -857,6 +929,8 @@ export function buildSubmergedAmbushState(): CombatState {
   const enemy: ShipState = {
     hullHP: 10,
     maxHullHP: 10,
+    oxygen: 0,
+    maxOxygen: 0,
     depth: DepthBand.PERISCOPE,
     depthTarget: DepthBand.PERISCOPE,
     depthTransitionTicks: 0,
@@ -899,5 +973,6 @@ export function buildSubmergedAmbushState(): CombatState {
     enemyTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
+    oxygenDepletedTicks: 0,
   };
 }

@@ -30,32 +30,35 @@ const DASH_HP_BAR_H = 12;
 const ROW_HP_LABEL = 150;
 const ROW_HP_BAR = 163;
 const ROW_HP_VALUE = 178;
-const ROW_DEPTH = 197;
-const ROW_TORPEDO = 215;
+const ROW_O2_LABEL = 193;
+const ROW_O2_BAR = 206;
+const ROW_O2_VALUE = 221;
+const ROW_DEPTH = 237;
+const ROW_TORPEDO = 255;
 
 // Control buttons — 32px tall for touch-friendly targets
-const SPEED_CTRL_Y = 235;
-const SPEED_BTN_Y = 247;
+const SPEED_CTRL_Y = 275;
+const SPEED_BTN_Y = 287;
 const SPEED_BTN_H = 32;
 
-const DIR_CTRL_Y = 283;
-const DIR_BTN_Y = 295;
+const DIR_CTRL_Y = 323;
+const DIR_BTN_Y = 335;
 const DIR_BTN_H = 32;
 
-const PAUSE_BTN_Y = 331;
+const PAUSE_BTN_Y = 371;
 const PAUSE_BTN_H = 32;
 
-const DEPTH_CTRL_Y = 367;
-const DEPTH_BTN_Y = 379;
+const DEPTH_CTRL_Y = 407;
+const DEPTH_BTN_Y = 419;
 const DEPTH_BTN_H = 32;
 const DEPTH_BTN_GAP = 5;
 
 // Weapon fire buttons — 36px tall, red/orange theme
-const WEAPON_CTRL_Y = 415;
-const WEAPON_BTN_Y = 427;
+const WEAPON_CTRL_Y = 455;
+const WEAPON_BTN_Y = 467;
 const WEAPON_BTN_H = 36;
 
-const TUTORIAL_Y = 468;
+const TUTORIAL_Y = 508;
 
 const DEPTH_BANDS = [
   DepthBand.SURFACE,
@@ -188,6 +191,9 @@ export class InteriorView {
   // Dashboard
   private hpBar: Graphics;
   private hpValue: Text;
+  private o2Bar: Graphics;
+  private o2Value: Text;
+  private o2BarBgContainer: Graphics;
   private depthValue: Text;
   private torpedoValue: Text;
 
@@ -280,6 +286,25 @@ export class InteriorView {
     this.hpValue.x = DASH_VALUE_X;
     this.hpValue.y = ROW_HP_VALUE;
     this.container.addChild(this.hpValue);
+
+    // O2
+    const o2Label = new Text({ text: "O2", style: makeLabelStyle() });
+    o2Label.x = DASH_LABEL_X;
+    o2Label.y = ROW_O2_LABEL;
+    this.container.addChild(o2Label);
+
+    this.o2BarBgContainer = new Graphics();
+    this.o2BarBgContainer
+      .rect(DASH_HP_BAR_X, ROW_O2_BAR, DASH_HP_BAR_W, DASH_HP_BAR_H)
+      .fill(0x1a2030);
+    this.container.addChild(this.o2BarBgContainer);
+
+    this.o2Bar = new Graphics();
+    this.container.addChild(this.o2Bar);
+
+    this.o2Value = new Text({ text: "", style: makeValueStyle() });
+    this.o2Value.y = ROW_O2_VALUE;
+    this.container.addChild(this.o2Value);
 
     // DEPTH stat row
     const depthLabel = new Text({ text: "DEPTH", style: makeLabelStyle() });
@@ -555,6 +580,29 @@ export class InteriorView {
         .fill(hpColor);
     }
     this.hpValue.text = `${state.player.hullHP} / ${state.player.maxHullHP}`;
+
+    // O2 bar
+    if (state.player.maxOxygen > 0) {
+      this.o2BarBgContainer.visible = true;
+      this.o2Bar.visible = true;
+      this.o2Value.visible = true;
+      const o2Frac = state.player.oxygen / state.player.maxOxygen;
+      const o2Color = o2Frac > 0.5 ? 0x00ccff : o2Frac > 0.25 ? 0xffaa00 : 0xff3333;
+      this.o2Bar.clear();
+      if (o2Frac > 0) {
+        this.o2Bar
+          .rect(DASH_HP_BAR_X, ROW_O2_BAR, Math.round(DASH_HP_BAR_W * o2Frac), DASH_HP_BAR_H)
+          .fill(o2Color);
+      }
+      const o2Pct = Math.round(o2Frac * 100);
+      this.o2Value.text = `${o2Pct}%`;
+      this.o2Value.x = DASH_HP_BAR_X + DASH_HP_BAR_W - this.o2Value.width;
+      this.o2Value.y = ROW_O2_VALUE;
+    } else {
+      this.o2BarBgContainer.visible = false;
+      this.o2Bar.visible = false;
+      this.o2Value.visible = false;
+    }
 
     // Depth
     const depthName = DEPTH_NAMES[state.player.depth] ?? "?";
