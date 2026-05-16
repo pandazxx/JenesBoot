@@ -11,6 +11,7 @@ import { defaultSimConfig } from "../sim/combat/config.js";
 interface FieldDef {
   key: keyof SimConfig;
   label: string;
+  min?: string;
 }
 
 interface Section {
@@ -69,6 +70,14 @@ const SECTIONS: Section[] = [
       { key: "enemyHullGunboatHunt", label: "enemyHullGunboatHunt" },
       { key: "enemyHullDestroyerBattle", label: "enemyHullDestroyerBattle" },
       { key: "enemyHullSubmergedAmbush", label: "enemyHullSubmergedAmbush" },
+    ],
+  },
+  {
+    heading: "ENEMY SPEED (0=SILENT 1=STANDARD 2=AHEAD_FULL)",
+    fields: [
+      { key: "enemySpeedDestroyerDive", label: "enemySpeedDestroyerDive", min: "0" },
+      { key: "enemySpeedGunboatHunt", label: "enemySpeedGunboatHunt", min: "0" },
+      { key: "enemySpeedDestroyerBattle", label: "enemySpeedDestroyerBattle", min: "0" },
     ],
   },
   {
@@ -222,7 +231,7 @@ export class SettingsPanel {
 
         const input = document.createElement("input");
         input.type = "number";
-        input.min = "1";
+        input.min = field.min ?? "1";
         input.id = `sp-${field.key}`;
         input.style.cssText = INPUT_STYLE;
 
@@ -280,7 +289,7 @@ export class SettingsPanel {
     const result: SimConfig = { ...defaults };
     for (const [key, input] of this.inputs) {
       const parsed = parseFloat(input.value);
-      if (!isNaN(parsed) && parsed >= 1) {
+      if (!isNaN(parsed) && parsed >= 0) {
         (result as Record<keyof SimConfig, number>)[key] = parsed;
       }
     }
