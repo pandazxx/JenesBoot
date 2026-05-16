@@ -85,6 +85,8 @@ export interface ShipState {
   evasion: number;
   detectionMethods: DetectionMethod[];
   speedOverride?: number;
+  /** Scales all SpeedSetting movement rates uniformly. 1.0 = base speed. */
+  speedMultiplier?: number;
 }
 
 export interface CombatState {

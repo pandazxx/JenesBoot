@@ -1,7 +1,12 @@
 import { Application, Assets, Container, Graphics, Sprite, Text, TextStyle } from "pixi.js";
 import type { CombatScenario } from "../sim/index.js";
 
-const BLINK_INTERVAL_MS = 800;
+const BTN_W = 300;
+const BTN_H = 28;
+const BTN_GAP = 8;
+const BTN_FILL = 0x0a1420;
+const BTN_BORDER = 0x334455;
+const BTN_HOVER = 0x162035;
 
 export async function showLanding(
   app: Application,
@@ -28,73 +33,12 @@ export async function showLanding(
     fitToCanvas();
     container.addChild(sprite);
 
-    const choiceStyle = new TextStyle({
+    const labelStyle = new TextStyle({
       fontFamily: "monospace",
       fontSize: 13,
       fill: 0xe8e8e0,
       align: "center",
     });
-
-    const choice1 = new Text({ text: "[1]  Surface Battle", style: choiceStyle });
-    const choice2 = new Text({ text: "[2]  Destroyer Dive (escape)", style: choiceStyle });
-    const choice3 = new Text({ text: "[3]  Gunboat Hunt", style: choiceStyle });
-    const choice4 = new Text({ text: "[4]  Destroyer Battle", style: choiceStyle });
-    const choice5 = new Text({ text: "[S]  Settings", style: choiceStyle });
-
-    const positionChoices = (): void => {
-      const { width: cw, height: ch } = app.renderer;
-      choice1.anchor.set(0.5, 1);
-      choice2.anchor.set(0.5, 1);
-      choice3.anchor.set(0.5, 1);
-      choice4.anchor.set(0.5, 1);
-      choice5.anchor.set(0.5, 1);
-      choice1.x = Math.round(cw / 2);
-      choice1.y = ch - 108;
-      choice2.x = Math.round(cw / 2);
-      choice2.y = ch - 84;
-      choice3.x = Math.round(cw / 2);
-      choice3.y = ch - 60;
-      choice4.x = Math.round(cw / 2);
-      choice4.y = ch - 36;
-      choice5.x = Math.round(cw / 2);
-      choice5.y = ch - 12;
-    };
-
-    positionChoices();
-    container.addChild(choice1);
-    container.addChild(choice2);
-    container.addChild(choice3);
-    container.addChild(choice4);
-    container.addChild(choice5);
-
-    app.stage.eventMode = "static";
-
-    const addTapTarget = (text: Text, scenario: CombatScenario): void => {
-      const hit = new Graphics();
-      hit.rect(text.x - text.width / 2 - 40, text.y - 36, text.width + 80, 36).fill({
-        color: 0xffffff,
-        alpha: 0,
-      });
-      hit.eventMode = "static";
-      hit.cursor = "pointer";
-      hit.on("pointertap", () => cleanup(scenario));
-      container.addChild(hit);
-    };
-    addTapTarget(choice1, "surface_battle");
-    addTapTarget(choice2, "destroyer_dive");
-    addTapTarget(choice3, "gunboat_hunt");
-    addTapTarget(choice4, "destroyer_battle");
-
-    if (onSettings !== undefined) {
-      const settingsHit = new Graphics();
-      settingsHit
-        .rect(choice5.x - choice5.width / 2 - 40, choice5.y - 36, choice5.width + 80, 36)
-        .fill({ color: 0xffffff, alpha: 0 });
-      settingsHit.eventMode = "static";
-      settingsHit.cursor = "pointer";
-      settingsHit.on("pointertap", () => onSettings());
-      container.addChild(settingsHit);
-    }
 
     const buildStyle = new TextStyle({ fontFamily: "monospace", fontSize: 10, fill: 0x445566 });
     const buildLabel = new Text({ text: `build ${__GIT_COMMIT__}`, style: buildStyle });
@@ -103,47 +47,119 @@ export async function showLanding(
     buildLabel.y = app.renderer.height - 4;
     container.addChild(buildLabel);
 
-    let blinkVisible = true;
-    let blinkAccum = 0;
+    app.stage.eventMode = "static";
 
-    const onTick = (): void => {
-      blinkAccum += app.ticker.deltaMS;
-      if (blinkAccum >= BLINK_INTERVAL_MS) {
-        blinkAccum -= BLINK_INTERVAL_MS;
-        blinkVisible = !blinkVisible;
-        choice1.visible = blinkVisible;
-        choice2.visible = blinkVisible;
-        choice3.visible = blinkVisible;
-        choice4.visible = blinkVisible;
-        choice5.visible = blinkVisible;
-      }
-    };
+    const scenarios: { label: string; scenario: CombatScenario }[] = [
+      { label: "Surface Battle", scenario: "surface_battle" },
+      { label: "Destroyer Dive (escape)", scenario: "destroyer_dive" },
+      { label: "Gunboat Hunt", scenario: "gunboat_hunt" },
+      { label: "Destroyer Battle", scenario: "destroyer_battle" },
+    ];
 
-    app.ticker.add(onTick);
+    type BtnEntry = { bg: Graphics; label: Text };
+    const buttons: BtnEntry[] = [];
 
     const cleanup = (scenario: CombatScenario): void => {
-      app.ticker.remove(onTick);
-      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onResize);
       app.stage.removeChild(container);
       container.destroy({ children: true });
       resolve(scenario);
     };
 
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "1") cleanup("surface_battle");
-      else if (e.key === "2") cleanup("destroyer_dive");
-      else if (e.key === "3") cleanup("gunboat_hunt");
-      else if (e.key === "4") cleanup("destroyer_battle");
-      else if (e.key === "s" || e.key === "S") {
-        if (onSettings !== undefined) onSettings();
-      }
+    for (const { label, scenario } of scenarios) {
+      const bg = new Graphics();
+      bg.roundRect(0, 0, BTN_W, BTN_H, 2).fill(BTN_FILL).stroke({ color: BTN_BORDER, width: 1 });
+      bg.eventMode = "static";
+      bg.cursor = "pointer";
+      bg.on("pointerover", () => {
+        bg.clear();
+        bg.roundRect(0, 0, BTN_W, BTN_H, 2).fill(BTN_HOVER).stroke({ color: BTN_BORDER, width: 1 });
+      });
+      bg.on("pointerout", () => {
+        bg.clear();
+        bg.roundRect(0, 0, BTN_W, BTN_H, 2).fill(BTN_FILL).stroke({ color: BTN_BORDER, width: 1 });
+      });
+      bg.on("pointertap", () => cleanup(scenario));
+
+      const text = new Text({ text: label, style: labelStyle });
+      text.anchor.set(0.5, 0.5);
+      text.x = BTN_W / 2;
+      text.y = BTN_H / 2;
+
+      const btnContainer = new Container();
+      btnContainer.addChild(bg);
+      btnContainer.addChild(text);
+      container.addChild(btnContainer);
+      buttons.push({ bg, label: text });
+    }
+
+    if (onSettings !== undefined) {
+      const settingsBg = new Graphics();
+      settingsBg
+        .roundRect(0, 0, BTN_W, BTN_H, 2)
+        .fill(BTN_FILL)
+        .stroke({ color: 0x225544, width: 1 });
+      settingsBg.eventMode = "static";
+      settingsBg.cursor = "pointer";
+      settingsBg.on("pointerover", () => {
+        settingsBg.clear();
+        settingsBg
+          .roundRect(0, 0, BTN_W, BTN_H, 2)
+          .fill(0x0d2018)
+          .stroke({ color: 0x225544, width: 1 });
+      });
+      settingsBg.on("pointerout", () => {
+        settingsBg.clear();
+        settingsBg
+          .roundRect(0, 0, BTN_W, BTN_H, 2)
+          .fill(BTN_FILL)
+          .stroke({ color: 0x225544, width: 1 });
+      });
+      settingsBg.on("pointertap", () => onSettings());
+
+      const settingsText = new Text({
+        text: "Settings",
+        style: new TextStyle({
+          fontFamily: "monospace",
+          fontSize: 13,
+          fill: 0x88ccaa,
+          align: "center",
+        }),
+      });
+      settingsText.anchor.set(0.5, 0.5);
+      settingsText.x = BTN_W / 2;
+      settingsText.y = BTN_H / 2;
+
+      const settingsContainer = new Container();
+      settingsContainer.addChild(settingsBg);
+      settingsContainer.addChild(settingsText);
+      container.addChild(settingsContainer);
+      buttons.push({ bg: settingsBg, label: settingsText });
+    }
+
+    const totalButtons = buttons.length;
+    const totalHeight = totalButtons * BTN_H + (totalButtons - 1) * BTN_GAP;
+
+    const positionButtons = (): void => {
+      const { width: cw, height: ch } = app.renderer;
+      const startX = Math.round(cw / 2 - BTN_W / 2);
+      const startY = Math.round(ch - totalHeight - 16);
+      const allBtnContainers = container.children.filter(
+        (c) => c !== sprite && c !== buildLabel,
+      ) as Container[];
+      allBtnContainers.forEach((c, i) => {
+        c.x = startX;
+        c.y = startY + i * (BTN_H + BTN_GAP);
+      });
     };
 
-    document.addEventListener("keydown", onKey);
+    positionButtons();
 
     const onResize = (): void => {
       fitToCanvas();
-      positionChoices();
+      positionButtons();
+      buildLabel.x = app.renderer.width - 6;
+      buildLabel.y = app.renderer.height - 4;
     };
 
     window.addEventListener("resize", onResize);

@@ -73,11 +73,10 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    heading: "ENEMY SPEED (0=SILENT 1=STANDARD 2=AHEAD_FULL)",
+    heading: "ENEMY SPEED (units/tick at AHEAD_FULL)",
     fields: [
-      { key: "enemySpeedDestroyerDive", label: "enemySpeedDestroyerDive", min: "0" },
-      { key: "enemySpeedGunboatHunt", label: "enemySpeedGunboatHunt", min: "0" },
-      { key: "enemySpeedDestroyerBattle", label: "enemySpeedDestroyerBattle", min: "0" },
+      { key: "gunboatSpeed", label: "gunboatSpeed", min: "0" },
+      { key: "destroyerSpeed", label: "destroyerSpeed", min: "0" },
     ],
   },
   {

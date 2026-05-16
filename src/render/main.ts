@@ -45,17 +45,21 @@ async function main(): Promise<void> {
     currentConfig = config;
   };
 
-  const scenario = await showLanding(app, () => {
-    settingsPanel.show(currentConfig);
-  });
-
   const urlSeed = new URLSearchParams(window.location.search).get("seed");
   const seed = urlSeed !== null ? parseInt(urlSeed, 10) : 0;
 
-  const engine = new SimEngine(seed, currentConfig);
-  engine.startCombat(scenario);
+  while (true) {
+    const scenario = await showLanding(app, () => {
+      settingsPanel.show(currentConfig);
+    });
 
-  showCombat(app, engine, scenario);
+    const engine = new SimEngine(seed, currentConfig);
+    engine.startCombat(scenario);
+
+    await showCombat(app, engine, scenario, () => {
+      settingsPanel.show(currentConfig);
+    });
+  }
 }
 
 main().catch((err: unknown) => {
