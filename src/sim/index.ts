@@ -29,9 +29,11 @@ import {
   buildSubmergedAmbushState,
 } from "./combat/tick.js";
 import type { PlayerCommand } from "./combat/tick.js";
+import { type SimConfig, defaultSimConfig } from "./combat/config.js";
 
 export type { SimEvent, SimState } from "./types.js";
 export type { PlayerCommand } from "./combat/tick.js";
+export type { SimConfig } from "./combat/config.js";
 
 export type CombatScenario =
   | "surface_battle"
@@ -46,6 +48,7 @@ export interface ISimEngine {
   getState(): SimState;
   startCombat(scenario: CombatScenario): void;
   queueCommand(cmd: PlayerCommand): void;
+  setConfig(config: SimConfig): void;
 }
 
 /** Internal class — use the SimEngine factory/constructor export below. */
@@ -57,23 +60,29 @@ class SimEngineImpl implements ISimEngine {
   private combatState: CombatState | null = null;
   private combatRng: Mulberry32 | null = null;
   private pendingCommand: PlayerCommand | null = null;
+  private config: SimConfig;
 
-  constructor(seed: number) {
+  constructor(seed: number, config: SimConfig = defaultSimConfig()) {
     this.seed = seed;
     this.rng = new Mulberry32(seed);
+    this.config = config;
+  }
+
+  setConfig(config: SimConfig): void {
+    this.config = config;
   }
 
   startCombat(scenario: CombatScenario): void {
     if (scenario === "surface_battle") {
-      this.combatState = buildSurfaceBattleState();
+      this.combatState = buildSurfaceBattleState(this.config);
     } else if (scenario === "destroyer_dive") {
-      this.combatState = buildDestroyerDiveState();
+      this.combatState = buildDestroyerDiveState(this.config);
     } else if (scenario === "gunboat_hunt") {
-      this.combatState = buildGunboatHuntState();
+      this.combatState = buildGunboatHuntState(this.config);
     } else if (scenario === "destroyer_battle") {
-      this.combatState = buildDestroyerBattleState();
+      this.combatState = buildDestroyerBattleState(this.config);
     } else if (scenario === "submerged_ambush") {
-      this.combatState = buildSubmergedAmbushState();
+      this.combatState = buildSubmergedAmbushState(this.config);
     }
     this.combatRng = new Mulberry32((this.seed ^ 0xdead) >>> 0);
   }
@@ -132,7 +141,7 @@ class SimEngineImpl implements ISimEngine {
       const rng = this.combatRng ?? this.rng;
       const cmd = this.pendingCommand ?? null;
       this.pendingCommand = null;
-      const { newState, events } = tickCombat(this.combatState, this.currentTick, rng, cmd);
+      const { newState, events } = tickCombat(this.combatState, this.currentTick, rng, cmd, this.config);
       this.combatState = newState;
       for (const ev of events) {
         this.emit(ev.type, ev.payload);
@@ -167,16 +176,16 @@ class SimEngineImpl implements ISimEngine {
   }
 }
 
-function SimEngineFactory(seed: number): ISimEngine {
-  return new SimEngineImpl(seed);
+function SimEngineFactory(seed: number, config?: SimConfig): ISimEngine {
+  return new SimEngineImpl(seed, config);
 }
 
 SimEngineFactory.prototype = SimEngineImpl.prototype;
 
 export const SimEngine: {
-  (seed: number): ISimEngine;
-  new (seed: number): ISimEngine;
+  (seed: number, config?: SimConfig): ISimEngine;
+  new (seed: number, config?: SimConfig): ISimEngine;
 } = SimEngineFactory as unknown as {
-  (seed: number): ISimEngine;
-  new (seed: number): ISimEngine;
+  (seed: number, config?: SimConfig): ISimEngine;
+  new (seed: number, config?: SimConfig): ISimEngine;
 };
