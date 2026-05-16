@@ -652,7 +652,7 @@ export class InteriorView {
     this.torpedoValue.text = `${"◆".repeat(full)}${"◇".repeat(empty)}  ${count}`;
 
     // Positions
-    this.positionValue.text = `SUB ${Math.round(state.playerX)}  DES ${Math.round(state.enemyX)}`;
+    this.positionValue.text = `SUB (${Math.round(state.player.x)},${Math.round(state.player.y)})  ENM (${Math.round(state.enemy.x)},${Math.round(state.enemy.y)})`;
 
     // ── Speed buttons ────────────────────────────────────────────────────────
 

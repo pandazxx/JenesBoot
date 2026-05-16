@@ -39,32 +39,23 @@ import {
   DEPTH_CHARGE_COOLDOWN_TICKS,
   deckGunDepthDamageMultiplier,
 } from "./weapons.js";
-import {
-  merchantAi,
-  destroyerAi,
-  destroyerBattleAi,
-  gunboatAi,
-  submarineAi,
-  MERCHANT_RANGE_TICKS_PER_BAND,
-  DESTROYER_RANGE_TICKS_PER_BAND,
-} from "./ai.js";
+import { merchantAi, destroyerAi, destroyerBattleAi, gunboatAi, submarineAi } from "./ai.js";
 
-const PLAYER_RANGE_TICKS: Record<SpeedSetting, number> = {
-  [SpeedSetting.SILENT]: 25,
-  [SpeedSetting.STANDARD]: 15,
-  [SpeedSetting.AHEAD_FULL]: 10,
+/** One band = 150 axis units, both x (range) and y (depth). */
+const BAND_SIZE = 150;
+
+/** Horizontal speed in x-units per tick. Preserves original ticks-per-band timing. */
+const X_SPEED: Record<SpeedSetting, number> = {
+  [SpeedSetting.SILENT]: 6, // 150/6  = 25 ticks/band
+  [SpeedSetting.STANDARD]: 10, // 150/10 = 15 ticks/band
+  [SpeedSetting.AHEAD_FULL]: 15, // 150/15 = 10 ticks/band
 };
 
-// Speed weight for net-direction calculation: faster ships exert more force.
-const SPEED_WEIGHT: Record<SpeedSetting, number> = {
-  [SpeedSetting.SILENT]: 1,
-  [SpeedSetting.STANDARD]: 2,
-  [SpeedSetting.AHEAD_FULL]: 3,
-};
+/** Depth speed: y-units per tick toward depthTarget. 150/25 = 6 ticks/band. */
+const Y_SPEED = 25;
 
 const DECK_GUN_FLIGHT_TICKS = 1;
 const TRACKING_THRESHOLD = 4;
-const DEPTH_TICKS_PER_BAND = 6;
 
 const O2_DEPTH_DRAIN: [number, number, number, number, number] = [0, 1, 2, 3, 4];
 const O2_SPEED_DRAIN: [number, number, number] = [0, 1, 2];
@@ -104,20 +95,12 @@ function applyCommand(
   }
 }
 
-function rangeTicksNeeded(ship: ShipState, isEnemy: boolean, scenario: string): number {
-  if (isEnemy) {
-    if (scenario === "destroyer_dive") return DESTROYER_RANGE_TICKS_PER_BAND;
-    if (scenario === "gunboat_hunt") return DESTROYER_RANGE_TICKS_PER_BAND;
-    if (scenario === "destroyer_battle") return DESTROYER_RANGE_TICKS_PER_BAND;
-    if (scenario === "submerged_ambush") return DESTROYER_RANGE_TICKS_PER_BAND;
-    return MERCHANT_RANGE_TICKS_PER_BAND;
-  }
-  return PLAYER_RANGE_TICKS[ship.speed] ?? 15;
+function xGapToRangeBand(gap: number): RangeBand {
+  return Math.min(RangeBand.LONG, Math.floor(gap / BAND_SIZE)) as RangeBand;
 }
 
-function shiftRange(current: RangeBand, direction: SpeedDirection): RangeBand {
-  const next = current - direction;
-  return Math.max(RangeBand.RAMMING, Math.min(RangeBand.LONG, next)) as RangeBand;
+function yToDepthBand(y: number): DepthBand {
+  return Math.min(DepthBand.ABYSSAL, Math.floor(y / BAND_SIZE)) as DepthBand;
 }
 
 function deckGunInRange(range: RangeBand): boolean {
@@ -126,28 +109,6 @@ function deckGunInRange(range: RangeBand): boolean {
 
 function torpedoInRange(range: RangeBand): boolean {
   return range <= RangeBand.MEDIUM;
-}
-
-/**
- * Advance one depth band toward depthTarget.
- * Returns the new depth if a band shift occurred this tick, otherwise null.
- */
-function advanceDepth(ship: ShipState): DepthBand | null {
-  if (ship.depth === ship.depthTarget) return null;
-
-  if (ship.depthTransitionTicks === 0) {
-    ship.depthTransitionTicks = DEPTH_TICKS_PER_BAND;
-  }
-
-  ship.depthTransitionTicks -= 1;
-
-  if (ship.depthTransitionTicks === 0) {
-    const dir = ship.depthTarget > ship.depth ? 1 : -1;
-    ship.depth = (ship.depth + dir) as DepthBand;
-    return ship.depth;
-  }
-
-  return null;
 }
 
 export function tickCombat(
@@ -293,54 +254,51 @@ export function tickCombat(
   }
 
   // -------------------------------------------------------------------------
-  // Step 5: Advance range
+  // Step 5+6: Move ships on (x, y) axes; derive range and depth bands
   // -------------------------------------------------------------------------
-  // Speed-weighted net direction: AHEAD_FULL beats STANDARD beats SILENT.
-  // This lets a destroyer outrun a standard-speed submarine.
-  // speedOverride on a ship substitutes for the table lookup (e.g. gunboat at 4).
-  const playerWeight =
-    (s.player.speedOverride ?? SPEED_WEIGHT[s.player.speed] ?? 2) * s.player.direction;
-  const enemyWeight =
-    (s.enemy.speedOverride ?? SPEED_WEIGHT[s.enemy.speed] ?? 2) * s.enemy.direction;
-  const netDirectionRaw = playerWeight + enemyWeight;
-  const netDirection: SpeedDirection =
-    netDirectionRaw > 0
-      ? SpeedDirection.CLOSE
-      : netDirectionRaw < 0
-        ? SpeedDirection.OPEN
-        : SpeedDirection.HOLD;
+  const xGapBefore = Math.abs(s.player.x - s.enemy.x);
 
-  if (netDirection !== SpeedDirection.HOLD) {
-    s.player.rangeTicksAccumulator += 1;
-    const needed = rangeTicksNeeded(s.player, false, s.scenario);
-    if (s.player.rangeTicksAccumulator >= needed) {
-      s.player.rangeTicksAccumulator -= needed;
-      const prevRange = s.range;
-      s.range = shiftRange(s.range, netDirection);
-      if (s.range !== prevRange) {
-        events.push({ type: "range_change", payload: { from: prevRange, to: s.range } });
-      }
-    }
-  } else {
-    s.player.rangeTicksAccumulator = 0;
+  // x — horizontal movement (player CLOSE increases x, enemy CLOSE decreases x)
+  s.player.x += (s.player.speedOverride ?? X_SPEED[s.player.speed] ?? 10) * s.player.direction;
+  s.enemy.x -= (s.enemy.speedOverride ?? X_SPEED[s.enemy.speed] ?? 10) * s.enemy.direction;
+  // Ships cannot pass through each other — clamp so player always stays left of enemy.
+  if (s.player.x > s.enemy.x) {
+    const mid = (s.player.x + s.enemy.x) / 2;
+    s.player.x = mid;
+    s.enemy.x = mid;
   }
 
-  // Update absolute 1-D positions (display-only; does not drive range logic).
-  // Player CLOSE → playerX increases; enemy CLOSE → enemyX decreases (they approach).
-  s.playerX += (s.player.speedOverride ?? SPEED_WEIGHT[s.player.speed]) * s.player.direction;
-  s.enemyX -= (s.enemy.speedOverride ?? SPEED_WEIGHT[s.enemy.speed]) * s.enemy.direction;
-
-  // -------------------------------------------------------------------------
-  // Step 6: Advance depth transitions
-  // -------------------------------------------------------------------------
-  const playerNewDepth = advanceDepth(s.player);
-  if (playerNewDepth !== null) {
-    events.push({ type: "depth_change", payload: { who: "player", depth: playerNewDepth } });
+  // y — depth movement toward depthTarget (band value × BAND_SIZE)
+  const playerYTarget = s.player.depthTarget * BAND_SIZE;
+  if (s.player.y !== playerYTarget) {
+    const dy = playerYTarget - s.player.y;
+    s.player.y = Math.abs(dy) <= Y_SPEED ? playerYTarget : s.player.y + Math.sign(dy) * Y_SPEED;
+  }
+  const enemyYTarget = s.enemy.depthTarget * BAND_SIZE;
+  if (s.enemy.y !== enemyYTarget) {
+    const dy = enemyYTarget - s.enemy.y;
+    s.enemy.y = Math.abs(dy) <= Y_SPEED ? enemyYTarget : s.enemy.y + Math.sign(dy) * Y_SPEED;
   }
 
-  const enemyNewDepth = advanceDepth(s.enemy);
-  if (enemyNewDepth !== null) {
-    events.push({ type: "depth_change", payload: { who: "enemy", depth: enemyNewDepth } });
+  // Derive range band from absolute x gap; emit event on change
+  const xGap = Math.abs(s.player.x - s.enemy.x);
+  const gapOpening = xGap > xGapBefore;
+  const prevRange = s.range;
+  s.range = xGapToRangeBand(xGap);
+  if (s.range !== prevRange) {
+    events.push({ type: "range_change", payload: { from: prevRange, to: s.range } });
+  }
+
+  // Derive depth bands from y; emit events on change
+  const playerDepthDerived = yToDepthBand(s.player.y);
+  if (playerDepthDerived !== s.player.depth) {
+    s.player.depth = playerDepthDerived;
+    events.push({ type: "depth_change", payload: { who: "player", depth: s.player.depth } });
+  }
+  const enemyDepthDerived = yToDepthBand(s.enemy.y);
+  if (enemyDepthDerived !== s.enemy.depth) {
+    s.enemy.depth = enemyDepthDerived;
+    events.push({ type: "depth_change", payload: { who: "enemy", depth: s.enemy.depth } });
   }
 
   // -------------------------------------------------------------------------
@@ -611,11 +569,7 @@ export function tickCombat(
     s.result === "ongoing"
   ) {
     const enemyCQForEscape = contactQuality(s.enemy, s.player, s.range);
-    if (
-      s.range === RangeBand.LONG &&
-      netDirection === SpeedDirection.OPEN &&
-      enemyCQForEscape === 0
-    ) {
+    if (s.range === RangeBand.LONG && gapOpening && enemyCQForEscape === 0) {
       s.escapeAccumulator += 1;
     } else {
       s.escapeAccumulator = 0;
@@ -639,12 +593,12 @@ export function buildSurfaceBattleState(): CombatState {
     maxHullHP: 20,
     oxygen: 1800,
     maxOxygen: 1800,
+    x: 0,
+    y: 0,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
-    depthTransitionTicks: 0,
     speed: SpeedSetting.AHEAD_FULL,
     direction: SpeedDirection.CLOSE,
-    rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
     torpedoCount: 4,
@@ -659,12 +613,12 @@ export function buildSurfaceBattleState(): CombatState {
     maxHullHP: 8,
     oxygen: 0,
     maxOxygen: 0,
+    x: 750,
+    y: 0,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
-    depthTransitionTicks: 0,
     speed: SpeedSetting.STANDARD,
     direction: SpeedDirection.HOLD,
-    rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
     torpedoCount: 0,
@@ -699,8 +653,6 @@ export function buildSurfaceBattleState(): CombatState {
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
-    playerX: 0,
-    enemyX: 400,
   };
 }
 
@@ -711,12 +663,12 @@ export function buildDestroyerDiveState(): CombatState {
     maxHullHP: 20,
     oxygen: 1800,
     maxOxygen: 1800,
+    x: 0,
+    y: 0,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
-    depthTransitionTicks: 0,
     speed: SpeedSetting.STANDARD,
     direction: SpeedDirection.HOLD,
-    rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
     torpedoCount: 4,
@@ -731,12 +683,12 @@ export function buildDestroyerDiveState(): CombatState {
     maxHullHP: 10,
     oxygen: 0,
     maxOxygen: 0,
+    x: 750,
+    y: 0,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
-    depthTransitionTicks: 0,
     speed: SpeedSetting.AHEAD_FULL,
     direction: SpeedDirection.CLOSE,
-    rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
     torpedoCount: 0,
@@ -774,8 +726,6 @@ export function buildDestroyerDiveState(): CombatState {
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
-    playerX: 0,
-    enemyX: 400,
   };
 }
 
@@ -786,12 +736,12 @@ export function buildGunboatHuntState(): CombatState {
     maxHullHP: 20,
     oxygen: 1800,
     maxOxygen: 1800,
+    x: 0,
+    y: 0,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
-    depthTransitionTicks: 0,
     speed: SpeedSetting.STANDARD,
     direction: SpeedDirection.HOLD,
-    rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
     torpedoCount: 4,
@@ -806,12 +756,12 @@ export function buildGunboatHuntState(): CombatState {
     maxHullHP: 15,
     oxygen: 0,
     maxOxygen: 0,
+    x: 750,
+    y: 0,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
-    depthTransitionTicks: 0,
     speed: SpeedSetting.AHEAD_FULL,
     direction: SpeedDirection.CLOSE,
-    rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
     torpedoCount: 0,
@@ -819,7 +769,6 @@ export function buildGunboatHuntState(): CombatState {
     acousticSigOverride: 0,
     evasion: 5,
     detectionMethods: [DetectionMethod.VISUAL],
-    speedOverride: 4,
   };
 
   const crew: CrewMember[] = [
@@ -850,8 +799,6 @@ export function buildGunboatHuntState(): CombatState {
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
-    playerX: 0,
-    enemyX: 400,
   };
 }
 
@@ -862,12 +809,12 @@ export function buildDestroyerBattleState(): CombatState {
     maxHullHP: 20,
     oxygen: 1800,
     maxOxygen: 1800,
+    x: 0,
+    y: 0,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
-    depthTransitionTicks: 0,
     speed: SpeedSetting.STANDARD,
     direction: SpeedDirection.HOLD,
-    rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
     torpedoCount: 4,
@@ -882,12 +829,12 @@ export function buildDestroyerBattleState(): CombatState {
     maxHullHP: 10,
     oxygen: 0,
     maxOxygen: 0,
+    x: 750,
+    y: 0,
     depth: DepthBand.SURFACE,
     depthTarget: DepthBand.SURFACE,
-    depthTransitionTicks: 0,
     speed: SpeedSetting.AHEAD_FULL,
     direction: SpeedDirection.CLOSE,
-    rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
     torpedoCount: 0,
@@ -895,7 +842,6 @@ export function buildDestroyerBattleState(): CombatState {
     acousticSigOverride: 0,
     evasion: 8,
     detectionMethods: [DetectionMethod.VISUAL, DetectionMethod.SONAR],
-    speedOverride: 4,
   };
 
   const crew: CrewMember[] = [
@@ -926,8 +872,6 @@ export function buildDestroyerBattleState(): CombatState {
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
-    playerX: 0,
-    enemyX: 400,
   };
 }
 
@@ -940,12 +884,12 @@ export function buildSubmergedAmbushState(): CombatState {
     maxHullHP: 20,
     oxygen: 1800,
     maxOxygen: 1800,
+    x: 0,
+    y: 150,
     depth: DepthBand.PERISCOPE,
     depthTarget: DepthBand.PERISCOPE,
-    depthTransitionTicks: 0,
     speed: SpeedSetting.SILENT,
     direction: SpeedDirection.HOLD,
-    rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
     torpedoCount: 4,
@@ -960,12 +904,12 @@ export function buildSubmergedAmbushState(): CombatState {
     maxHullHP: 10,
     oxygen: 0,
     maxOxygen: 0,
+    x: 750,
+    y: 150,
     depth: DepthBand.PERISCOPE,
     depthTarget: DepthBand.PERISCOPE,
-    depthTransitionTicks: 0,
     speed: SpeedSetting.STANDARD,
     direction: SpeedDirection.CLOSE,
-    rangeTicksAccumulator: 0,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
     torpedoCount: 4,
@@ -1003,7 +947,5 @@ export function buildSubmergedAmbushState(): CombatState {
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
-    playerX: 0,
-    enemyX: 400,
   };
 }
