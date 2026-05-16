@@ -107,6 +107,9 @@ export interface CombatState {
   /** Ticks remaining since player last hit the enemy — used by submarine AI rule 2. */
   enemyRecentlyHitTicks: number;
   oxygenDepletedTicks: number;
+  /** Absolute 1-D x positions (speed-weight units/tick). Sub=0, enemy=400 at LONG range. */
+  playerX: number;
+  enemyX: number;
 }
 
 export interface InFlightProjectile {
