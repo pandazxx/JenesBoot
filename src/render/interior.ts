@@ -194,6 +194,7 @@ export class InteriorView {
   private o2Bar: Graphics;
   private o2Value: Text;
   private o2BarBgContainer: Graphics;
+  private suffocatingLabel: Text;
   private depthValue: Text;
   private torpedoValue: Text;
 
@@ -305,6 +306,20 @@ export class InteriorView {
     this.o2Value = new Text({ text: "", style: makeValueStyle() });
     this.o2Value.y = ROW_O2_VALUE;
     this.container.addChild(this.o2Value);
+
+    this.suffocatingLabel = new Text({
+      text: "SUFFOCATING",
+      style: new TextStyle({
+        fontFamily: "monospace",
+        fontSize: 11,
+        fill: 0xff3333,
+        fontWeight: "bold",
+      }),
+    });
+    this.suffocatingLabel.x = DASH_LABEL_X;
+    this.suffocatingLabel.y = ROW_O2_VALUE;
+    this.suffocatingLabel.visible = false;
+    this.container.addChild(this.suffocatingLabel);
 
     // DEPTH stat row
     const depthLabel = new Text({ text: "DEPTH", style: makeLabelStyle() });
@@ -598,10 +613,15 @@ export class InteriorView {
       this.o2Value.text = `${o2Pct}%`;
       this.o2Value.x = DASH_HP_BAR_X + DASH_HP_BAR_W - this.o2Value.width;
       this.o2Value.y = ROW_O2_VALUE;
+
+      const suffocating = state.player.oxygen <= 0 && state.oxygenDepletedTicks > 0;
+      this.suffocatingLabel.visible = suffocating && Math.floor(elapsed / 300) % 2 === 0;
+      this.o2Value.visible = !suffocating;
     } else {
       this.o2BarBgContainer.visible = false;
       this.o2Bar.visible = false;
       this.o2Value.visible = false;
+      this.suffocatingLabel.visible = false;
     }
 
     // Depth

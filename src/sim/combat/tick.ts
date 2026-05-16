@@ -69,7 +69,7 @@ const DEPTH_TICKS_PER_BAND = 6;
 const O2_DEPTH_DRAIN: [number, number, number, number, number] = [0, 1, 2, 3, 4];
 const O2_SPEED_DRAIN: [number, number, number] = [0, 1, 2];
 const O2_SURFACE_REGEN = 2;
-const O2_GRACE_TICKS = 100;
+const O2_GRACE_TICKS = 20;
 
 export type PlayerCommand =
   | { type: "SET_SPEED"; speed: SpeedSetting; direction: SpeedDirection }
@@ -558,7 +558,9 @@ export function tickCombat(
   if (s.result === "ongoing") {
     if (s.player.oxygen <= 0 && s.player.depth > DepthBand.SURFACE) {
       s.oxygenDepletedTicks += 1;
-      events.push({ type: "oxygen_depleted", payload: { graceTicks: s.oxygenDepletedTicks } });
+      if (s.oxygenDepletedTicks === 1) {
+        events.push({ type: "oxygen_depleted", payload: { graceTicks: O2_GRACE_TICKS } });
+      }
       if (s.oxygenDepletedTicks >= O2_GRACE_TICKS) {
         s.result = "player_lose";
         events.push({
