@@ -38,23 +38,8 @@ import { type SimConfig, defaultSimConfig } from "./config.js";
 /** One band = 150 axis units, both x (range) and y (depth). */
 const BAND_SIZE = 150;
 
-/** Horizontal speed in x-units per tick. Preserves original ticks-per-band timing. */
-const X_SPEED: Record<SpeedSetting, number> = {
-  [SpeedSetting.SILENT]: 6, // 150/6  = 25 ticks/band
-  [SpeedSetting.STANDARD]: 10, // 150/10 = 15 ticks/band
-  [SpeedSetting.AHEAD_FULL]: 15, // 150/15 = 10 ticks/band
-};
-
-/** Depth speed: y-units per tick toward depthTarget. 150/25 = 6 ticks/band. */
-const Y_SPEED = 25;
-
 const DECK_GUN_FLIGHT_TICKS = 1;
 const TRACKING_THRESHOLD = 4;
-
-const O2_DEPTH_DRAIN: [number, number, number, number, number] = [0, 1, 2, 3, 4];
-const O2_SPEED_DRAIN: [number, number, number] = [0, 1, 2];
-const O2_SURFACE_REGEN = 2;
-const O2_GRACE_TICKS = 20;
 
 export type PlayerCommand =
   | { type: "SET_SPEED"; speed: SpeedSetting; direction: SpeedDirection }
@@ -164,7 +149,11 @@ export function tickCombat(
       config.o2DrainDeep,
       config.o2DrainAbyssal,
     ];
-    const o2SpeedDrain: [number, number, number] = [0, config.o2DrainStandard, config.o2DrainAheadFull];
+    const o2SpeedDrain: [number, number, number] = [
+      0,
+      config.o2DrainStandard,
+      config.o2DrainAheadFull,
+    ];
     const oxygenBefore = s.player.oxygen;
     if (s.player.depth === DepthBand.SURFACE) {
       s.player.oxygen = Math.min(s.player.maxOxygen, s.player.oxygen + config.o2SurfaceRegen);
@@ -267,8 +256,12 @@ export function tickCombat(
     [SpeedSetting.STANDARD]: config.xSpeedStandard,
     [SpeedSetting.AHEAD_FULL]: config.xSpeedAheadFull,
   };
-  s.player.x += (s.player.speedOverride ?? xSpeedMap[s.player.speed] ?? config.xSpeedStandard) * s.player.direction;
-  s.enemy.x -= (s.enemy.speedOverride ?? xSpeedMap[s.enemy.speed] ?? config.xSpeedStandard) * s.enemy.direction;
+  s.player.x +=
+    (s.player.speedOverride ?? xSpeedMap[s.player.speed] ?? config.xSpeedStandard) *
+    s.player.direction;
+  s.enemy.x -=
+    (s.enemy.speedOverride ?? xSpeedMap[s.enemy.speed] ?? config.xSpeedStandard) *
+    s.enemy.direction;
   // Ships cannot pass through each other — clamp so player always stays left of enemy.
   if (s.player.x > s.enemy.x) {
     const mid = (s.player.x + s.enemy.x) / 2;
@@ -280,12 +273,14 @@ export function tickCombat(
   const playerYTarget = s.player.depthTarget * BAND_SIZE;
   if (s.player.y !== playerYTarget) {
     const dy = playerYTarget - s.player.y;
-    s.player.y = Math.abs(dy) <= config.ySpeed ? playerYTarget : s.player.y + Math.sign(dy) * config.ySpeed;
+    s.player.y =
+      Math.abs(dy) <= config.ySpeed ? playerYTarget : s.player.y + Math.sign(dy) * config.ySpeed;
   }
   const enemyYTarget = s.enemy.depthTarget * BAND_SIZE;
   if (s.enemy.y !== enemyYTarget) {
     const dy = enemyYTarget - s.enemy.y;
-    s.enemy.y = Math.abs(dy) <= config.ySpeed ? enemyYTarget : s.enemy.y + Math.sign(dy) * config.ySpeed;
+    s.enemy.y =
+      Math.abs(dy) <= config.ySpeed ? enemyYTarget : s.enemy.y + Math.sign(dy) * config.ySpeed;
   }
 
   // Derive range band from absolute x gap; emit event on change
