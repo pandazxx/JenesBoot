@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   const settingsPanel = new SettingsPanel();
   let currentConfig = loadSimConfig();
 
-  settingsPanel.onClose = (config) => {
+  settingsPanel.onClose = (config): void => {
     saveSimConfig(config);
     currentConfig = config;
   };
