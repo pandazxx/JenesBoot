@@ -319,8 +319,6 @@ Sonar CQ = `sonarBase[observerDepth][range] + (effectiveAcousticSig(target) − 
 | DEEP | 0 | 0 | 0 | 0 | 0 |
 | ABYSSAL | 0 | 0 | 0 | 0 | 0 |
 
-DEEP and ABYSSAL observers have stronger sonar than surface ships — this is the deep-sea archetype's detection advantage.
-
 **Effective acoustic signature** of target = `4 + speedMod + fireMod`
 
 | Condition | Modifier |
