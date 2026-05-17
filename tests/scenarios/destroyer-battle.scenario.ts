@@ -147,4 +147,51 @@ describe("destroyer_battle scenario", () => {
     // The fight must resolve, not loop forever
     expect(result).not.toBe("ongoing");
   });
+
+  it("sub at DEEP has halved acoustic sig — enemy loses sonar contact at LONG range", () => {
+    // At DEEP, effectiveAcousticSig(STANDARD sub) = floor(4/2) = 2.
+    // Enemy (SURFACE) sonar at LONG = SONAR_BASE[SURFACE][LONG] + (2-4) = 5 - 2 = 3 < 4 = NOT tracking.
+    const state = buildDestroyerBattleState();
+    state.player.depth = DepthBand.DEEP;
+    state.player.y = DepthBand.DEEP * 150;
+    state.player.speed = SpeedSetting.STANDARD;
+    state.range = RangeBand.LONG;
+
+    const rng = new Mulberry32(0);
+    const { newState } = tickCombat(state, 1, rng, null);
+
+    // Enemy must have lost (or never gained) tracking.
+    expect(newState.enemyTracking).toBe(false);
+    // Player's own tracking state should also reflect CQ on the enemy.
+    // Enemy (SURFACE, AHEAD_FULL): sig = 4+2 = 6, no depth penalty. Player uses SONAR.
+    // SONAR_BASE[DEEP][LONG] = 0, so player CQ on enemy = 0 + (6-4) = 2... also < 4.
+    // So playerTracking = false too.
+    expect(newState.playerTracking).toBe(false);
+  });
+
+  it("position_report event emitted at tick 50 and 100", () => {
+    const engine = new SimEngine(0);
+    engine.startCombat("destroyer_battle");
+
+    for (let i = 0; i < 100; i++) {
+      engine.tick();
+    }
+
+    const log = engine.getState().log;
+    const posReports = log.filter((e) => e.type === "position_report");
+    expect(posReports.length).toBeGreaterThanOrEqual(2);
+
+    const ticks = posReports.map((e) => e.tick);
+    expect(ticks).toContain(50);
+    expect(ticks).toContain(100);
+
+    // Each report must have the expected payload shape.
+    const report = posReports[0];
+    expect(report).toBeDefined();
+    if (!report) return;
+    const p = report.payload as Record<string, unknown>;
+    expect(typeof p["playerX"]).toBe("number");
+    expect(typeof p["enemyX"]).toBe("number");
+    expect(typeof p["range"]).toBe("number");
+  });
 });

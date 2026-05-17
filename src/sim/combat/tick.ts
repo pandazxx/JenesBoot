@@ -207,6 +207,9 @@ export function tickCombat(
     }
   }
 
+  const playerCQ = contactQuality(s.player, s.enemy, s.range);
+  s.playerTracking = playerCQ >= TRACKING_THRESHOLD;
+
   let enemyCmd;
   if (s.scenario === "destroyer_dive") {
     enemyCmd = destroyerAi(s.enemy, s.range, s.player.depth);
@@ -599,6 +602,19 @@ export function tickCombat(
   // -------------------------------------------------------------------------
   // Step 10: Return
   // -------------------------------------------------------------------------
+  if (currentTick % 50 === 0) {
+    events.push({
+      type: "position_report",
+      payload: {
+        playerX: Math.round(s.player.x),
+        playerY: Math.round(s.player.y),
+        enemyX: Math.round(s.enemy.x),
+        enemyY: Math.round(s.enemy.y),
+        range: s.range,
+      },
+    });
+  }
+
   return { newState: s, events };
 }
 
@@ -666,6 +682,7 @@ export function buildSurfaceBattleState(config: SimConfig = defaultSimConfig()):
     enemyLastKnownRange: RangeBand.LONG,
     enemyBlindShotsFired: 0,
     enemyTracking: false,
+    playerTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
@@ -740,6 +757,7 @@ export function buildDestroyerDiveState(config: SimConfig = defaultSimConfig()):
     enemyLastKnownRange: RangeBand.LONG,
     enemyBlindShotsFired: 0,
     enemyTracking: false,
+    playerTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
@@ -814,6 +832,7 @@ export function buildGunboatHuntState(config: SimConfig = defaultSimConfig()): C
     enemyLastKnownRange: RangeBand.LONG,
     enemyBlindShotsFired: 0,
     enemyTracking: false,
+    playerTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
@@ -888,6 +907,7 @@ export function buildDestroyerBattleState(config: SimConfig = defaultSimConfig()
     enemyLastKnownRange: RangeBand.LONG,
     enemyBlindShotsFired: 0,
     enemyTracking: false,
+    playerTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
@@ -963,6 +983,7 @@ export function buildSubmergedAmbushState(config: SimConfig = defaultSimConfig()
     enemyLastKnownRange: RangeBand.LONG,
     enemyBlindShotsFired: 0,
     enemyTracking: false,
+    playerTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
