@@ -316,8 +316,8 @@ Sonar CQ = `sonarBase[observerDepth][range] + (effectiveAcousticSig(target) − 
 | SURFACE | 5 | 7 | 9 | 10 | 10 |
 | PERISCOPE | 5 | 7 | 9 | 10 | 10 |
 | SHALLOW | 4 | 6 | 8 | 9 | 10 |
-| DEEP | 6 | 8 | 9 | 10 | 10 |
-| ABYSSAL | 7 | 9 | 10 | 10 | 10 |
+| DEEP | 0 | 0 | 0 | 0 | 0 |
+| ABYSSAL | 0 | 0 | 0 | 0 | 0 |
 
 DEEP and ABYSSAL observers have stronger sonar than surface ships — this is the deep-sea archetype's detection advantage.
 
