@@ -194,7 +194,12 @@ export function tickCombat(
     if (!wasTracking) {
       events.push({
         type: "enemy_spotted",
-        payload: { range: s.range, playerDepth: s.player.depth },
+        payload: {
+          range: s.range,
+          playerDepth: s.player.depth,
+          playerX: Math.round(s.player.x),
+          playerY: Math.round(s.player.y),
+        },
       });
     }
   } else {
@@ -205,6 +210,8 @@ export function tickCombat(
         payload: {
           lastKnownRange: s.enemyLastKnownRange,
           playerDepth: s.player.depth,
+          playerX: Math.round(s.player.x),
+          playerY: Math.round(s.player.y),
           cq: enemyCQ,
         },
       });

@@ -90,16 +90,22 @@ function formatEvent(type: string, payload: unknown): string {
 
     case "enemy_spotted": {
       const range = RANGE_NAMES[p["range"] as number] ?? String(p["range"]);
-      return `Enemy spotted sub at ${range}`;
+      const depth = DEPTH_NAMES[p["playerDepth"] as number] ?? "?";
+      const px = p["playerX"] as number | undefined;
+      const py = p["playerY"] as number | undefined;
+      const posStr = px !== undefined && py !== undefined ? ` (${px},${py})` : "";
+      return `Enemy spotted sub@${depth}${posStr} [${range}]`;
     }
 
     case "enemy_contact_lost": {
       const last = RANGE_NAMES[p["lastKnownRange"] as number] ?? String(p["lastKnownRange"]);
-      const depth = DEPTH_NAMES[p["playerDepth"] as number];
+      const depth = DEPTH_NAMES[p["playerDepth"] as number] ?? "?";
       const cq = p["cq"] as number | undefined;
-      const depthStr = depth !== undefined ? ` sub@${depth}` : "";
+      const px = p["playerX"] as number | undefined;
+      const py = p["playerY"] as number | undefined;
+      const posStr = px !== undefined && py !== undefined ? ` at (${px},${py})` : "";
       const cqStr = cq !== undefined ? ` CQ=${cq}` : "";
-      return `Enemy lost contact (last: ${last}${depthStr}${cqStr})`;
+      return `Enemy lost contact sub@${depth}${posStr} [${last}]${cqStr}`;
     }
 
     case "position_report": {
