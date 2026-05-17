@@ -112,6 +112,7 @@ export interface CombatState {
   enemyLastKnownRange: RangeBand;
   enemyBlindShotsFired: number;
   enemyTracking: boolean;
+  playerTracking: boolean;
   escapeAccumulator: number;
   /** Ticks remaining since player last hit the enemy — used by submarine AI rule 2. */
   enemyRecentlyHitTicks: number;
@@ -136,7 +137,8 @@ export type CombatEventType =
   | "enemy_contact_lost"
   | "oxygen_low"
   | "oxygen_critical"
-  | "oxygen_depleted";
+  | "oxygen_depleted"
+  | "position_report";
 
 export interface CombatEvent {
   type: CombatEventType;

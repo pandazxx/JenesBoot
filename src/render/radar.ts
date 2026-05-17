@@ -98,6 +98,15 @@ function formatEvent(type: string, payload: unknown): string {
       return `Enemy lost contact (last: ${last})`;
     }
 
+    case "position_report": {
+      const px = p["playerX"] as number;
+      const py = p["playerY"] as number;
+      const ex2 = p["enemyX"] as number;
+      const ey2 = p["enemyY"] as number;
+      const rangeName = RANGE_NAMES[p["range"] as number] ?? "?";
+      return `SUB (${px},${py}) ENM (${ex2},${ey2}) [${rangeName}]`;
+    }
+
     default:
       return type;
   }
@@ -228,16 +237,19 @@ export class RadarView {
 
     // Enemy dot
     this.enemyGfx.clear();
-    this.enemyGfx.circle(ex, ey, 8).fill(0xff4444);
+    const enemyColor = state.playerTracking ? 0xff4444 : 0x4488ff;
+    this.enemyGfx.circle(ex, ey, 8).fill(enemyColor);
 
     // Enemy HP bar
     this.hpGfx.clear();
     const barX = ex - 30;
     const barY = ey - 20;
-    this.hpGfx.rect(barX, barY, 60, 6).fill(0x331111);
+    const barBgColor = state.playerTracking ? 0x331111 : 0x111133;
+    const barFillColor = state.playerTracking ? 0xff4444 : 0x4488ff;
+    this.hpGfx.rect(barX, barY, 60, 6).fill(barBgColor);
     const frac = state.enemy.hullHP / state.enemy.maxHullHP;
     if (frac > 0) {
-      this.hpGfx.rect(barX, barY, Math.round(60 * frac), 6).fill(0xff4444);
+      this.hpGfx.rect(barX, barY, Math.round(60 * frac), 6).fill(barFillColor);
     }
 
     // Keep a reference to the full log for export

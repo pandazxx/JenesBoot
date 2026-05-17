@@ -243,7 +243,8 @@ function effectiveAcousticSig(ship: ShipState): number {
   const speedMod =
     ship.speed === SpeedSetting.AHEAD_FULL ? 2 : ship.speed === SpeedSetting.SILENT ? -3 : 0;
   const fireMod = ship.acousticSigOverride > 0 ? 3 : 0;
-  return 4 + speedMod + fireMod;
+  const base = 4 + speedMod + fireMod;
+  return ship.depth >= DepthBand.DEEP ? Math.floor(base / 2) : base;
 }
 
 export function contactQuality(observer: ShipState, target: ShipState, range: RangeBand): number {
