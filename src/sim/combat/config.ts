@@ -2,9 +2,6 @@
  * SimConfig — all tunable simulation parameters in one place.
  *
  * No PixiJS, no DOM, no Math.random(), no wall-clock reads.
- * loadSimConfig / saveSimConfig access localStorage — only call from the
- * render layer (or settings panel). The sim itself only reads the config
- * value it was handed; it does not touch localStorage.
  */
 
 export interface SimConfig {
@@ -96,33 +93,4 @@ export function defaultSimConfig(): SimConfig {
     escapeTicksSubmergedAmbush: 30,
     escapeTicksOther: 20,
   };
-}
-
-const LS_KEY = "jenesboot-sim-config";
-
-export function loadSimConfig(): SimConfig {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return defaultSimConfig();
-    return { ...defaultSimConfig(), ...(JSON.parse(raw) as Partial<SimConfig>) };
-  } catch {
-    return defaultSimConfig();
-  }
-}
-
-export function saveSimConfig(config: SimConfig): void {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(config));
-  } catch {
-    // ignore — storage may be unavailable
-  }
-}
-
-export function resetSimConfig(): SimConfig {
-  try {
-    localStorage.removeItem(LS_KEY);
-  } catch {
-    // ignore
-  }
-  return defaultSimConfig();
 }
