@@ -85,6 +85,12 @@ export interface ShipState {
   evasion: number;
   detectionMethods: DetectionMethod[];
   speedOverride?: number;
+  /**
+   * Absolute AHEAD_FULL speed in units/tick for this ship.
+   * When set, STANDARD = aheadFullSpeed*(10/15) and SILENT = aheadFullSpeed*(6/15)
+   * using fixed ratios, independent of the player's xSpeed config values.
+   */
+  aheadFullSpeed?: number;
 }
 
 export interface CombatState {
@@ -106,6 +112,7 @@ export interface CombatState {
   enemyLastKnownRange: RangeBand;
   enemyBlindShotsFired: number;
   enemyTracking: boolean;
+  playerTracking: boolean;
   escapeAccumulator: number;
   /** Ticks remaining since player last hit the enemy — used by submarine AI rule 2. */
   enemyRecentlyHitTicks: number;
@@ -130,7 +137,8 @@ export type CombatEventType =
   | "enemy_contact_lost"
   | "oxygen_low"
   | "oxygen_critical"
-  | "oxygen_depleted";
+  | "oxygen_depleted"
+  | "position_report";
 
 export interface CombatEvent {
   type: CombatEventType;

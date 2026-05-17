@@ -28,39 +28,18 @@ import {
   resolveTorpedo,
   resolveDepthCharge,
   DECK_GUN_ACCURACY,
-  DECK_GUN_DAMAGE,
-  DECK_GUN_COOLDOWN_TICKS,
   TORPEDO_ACCURACY,
-  TORPEDO_DAMAGE,
-  TORPEDO_COOLDOWN_TICKS,
-  TORPEDO_FLIGHT_TICKS,
   DEPTH_CHARGE_ACCURACY,
-  DEPTH_CHARGE_DAMAGE,
-  DEPTH_CHARGE_COOLDOWN_TICKS,
   deckGunDepthDamageMultiplier,
 } from "./weapons.js";
 import { merchantAi, destroyerAi, destroyerBattleAi, gunboatAi, submarineAi } from "./ai.js";
+import { type SimConfig, defaultSimConfig } from "./config.js";
 
 /** One band = 150 axis units, both x (range) and y (depth). */
 const BAND_SIZE = 150;
 
-/** Horizontal speed in x-units per tick. Preserves original ticks-per-band timing. */
-const X_SPEED: Record<SpeedSetting, number> = {
-  [SpeedSetting.SILENT]: 6, // 150/6  = 25 ticks/band
-  [SpeedSetting.STANDARD]: 10, // 150/10 = 15 ticks/band
-  [SpeedSetting.AHEAD_FULL]: 15, // 150/15 = 10 ticks/band
-};
-
-/** Depth speed: y-units per tick toward depthTarget. 150/25 = 6 ticks/band. */
-const Y_SPEED = 25;
-
 const DECK_GUN_FLIGHT_TICKS = 1;
 const TRACKING_THRESHOLD = 4;
-
-const O2_DEPTH_DRAIN: [number, number, number, number, number] = [0, 1, 2, 3, 4];
-const O2_SPEED_DRAIN: [number, number, number] = [0, 1, 2];
-const O2_SURFACE_REGEN = 2;
-const O2_GRACE_TICKS = 20;
 
 export type PlayerCommand =
   | { type: "SET_SPEED"; speed: SpeedSetting; direction: SpeedDirection }
@@ -116,6 +95,7 @@ export function tickCombat(
   currentTick: number,
   rng: Mulberry32,
   playerCmd?: PlayerCommand | null,
+  config: SimConfig = defaultSimConfig(),
 ): { newState: CombatState; events: CombatEvent[] } {
   if (state.result !== "ongoing") {
     return { newState: cloneState(state), events: [] };
@@ -162,11 +142,23 @@ export function tickCombat(
 
   // O2 drain / regen — player sub only
   if (s.player.maxOxygen > 0) {
+    const o2DepthDrain: [number, number, number, number, number] = [
+      0,
+      config.o2DrainPeriscope,
+      config.o2DrainShallow,
+      config.o2DrainDeep,
+      config.o2DrainAbyssal,
+    ];
+    const o2SpeedDrain: [number, number, number] = [
+      0,
+      config.o2DrainStandard,
+      config.o2DrainAheadFull,
+    ];
     const oxygenBefore = s.player.oxygen;
     if (s.player.depth === DepthBand.SURFACE) {
-      s.player.oxygen = Math.min(s.player.maxOxygen, s.player.oxygen + O2_SURFACE_REGEN);
+      s.player.oxygen = Math.min(s.player.maxOxygen, s.player.oxygen + config.o2SurfaceRegen);
     } else {
-      const drain = (O2_DEPTH_DRAIN[s.player.depth] ?? 0) + (O2_SPEED_DRAIN[s.player.speed] ?? 0);
+      const drain = (o2DepthDrain[s.player.depth] ?? 0) + (o2SpeedDrain[s.player.speed] ?? 0);
       s.player.oxygen = Math.max(0, s.player.oxygen - drain);
     }
     const halfMax = s.player.maxOxygen * 0.5;
@@ -202,7 +194,12 @@ export function tickCombat(
     if (!wasTracking) {
       events.push({
         type: "enemy_spotted",
-        payload: { range: s.range, playerDepth: s.player.depth },
+        payload: {
+          range: s.range,
+          playerDepth: s.player.depth,
+          playerX: Math.round(s.player.x),
+          playerY: Math.round(s.player.y),
+        },
       });
     }
   } else {
@@ -210,16 +207,25 @@ export function tickCombat(
     if (wasTracking) {
       events.push({
         type: "enemy_contact_lost",
-        payload: { lastKnownRange: s.enemyLastKnownRange },
+        payload: {
+          lastKnownRange: s.enemyLastKnownRange,
+          playerDepth: s.player.depth,
+          playerX: Math.round(s.player.x),
+          playerY: Math.round(s.player.y),
+          cq: enemyCQ,
+        },
       });
     }
   }
+
+  const playerCQ = contactQuality(s.player, s.enemy, s.range);
+  s.playerTracking = playerCQ >= TRACKING_THRESHOLD;
 
   let enemyCmd;
   if (s.scenario === "destroyer_dive") {
     enemyCmd = destroyerAi(s.enemy, s.range, s.player.depth);
   } else if (s.scenario === "destroyer_battle") {
-    enemyCmd = destroyerBattleAi(s.enemy, s.range, s.player.depth, enemyCQ);
+    enemyCmd = destroyerBattleAi(s.enemy, s.range, s.player.depth, enemyCQ, s.enemyLastKnownRange);
   } else if (s.scenario === "submerged_ambush") {
     enemyCmd = submarineAi(s.enemy, s.range, s.player.depth, enemyCQ, s.enemyRecentlyHitTicks);
   } else if (s.scenario === "gunboat_hunt") {
@@ -241,8 +247,7 @@ export function tickCombat(
     // Blind shots fired from a stationary search pattern — stop closing.
     s.enemy.direction = SpeedDirection.HOLD;
   } else if (enemyCmd.type === "FIRE_DEPTH_CHARGE") {
-    // Destroyer holds position while dropping charges.
-    s.enemy.direction = SpeedDirection.HOLD;
+    // Destroyer continues on its current heading while dropping charges.
   } else if (enemyCmd.type === "MATCH_AND_CLOSE") {
     s.enemy.speed = SpeedSetting.STANDARD;
     s.enemy.direction = SpeedDirection.CLOSE;
@@ -259,8 +264,31 @@ export function tickCombat(
   const xGapBefore = Math.abs(s.player.x - s.enemy.x);
 
   // x — horizontal movement (player CLOSE increases x, enemy CLOSE decreases x)
-  s.player.x += (s.player.speedOverride ?? X_SPEED[s.player.speed] ?? 10) * s.player.direction;
-  s.enemy.x -= (s.enemy.speedOverride ?? X_SPEED[s.enemy.speed] ?? 10) * s.enemy.direction;
+  const xSpeedMap: Record<SpeedSetting, number> = {
+    [SpeedSetting.SILENT]: config.xSpeedSilent,
+    [SpeedSetting.STANDARD]: config.xSpeedStandard,
+    [SpeedSetting.AHEAD_FULL]: config.xSpeedAheadFull,
+  };
+  s.player.x +=
+    (s.player.speedOverride ?? xSpeedMap[s.player.speed] ?? config.xSpeedStandard) *
+    s.player.direction;
+  // Enemy speed: if aheadFullSpeed is set, use fixed SILENT/STANDARD/AHEAD_FULL ratios
+  // (10/15, 1) independent of the player's xSpeed config, so tuning player speeds
+  // doesn't accidentally alter enemy speed tiers.
+  const enemyXSpeed = ((): number => {
+    if (s.enemy.speedOverride !== undefined) return s.enemy.speedOverride;
+    if (s.enemy.aheadFullSpeed !== undefined) {
+      const tierRatio =
+        s.enemy.speed === SpeedSetting.AHEAD_FULL
+          ? 1
+          : s.enemy.speed === SpeedSetting.STANDARD
+            ? 10 / 15
+            : 6 / 15;
+      return s.enemy.aheadFullSpeed * tierRatio;
+    }
+    return xSpeedMap[s.enemy.speed] ?? config.xSpeedStandard;
+  })();
+  s.enemy.x -= enemyXSpeed * s.enemy.direction;
   // Ships cannot pass through each other — clamp so player always stays left of enemy.
   if (s.player.x > s.enemy.x) {
     const mid = (s.player.x + s.enemy.x) / 2;
@@ -272,12 +300,14 @@ export function tickCombat(
   const playerYTarget = s.player.depthTarget * BAND_SIZE;
   if (s.player.y !== playerYTarget) {
     const dy = playerYTarget - s.player.y;
-    s.player.y = Math.abs(dy) <= Y_SPEED ? playerYTarget : s.player.y + Math.sign(dy) * Y_SPEED;
+    s.player.y =
+      Math.abs(dy) <= config.ySpeed ? playerYTarget : s.player.y + Math.sign(dy) * config.ySpeed;
   }
   const enemyYTarget = s.enemy.depthTarget * BAND_SIZE;
   if (s.enemy.y !== enemyYTarget) {
     const dy = enemyYTarget - s.enemy.y;
-    s.enemy.y = Math.abs(dy) <= Y_SPEED ? enemyYTarget : s.enemy.y + Math.sign(dy) * Y_SPEED;
+    s.enemy.y =
+      Math.abs(dy) <= config.ySpeed ? enemyYTarget : s.enemy.y + Math.sign(dy) * config.ySpeed;
   }
 
   // Derive range band from absolute x gap; emit event on change
@@ -326,13 +356,13 @@ export function tickCombat(
       type: "shot_fired",
       payload: { by: "player", weapon: "deck_gun", range: s.range },
     });
-    s.player.deckGunCooldown = DECK_GUN_COOLDOWN_TICKS;
+    s.player.deckGunCooldown = config.deckGunCooldown;
     s.player.acousticSigOverride = 1;
     s.playerFiredTicks = 5;
     if (hit) {
       s.inFlight.push({
         firedBy: "player",
-        damage: DECK_GUN_DAMAGE,
+        damage: config.deckGunDamage,
         arrivesOnTick: currentTick + DECK_GUN_FLIGHT_TICKS,
       });
     } else {
@@ -362,15 +392,15 @@ export function tickCombat(
       type: "shot_fired",
       payload: { by: "player", weapon: "torpedo", range: s.range },
     });
-    s.player.torpedoCooldown = TORPEDO_COOLDOWN_TICKS;
+    s.player.torpedoCooldown = config.torpedoCooldown;
     s.player.torpedoCount -= 1;
     s.player.acousticSigOverride = 1;
     s.playerFiredTicks = 5;
     if (hit) {
       s.inFlight.push({
         firedBy: "player",
-        damage: TORPEDO_DAMAGE,
-        arrivesOnTick: currentTick + TORPEDO_FLIGHT_TICKS,
+        damage: config.torpedoDamage,
+        arrivesOnTick: currentTick + config.torpedoFlightTicks,
       });
     } else {
       events.push({ type: "shot_miss", payload: { by: "player", weapon: "torpedo" } });
@@ -388,12 +418,12 @@ export function tickCombat(
     if (dmgMult > 0) {
       const accuracy = DECK_GUN_ACCURACY[s.range] ?? 0;
       const hit = resolveDeckGun(accuracy, s.player.evasion, rng);
-      const damage = Math.max(1, Math.round(DECK_GUN_DAMAGE * dmgMult));
+      const damage = Math.max(1, Math.round(config.deckGunDamage * dmgMult));
       events.push({
         type: "shot_fired",
         payload: { by: "enemy", weapon: "deck_gun", range: s.range },
       });
-      s.enemy.deckGunCooldown = DECK_GUN_COOLDOWN_TICKS;
+      s.enemy.deckGunCooldown = config.deckGunCooldown;
       s.enemy.acousticSigOverride = 1;
       s.enemyFiredTicks = 5;
       if (hit) {
@@ -417,14 +447,14 @@ export function tickCombat(
     s.enemy.deckGunCooldown === 0
   ) {
     s.enemyBlindShotsFired += 1;
-    s.enemy.deckGunCooldown = DECK_GUN_COOLDOWN_TICKS;
+    s.enemy.deckGunCooldown = config.deckGunCooldown;
     s.enemy.acousticSigOverride = 1;
     s.enemyFiredTicks = 5;
     const dmgMult = deckGunDepthDamageMultiplier(s.player.depth);
     if (dmgMult > 0) {
       const accuracy = DECK_GUN_ACCURACY[s.range] ?? 0;
       const hit = resolveDeckGun(accuracy, s.player.evasion, rng);
-      const damage = Math.max(1, Math.round(DECK_GUN_DAMAGE * dmgMult));
+      const damage = Math.max(1, Math.round(config.deckGunDamage * dmgMult));
       events.push({
         type: "shot_fired",
         payload: { by: "enemy", weapon: "deck_gun", blind: true, range: s.range },
@@ -459,13 +489,13 @@ export function tickCombat(
       type: "shot_fired",
       payload: { by: "enemy", weapon: "depth_charge", range: s.range, playerDepth: s.player.depth },
     });
-    s.enemy.torpedoCooldown = DEPTH_CHARGE_COOLDOWN_TICKS;
+    s.enemy.torpedoCooldown = config.depthChargeCooldown;
     s.enemy.acousticSigOverride = 1;
     s.enemyFiredTicks = 5;
     if (hit) {
       s.inFlight.push({
         firedBy: "enemy",
-        damage: DEPTH_CHARGE_DAMAGE,
+        damage: config.depthChargeDamage,
         arrivesOnTick: currentTick + DECK_GUN_FLIGHT_TICKS,
       });
     } else {
@@ -487,15 +517,15 @@ export function tickCombat(
       type: "shot_fired",
       payload: { by: "enemy", weapon: "torpedo", range: s.range },
     });
-    s.enemy.torpedoCooldown = TORPEDO_COOLDOWN_TICKS;
+    s.enemy.torpedoCooldown = config.torpedoCooldown;
     s.enemy.torpedoCount -= 1;
     s.enemy.acousticSigOverride = 1;
     s.enemyFiredTicks = 5;
     if (hit) {
       s.inFlight.push({
         firedBy: "enemy",
-        damage: TORPEDO_DAMAGE,
-        arrivesOnTick: currentTick + TORPEDO_FLIGHT_TICKS,
+        damage: config.torpedoDamage,
+        arrivesOnTick: currentTick + config.torpedoFlightTicks,
       });
     } else {
       events.push({ type: "shot_miss", payload: { by: "enemy", weapon: "torpedo" } });
@@ -522,9 +552,9 @@ export function tickCombat(
     if (s.player.oxygen <= 0 && s.player.depth > DepthBand.SURFACE) {
       s.oxygenDepletedTicks += 1;
       if (s.oxygenDepletedTicks === 1) {
-        events.push({ type: "oxygen_depleted", payload: { graceTicks: O2_GRACE_TICKS } });
+        events.push({ type: "oxygen_depleted", payload: { graceTicks: config.o2GraceTicks } });
       }
-      if (s.oxygenDepletedTicks >= O2_GRACE_TICKS) {
+      if (s.oxygenDepletedTicks >= config.o2GraceTicks) {
         s.result = "player_lose";
         events.push({
           type: "combat_end",
@@ -544,7 +574,7 @@ export function tickCombat(
     } else {
       s.escapeAccumulator = 0;
     }
-    if (s.escapeAccumulator >= 40) {
+    if (s.escapeAccumulator >= config.escapeTicksDestroyerDive) {
       s.result = "escaped";
       events.push({ type: "combat_end", payload: { result: "escaped", atTick: currentTick } });
     }
@@ -557,24 +587,25 @@ export function tickCombat(
     } else {
       s.escapeAccumulator = 0;
     }
-    if (s.escapeAccumulator >= 30) {
+    if (s.escapeAccumulator >= config.escapeTicksSubmergedAmbush) {
       s.result = "escaped";
       events.push({ type: "combat_end", payload: { result: "escaped", atTick: currentTick } });
     }
   }
 
   // Escape condition — gunboat_hunt and destroyer_battle
+  // Enemy must have lost tracking (CQ < 4) while the gap is at LONG and opening.
+  // Using enemyTracking (already computed this tick) avoids a redundant CQ call.
   if (
     (s.scenario === "gunboat_hunt" || s.scenario === "destroyer_battle") &&
     s.result === "ongoing"
   ) {
-    const enemyCQForEscape = contactQuality(s.enemy, s.player, s.range);
-    if (s.range === RangeBand.LONG && gapOpening && enemyCQForEscape === 0) {
+    if (s.range === RangeBand.LONG && gapOpening && !s.enemyTracking) {
       s.escapeAccumulator += 1;
     } else {
       s.escapeAccumulator = 0;
     }
-    if (s.escapeAccumulator >= 20) {
+    if (s.escapeAccumulator >= config.escapeTicksOther) {
       s.result = "escaped";
       events.push({ type: "combat_end", payload: { result: "escaped", atTick: currentTick } });
     }
@@ -583,16 +614,29 @@ export function tickCombat(
   // -------------------------------------------------------------------------
   // Step 10: Return
   // -------------------------------------------------------------------------
+  if (currentTick % 50 === 0) {
+    events.push({
+      type: "position_report",
+      payload: {
+        playerX: Math.round(s.player.x),
+        playerY: Math.round(s.player.y),
+        enemyX: Math.round(s.enemy.x),
+        enemyY: Math.round(s.enemy.y),
+        range: s.range,
+      },
+    });
+  }
+
   return { newState: s, events };
 }
 
 /** Build the initial CombatState for the surface_battle scenario. */
-export function buildSurfaceBattleState(): CombatState {
+export function buildSurfaceBattleState(config: SimConfig = defaultSimConfig()): CombatState {
   const player: ShipState = {
-    hullHP: 20,
-    maxHullHP: 20,
-    oxygen: 1800,
-    maxOxygen: 1800,
+    hullHP: config.playerMaxHullHP,
+    maxHullHP: config.playerMaxHullHP,
+    oxygen: config.maxOxygen,
+    maxOxygen: config.maxOxygen,
     x: 0,
     y: 0,
     depth: DepthBand.SURFACE,
@@ -601,7 +645,7 @@ export function buildSurfaceBattleState(): CombatState {
     direction: SpeedDirection.CLOSE,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
-    torpedoCount: 4,
+    torpedoCount: config.playerTorpedoCount,
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 10,
@@ -609,8 +653,8 @@ export function buildSurfaceBattleState(): CombatState {
   };
 
   const enemy: ShipState = {
-    hullHP: 8,
-    maxHullHP: 8,
+    hullHP: config.enemyHullSurfaceBattle,
+    maxHullHP: config.enemyHullSurfaceBattle,
     oxygen: 0,
     maxOxygen: 0,
     x: 750,
@@ -650,6 +694,7 @@ export function buildSurfaceBattleState(): CombatState {
     enemyLastKnownRange: RangeBand.LONG,
     enemyBlindShotsFired: 0,
     enemyTracking: false,
+    playerTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
@@ -657,12 +702,12 @@ export function buildSurfaceBattleState(): CombatState {
 }
 
 /** Build the initial CombatState for the destroyer_dive scenario. */
-export function buildDestroyerDiveState(): CombatState {
+export function buildDestroyerDiveState(config: SimConfig = defaultSimConfig()): CombatState {
   const player: ShipState = {
-    hullHP: 20,
-    maxHullHP: 20,
-    oxygen: 1800,
-    maxOxygen: 1800,
+    hullHP: config.playerMaxHullHP,
+    maxHullHP: config.playerMaxHullHP,
+    oxygen: config.maxOxygen,
+    maxOxygen: config.maxOxygen,
     x: 0,
     y: 0,
     depth: DepthBand.SURFACE,
@@ -671,7 +716,7 @@ export function buildDestroyerDiveState(): CombatState {
     direction: SpeedDirection.HOLD,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
-    torpedoCount: 4,
+    torpedoCount: config.playerTorpedoCount,
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 10,
@@ -679,8 +724,8 @@ export function buildDestroyerDiveState(): CombatState {
   };
 
   const enemy: ShipState = {
-    hullHP: 10,
-    maxHullHP: 10,
+    hullHP: config.enemyHullDestroyerDive,
+    maxHullHP: config.enemyHullDestroyerDive,
     oxygen: 0,
     maxOxygen: 0,
     x: 750,
@@ -696,6 +741,7 @@ export function buildDestroyerDiveState(): CombatState {
     acousticSigOverride: 0,
     evasion: 8,
     detectionMethods: [DetectionMethod.VISUAL],
+    aheadFullSpeed: config.destroyerSpeed,
   };
 
   const crew: CrewMember[] = [
@@ -723,6 +769,7 @@ export function buildDestroyerDiveState(): CombatState {
     enemyLastKnownRange: RangeBand.LONG,
     enemyBlindShotsFired: 0,
     enemyTracking: false,
+    playerTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
@@ -730,12 +777,12 @@ export function buildDestroyerDiveState(): CombatState {
 }
 
 /** Build the initial CombatState for the gunboat_hunt scenario. */
-export function buildGunboatHuntState(): CombatState {
+export function buildGunboatHuntState(config: SimConfig = defaultSimConfig()): CombatState {
   const player: ShipState = {
-    hullHP: 20,
-    maxHullHP: 20,
-    oxygen: 1800,
-    maxOxygen: 1800,
+    hullHP: config.playerMaxHullHP,
+    maxHullHP: config.playerMaxHullHP,
+    oxygen: config.maxOxygen,
+    maxOxygen: config.maxOxygen,
     x: 0,
     y: 0,
     depth: DepthBand.SURFACE,
@@ -744,7 +791,7 @@ export function buildGunboatHuntState(): CombatState {
     direction: SpeedDirection.HOLD,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
-    torpedoCount: 4,
+    torpedoCount: config.playerTorpedoCount,
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 10,
@@ -752,8 +799,8 @@ export function buildGunboatHuntState(): CombatState {
   };
 
   const enemy: ShipState = {
-    hullHP: 15,
-    maxHullHP: 15,
+    hullHP: config.enemyHullGunboatHunt,
+    maxHullHP: config.enemyHullGunboatHunt,
     oxygen: 0,
     maxOxygen: 0,
     x: 750,
@@ -769,6 +816,7 @@ export function buildGunboatHuntState(): CombatState {
     acousticSigOverride: 0,
     evasion: 5,
     detectionMethods: [DetectionMethod.VISUAL],
+    aheadFullSpeed: config.gunboatSpeed,
   };
 
   const crew: CrewMember[] = [
@@ -796,6 +844,7 @@ export function buildGunboatHuntState(): CombatState {
     enemyLastKnownRange: RangeBand.LONG,
     enemyBlindShotsFired: 0,
     enemyTracking: false,
+    playerTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
@@ -803,12 +852,12 @@ export function buildGunboatHuntState(): CombatState {
 }
 
 /** Build the initial CombatState for the destroyer_battle scenario. */
-export function buildDestroyerBattleState(): CombatState {
+export function buildDestroyerBattleState(config: SimConfig = defaultSimConfig()): CombatState {
   const player: ShipState = {
-    hullHP: 20,
-    maxHullHP: 20,
-    oxygen: 1800,
-    maxOxygen: 1800,
+    hullHP: config.playerMaxHullHP,
+    maxHullHP: config.playerMaxHullHP,
+    oxygen: config.maxOxygen,
+    maxOxygen: config.maxOxygen,
     x: 0,
     y: 0,
     depth: DepthBand.SURFACE,
@@ -817,7 +866,7 @@ export function buildDestroyerBattleState(): CombatState {
     direction: SpeedDirection.HOLD,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
-    torpedoCount: 4,
+    torpedoCount: config.playerTorpedoCount,
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 10,
@@ -825,8 +874,8 @@ export function buildDestroyerBattleState(): CombatState {
   };
 
   const enemy: ShipState = {
-    hullHP: 10,
-    maxHullHP: 10,
+    hullHP: config.enemyHullDestroyerBattle,
+    maxHullHP: config.enemyHullDestroyerBattle,
     oxygen: 0,
     maxOxygen: 0,
     x: 750,
@@ -842,6 +891,7 @@ export function buildDestroyerBattleState(): CombatState {
     acousticSigOverride: 0,
     evasion: 8,
     detectionMethods: [DetectionMethod.VISUAL, DetectionMethod.SONAR],
+    aheadFullSpeed: config.destroyerSpeed,
   };
 
   const crew: CrewMember[] = [
@@ -869,6 +919,7 @@ export function buildDestroyerBattleState(): CombatState {
     enemyLastKnownRange: RangeBand.LONG,
     enemyBlindShotsFired: 0,
     enemyTracking: false,
+    playerTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
@@ -876,14 +927,14 @@ export function buildDestroyerBattleState(): CombatState {
 }
 
 /** Build the initial CombatState for the submerged_ambush scenario. */
-export function buildSubmergedAmbushState(): CombatState {
+export function buildSubmergedAmbushState(config: SimConfig = defaultSimConfig()): CombatState {
   // Player waits at PERISCOPE SILENT; enemy approaches at STANDARD same depth.
   // At LONG, 0-depth-diff: player CQ on enemy ≈4 (tracking), enemy CQ on player ≈1 (SILENT).
   const player: ShipState = {
-    hullHP: 20,
-    maxHullHP: 20,
-    oxygen: 1800,
-    maxOxygen: 1800,
+    hullHP: config.playerMaxHullHP,
+    maxHullHP: config.playerMaxHullHP,
+    oxygen: config.maxOxygen,
+    maxOxygen: config.maxOxygen,
     x: 0,
     y: 150,
     depth: DepthBand.PERISCOPE,
@@ -892,7 +943,7 @@ export function buildSubmergedAmbushState(): CombatState {
     direction: SpeedDirection.HOLD,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
-    torpedoCount: 4,
+    torpedoCount: config.playerTorpedoCount,
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 10,
@@ -900,8 +951,8 @@ export function buildSubmergedAmbushState(): CombatState {
   };
 
   const enemy: ShipState = {
-    hullHP: 10,
-    maxHullHP: 10,
+    hullHP: config.enemyHullSubmergedAmbush,
+    maxHullHP: config.enemyHullSubmergedAmbush,
     oxygen: 0,
     maxOxygen: 0,
     x: 750,
@@ -912,7 +963,7 @@ export function buildSubmergedAmbushState(): CombatState {
     direction: SpeedDirection.CLOSE,
     deckGunCooldown: 0,
     torpedoCooldown: 0,
-    torpedoCount: 4,
+    torpedoCount: config.playerTorpedoCount,
     acousticSig: 4,
     acousticSigOverride: 0,
     evasion: 8,
@@ -944,6 +995,7 @@ export function buildSubmergedAmbushState(): CombatState {
     enemyLastKnownRange: RangeBand.LONG,
     enemyBlindShotsFired: 0,
     enemyTracking: false,
+    playerTracking: false,
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,

@@ -224,52 +224,39 @@ const SONAR_BASE: Record<DepthBand, Record<RangeBand, number>> = {
     [RangeBand.RAMMING]: 10,
   },
   [DepthBand.DEEP]: {
-    [RangeBand.LONG]: 6,
-    [RangeBand.MEDIUM]: 8,
-    [RangeBand.SHORT]: 9,
-    [RangeBand.POINT_BLANK]: 10,
-    [RangeBand.RAMMING]: 10,
+    [RangeBand.LONG]: 0,
+    [RangeBand.MEDIUM]: 0,
+    [RangeBand.SHORT]: 0,
+    [RangeBand.POINT_BLANK]: 0,
+    [RangeBand.RAMMING]: 0,
   },
   [DepthBand.ABYSSAL]: {
-    [RangeBand.LONG]: 7,
-    [RangeBand.MEDIUM]: 9,
-    [RangeBand.SHORT]: 10,
-    [RangeBand.POINT_BLANK]: 10,
-    [RangeBand.RAMMING]: 10,
+    [RangeBand.LONG]: 0,
+    [RangeBand.MEDIUM]: 0,
+    [RangeBand.SHORT]: 0,
+    [RangeBand.POINT_BLANK]: 0,
+    [RangeBand.RAMMING]: 0,
   },
 };
 
-// Table C — both subs submerged: pure passive hydrophone, indexed by absolute depth differential.
-// Row 0: same depth band. Row 1: 1 band apart. Row 2: 2+ bands apart (clamped).
-const SUB_VS_SUB_TABLE: Record<RangeBand, number>[] = [
-  {
-    [RangeBand.LONG]: 4,
-    [RangeBand.MEDIUM]: 6,
-    [RangeBand.SHORT]: 8,
-    [RangeBand.POINT_BLANK]: 9,
-    [RangeBand.RAMMING]: 10,
-  },
-  {
-    [RangeBand.LONG]: 2,
-    [RangeBand.MEDIUM]: 4,
-    [RangeBand.SHORT]: 6,
-    [RangeBand.POINT_BLANK]: 7,
-    [RangeBand.RAMMING]: 8,
-  },
-  {
-    [RangeBand.LONG]: 0,
-    [RangeBand.MEDIUM]: 1,
-    [RangeBand.SHORT]: 3,
-    [RangeBand.POINT_BLANK]: 4,
-    [RangeBand.RAMMING]: 5,
-  },
-];
+// Additional sonar penalty applied when the TARGET is at depth.
+// Ensures going DEEP reliably breaks sonar contact regardless of range.
+// At DEEP the worst-case sig (AHEAD_FULL + recently fired, halved) is 4,
+// so a penalty of 7 keeps max CQ at 3 even at RAMMING range.
+const SONAR_TARGET_DEPTH_PENALTY: Record<DepthBand, number> = {
+  [DepthBand.SURFACE]: 0,
+  [DepthBand.PERISCOPE]: 0,
+  [DepthBand.SHALLOW]: 0,
+  [DepthBand.DEEP]: 7,
+  [DepthBand.ABYSSAL]: 10,
+};
 
 function effectiveAcousticSig(ship: ShipState): number {
   const speedMod =
     ship.speed === SpeedSetting.AHEAD_FULL ? 2 : ship.speed === SpeedSetting.SILENT ? -3 : 0;
   const fireMod = ship.acousticSigOverride > 0 ? 3 : 0;
-  return 4 + speedMod + fireMod;
+  const base = 4 + speedMod + fireMod;
+  return ship.depth >= DepthBand.DEEP ? Math.floor(base / 2) : base;
 }
 
 export function contactQuality(observer: ShipState, target: ShipState, range: RangeBand): number {
@@ -282,14 +269,9 @@ export function contactQuality(observer: ShipState, target: ShipState, range: Ra
       base = VISUAL_TABLE[observer.depth]?.[target.depth]?.[range] ?? 0;
     } else if (method === DetectionMethod.SONAR) {
       const sig = effectiveAcousticSig(target);
-      if (observer.depth >= DepthBand.PERISCOPE && target.depth >= DepthBand.PERISCOPE) {
-        // Both submerged: use Table C (depth differential-based passive hydrophone).
-        const delta = Math.min(2, Math.abs(observer.depth - target.depth));
-        base = (SUB_VS_SUB_TABLE[delta]?.[range] ?? 0) + (sig - 4);
-      } else {
-        const sonarBase = SONAR_BASE[observer.depth]?.[range] ?? 0;
-        base = sonarBase + (sig - 4);
-      }
+      const sonarBase = SONAR_BASE[observer.depth]?.[range] ?? 0;
+      const depthPenalty = SONAR_TARGET_DEPTH_PENALTY[target.depth] ?? 0;
+      base = sonarBase + (sig - 4) - depthPenalty;
     } else {
       base = 0;
     }

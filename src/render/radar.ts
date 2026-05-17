@@ -90,12 +90,31 @@ function formatEvent(type: string, payload: unknown): string {
 
     case "enemy_spotted": {
       const range = RANGE_NAMES[p["range"] as number] ?? String(p["range"]);
-      return `Enemy spotted sub at ${range}`;
+      const depth = DEPTH_NAMES[p["playerDepth"] as number] ?? "?";
+      const px = p["playerX"] as number | undefined;
+      const py = p["playerY"] as number | undefined;
+      const posStr = px !== undefined && py !== undefined ? ` (${px},${py})` : "";
+      return `Enemy spotted sub@${depth}${posStr} [${range}]`;
     }
 
     case "enemy_contact_lost": {
       const last = RANGE_NAMES[p["lastKnownRange"] as number] ?? String(p["lastKnownRange"]);
-      return `Enemy lost contact (last: ${last})`;
+      const depth = DEPTH_NAMES[p["playerDepth"] as number] ?? "?";
+      const cq = p["cq"] as number | undefined;
+      const px = p["playerX"] as number | undefined;
+      const py = p["playerY"] as number | undefined;
+      const posStr = px !== undefined && py !== undefined ? ` at (${px},${py})` : "";
+      const cqStr = cq !== undefined ? ` CQ=${cq}` : "";
+      return `Enemy lost contact sub@${depth}${posStr} [${last}]${cqStr}`;
+    }
+
+    case "position_report": {
+      const px = p["playerX"] as number;
+      const py = p["playerY"] as number;
+      const ex2 = p["enemyX"] as number;
+      const ey2 = p["enemyY"] as number;
+      const rangeName = RANGE_NAMES[p["range"] as number] ?? "?";
+      return `SUB (${px},${py}) ENM (${ex2},${ey2}) [${rangeName}]`;
     }
 
     default:
@@ -228,16 +247,19 @@ export class RadarView {
 
     // Enemy dot
     this.enemyGfx.clear();
-    this.enemyGfx.circle(ex, ey, 8).fill(0xff4444);
+    const enemyColor = state.playerTracking ? 0xff4444 : 0x4488ff;
+    this.enemyGfx.circle(ex, ey, 8).fill(enemyColor);
 
     // Enemy HP bar
     this.hpGfx.clear();
     const barX = ex - 30;
     const barY = ey - 20;
-    this.hpGfx.rect(barX, barY, 60, 6).fill(0x331111);
+    const barBgColor = state.playerTracking ? 0x331111 : 0x111133;
+    const barFillColor = state.playerTracking ? 0xff4444 : 0x4488ff;
+    this.hpGfx.rect(barX, barY, 60, 6).fill(barBgColor);
     const frac = state.enemy.hullHP / state.enemy.maxHullHP;
     if (frac > 0) {
-      this.hpGfx.rect(barX, barY, Math.round(60 * frac), 6).fill(0xff4444);
+      this.hpGfx.rect(barX, barY, Math.round(60 * frac), 6).fill(barFillColor);
     }
 
     // Keep a reference to the full log for export
