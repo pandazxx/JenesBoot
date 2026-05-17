@@ -72,19 +72,21 @@ export function destroyerAi(enemy: ShipState, range: RangeBand, playerDepth: Dep
 
 /**
  * Destroyer Battle AI — closes with sonar tracking, fires depth charges on submerged sub,
- * deck gun on surface sub, continues searching when contact lost.
+ * deck gun on surface sub, searches last known range when contact lost.
  *
  * Priority order (highest first):
  *   1. CQ≥4, sub submerged, SHORT → FIRE_DEPTH_CHARGE
  *   2. CQ≥4, sub surface, range≤MEDIUM → FIRE_DECK_GUN
  *   3. CQ≥4, range>SHORT → close at AHEAD_FULL
- *   4. CQ<4 → HOLD (contact lost; destroyer stops and waits)
+ *   4. CQ<4, range ≠ lastKnownRange → navigate toward last known position
+ *   5. CQ<4, range === lastKnownRange → HOLD (searching at last known position)
  */
 export function destroyerBattleAi(
   enemy: ShipState,
   range: RangeBand,
   playerDepth: DepthBand,
   contactQualityValue: number,
+  lastKnownRange: RangeBand,
 ): AiCommand {
   const playerSubmerged = playerDepth >= DepthBand.PERISCOPE;
 
@@ -102,13 +104,14 @@ export function destroyerBattleAi(
     };
   }
 
-  // Contact lost — hold position. Without a firing solution the destroyer
-  // cannot locate a submerged target; it stops and waits rather than charging blind.
-  return {
-    type: "SET_SPEED",
-    speed: SpeedSetting.STANDARD,
-    direction: SpeedDirection.HOLD,
-  };
+  // Contact lost — move to last known range and hold there to search.
+  if (range > lastKnownRange) {
+    return { type: "SET_SPEED", speed: SpeedSetting.STANDARD, direction: SpeedDirection.CLOSE };
+  }
+  if (range < lastKnownRange) {
+    return { type: "SET_SPEED", speed: SpeedSetting.STANDARD, direction: SpeedDirection.OPEN };
+  }
+  return { type: "SET_SPEED", speed: SpeedSetting.STANDARD, direction: SpeedDirection.HOLD };
 }
 
 /**
