@@ -224,18 +224,18 @@ const SONAR_BASE: Record<DepthBand, Record<RangeBand, number>> = {
     [RangeBand.RAMMING]: 10,
   },
   [DepthBand.DEEP]: {
-    [RangeBand.LONG]: 6,
-    [RangeBand.MEDIUM]: 8,
-    [RangeBand.SHORT]: 9,
-    [RangeBand.POINT_BLANK]: 10,
-    [RangeBand.RAMMING]: 10,
+    [RangeBand.LONG]: 0,
+    [RangeBand.MEDIUM]: 0,
+    [RangeBand.SHORT]: 0,
+    [RangeBand.POINT_BLANK]: 0,
+    [RangeBand.RAMMING]: 0,
   },
   [DepthBand.ABYSSAL]: {
-    [RangeBand.LONG]: 7,
-    [RangeBand.MEDIUM]: 9,
-    [RangeBand.SHORT]: 10,
-    [RangeBand.POINT_BLANK]: 10,
-    [RangeBand.RAMMING]: 10,
+    [RangeBand.LONG]: 0,
+    [RangeBand.MEDIUM]: 0,
+    [RangeBand.SHORT]: 0,
+    [RangeBand.POINT_BLANK]: 0,
+    [RangeBand.RAMMING]: 0,
   },
 };
 
