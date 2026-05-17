@@ -3,7 +3,7 @@ import { SimEngine } from "../sim/index.js";
 import { showLanding } from "./landing.js";
 import { showCombat } from "./combat.js";
 import { SettingsPanel } from "./settings-panel.js";
-import { loadSimConfig, saveSimConfig } from "../sim/combat/config.js";
+import { loadSimConfig, saveSimConfig } from "./sim-config-storage.js";
 
 async function main(): Promise<void> {
   const app = new Application();
