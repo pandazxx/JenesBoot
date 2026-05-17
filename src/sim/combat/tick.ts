@@ -202,7 +202,11 @@ export function tickCombat(
     if (wasTracking) {
       events.push({
         type: "enemy_contact_lost",
-        payload: { lastKnownRange: s.enemyLastKnownRange },
+        payload: {
+          lastKnownRange: s.enemyLastKnownRange,
+          playerDepth: s.player.depth,
+          cq: enemyCQ,
+        },
       });
     }
   }
@@ -583,12 +587,13 @@ export function tickCombat(
   }
 
   // Escape condition — gunboat_hunt and destroyer_battle
+  // Enemy must have lost tracking (CQ < 4) while the gap is at LONG and opening.
+  // Using enemyTracking (already computed this tick) avoids a redundant CQ call.
   if (
     (s.scenario === "gunboat_hunt" || s.scenario === "destroyer_battle") &&
     s.result === "ongoing"
   ) {
-    const enemyCQForEscape = contactQuality(s.enemy, s.player, s.range);
-    if (s.range === RangeBand.LONG && gapOpening && enemyCQForEscape === 0) {
+    if (s.range === RangeBand.LONG && gapOpening && !s.enemyTracking) {
       s.escapeAccumulator += 1;
     } else {
       s.escapeAccumulator = 0;

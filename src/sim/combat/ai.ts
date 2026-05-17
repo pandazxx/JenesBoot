@@ -78,7 +78,7 @@ export function destroyerAi(enemy: ShipState, range: RangeBand, playerDepth: Dep
  *   1. CQ≥4, sub submerged, SHORT → FIRE_DEPTH_CHARGE
  *   2. CQ≥4, sub surface, range≤MEDIUM → FIRE_DECK_GUN
  *   3. CQ≥4, range>SHORT → close at AHEAD_FULL
- *   4. CQ<4 → continue closing at STANDARD (search toward last known position)
+ *   4. CQ<4 → HOLD (contact lost; destroyer stops and waits)
  */
 export function destroyerBattleAi(
   enemy: ShipState,
@@ -102,13 +102,12 @@ export function destroyerBattleAi(
     };
   }
 
-  // Contact lost — keep closing at STANDARD to search the last known position.
-  // In the continuous axis model, HOLD means the destroyer freezes completely,
-  // which breaks the intended "searching" behavior.
+  // Contact lost — hold position. Without a firing solution the destroyer
+  // cannot locate a submerged target; it stops and waits rather than charging blind.
   return {
     type: "SET_SPEED",
     speed: SpeedSetting.STANDARD,
-    direction: SpeedDirection.CLOSE,
+    direction: SpeedDirection.HOLD,
   };
 }
 

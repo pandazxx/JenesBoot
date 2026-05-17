@@ -95,7 +95,11 @@ function formatEvent(type: string, payload: unknown): string {
 
     case "enemy_contact_lost": {
       const last = RANGE_NAMES[p["lastKnownRange"] as number] ?? String(p["lastKnownRange"]);
-      return `Enemy lost contact (last: ${last})`;
+      const depth = DEPTH_NAMES[p["playerDepth"] as number];
+      const cq = p["cq"] as number | undefined;
+      const depthStr = depth !== undefined ? ` sub@${depth}` : "";
+      const cqStr = cq !== undefined ? ` CQ=${cq}` : "";
+      return `Enemy lost contact (last: ${last}${depthStr}${cqStr})`;
     }
 
     case "position_report": {
