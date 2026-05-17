@@ -239,6 +239,18 @@ const SONAR_BASE: Record<DepthBand, Record<RangeBand, number>> = {
   },
 };
 
+// Additional sonar penalty applied when the TARGET is at depth.
+// Ensures going DEEP reliably breaks sonar contact regardless of range.
+// At DEEP the worst-case sig (AHEAD_FULL + recently fired, halved) is 4,
+// so a penalty of 7 keeps max CQ at 3 even at RAMMING range.
+const SONAR_TARGET_DEPTH_PENALTY: Record<DepthBand, number> = {
+  [DepthBand.SURFACE]: 0,
+  [DepthBand.PERISCOPE]: 0,
+  [DepthBand.SHALLOW]: 0,
+  [DepthBand.DEEP]: 7,
+  [DepthBand.ABYSSAL]: 10,
+};
+
 function effectiveAcousticSig(ship: ShipState): number {
   const speedMod =
     ship.speed === SpeedSetting.AHEAD_FULL ? 2 : ship.speed === SpeedSetting.SILENT ? -3 : 0;
@@ -258,7 +270,8 @@ export function contactQuality(observer: ShipState, target: ShipState, range: Ra
     } else if (method === DetectionMethod.SONAR) {
       const sig = effectiveAcousticSig(target);
       const sonarBase = SONAR_BASE[observer.depth]?.[range] ?? 0;
-      base = sonarBase + (sig - 4);
+      const depthPenalty = SONAR_TARGET_DEPTH_PENALTY[target.depth] ?? 0;
+      base = sonarBase + (sig - 4) - depthPenalty;
     } else {
       base = 0;
     }
