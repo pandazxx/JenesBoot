@@ -218,7 +218,7 @@ export function tickCombat(
   if (s.scenario === "destroyer_dive") {
     enemyCmd = destroyerAi(s.enemy, s.range, s.player.depth);
   } else if (s.scenario === "destroyer_battle") {
-    enemyCmd = destroyerBattleAi(s.enemy, s.range, s.player.depth, enemyCQ);
+    enemyCmd = destroyerBattleAi(s.enemy, s.range, s.player.depth, enemyCQ, s.enemyLastKnownRange);
   } else if (s.scenario === "submerged_ambush") {
     enemyCmd = submarineAi(s.enemy, s.range, s.player.depth, enemyCQ, s.enemyRecentlyHitTicks);
   } else if (s.scenario === "gunboat_hunt") {

@@ -169,6 +169,29 @@ describe("destroyer_battle scenario", () => {
     expect(newState.playerTracking).toBe(false);
   });
 
+  it("destroyer searches last known range when contact lost — closes if beyond, holds if at it", () => {
+    // At DEEP STANDARD LONG: sig=floor(4/2)=2, SONAR_BASE[SURFACE][LONG]=5, CQ=5+(2-4)=3 < 4.
+    // Enemy loses contact. lastKnownRange=SHORT (range=LONG > SHORT), so destroyer should CLOSE.
+    const state = buildDestroyerBattleState();
+    state.player.depth = DepthBand.DEEP;
+    state.player.y = DepthBand.DEEP * 150;
+    state.player.speed = SpeedSetting.STANDARD;
+    // Gap = 750 → LONG (floor(750/150)=5 clamped to 4)
+    state.player.x = 0;
+    state.enemy.x = 750;
+    state.range = RangeBand.LONG;
+    state.enemyLastKnownRange = RangeBand.SHORT;
+    state.enemyTracking = false;
+
+    const rng = new Mulberry32(0);
+    const { newState } = tickCombat(state, 1, rng, null);
+
+    // At LONG DEEP STANDARD, CQ = 3 — no tracking.
+    expect(newState.enemyTracking).toBe(false);
+    // Enemy is at LONG but lastKnownRange=SHORT, so it should close toward SHORT.
+    expect(newState.enemy.direction).toBe(SpeedDirection.CLOSE);
+  });
+
   it("position_report event emitted at tick 50 and 100", () => {
     const engine = new SimEngine(0);
     engine.startCombat("destroyer_battle");
