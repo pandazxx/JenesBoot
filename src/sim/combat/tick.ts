@@ -1,4 +1,4 @@
-import { DepthBand, RangeBand, VisibilityLevel } from "./enums.js";
+import { DepthBand, VisibilityLevel } from "./enums.js";
 import {
   euclideanDistance,
   toRangeBand,
