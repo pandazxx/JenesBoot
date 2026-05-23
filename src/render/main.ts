@@ -49,14 +49,14 @@ async function main(): Promise<void> {
   const seed = urlSeed !== null ? parseInt(urlSeed, 10) : 0;
 
   while (true) {
-    const scenario = await showLanding(app, () => {
+    const enemyType = await showLanding(app, () => {
       settingsPanel.show(currentConfig);
     });
 
     const engine = new SimEngine(seed, currentConfig);
-    engine.startCombat(scenario);
+    engine.startCombat(enemyType);
 
-    await showCombat(app, engine, scenario, () => {
+    await showCombat(app, engine, enemyType, () => {
       settingsPanel.show(currentConfig);
     });
   }

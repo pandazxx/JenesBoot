@@ -1,198 +1,73 @@
-/**
- * Enemy AI — merchant, destroyer, and gunboat behaviours.
- *
- * Returns a command object; never mutates state.
- * No PixiJS, no DOM, no Math.random(), no wall-clock reads.
- */
-
-import { DepthBand, RangeBand, SpeedSetting, SpeedDirection } from "./types.js";
-import type { ShipState } from "./types.js";
+import { DepthBand, NauticalSpeed, DiveSpeed, VisibilityLevel, VesselType } from "./enums.js";
+import { BAND_SIZE } from "./geometry.js";
+import type { RangeBand } from "./enums.js";
+import type { VesselState, AiState } from "./types.js";
+import type { CombatConfig } from "./config.js";
 
 export type AiCommand =
-  | { type: "FIRE_DECK_GUN" }
-  | { type: "FIRE_BLIND_SHOT" }
-  | { type: "FIRE_DEPTH_CHARGE" }
-  | { type: "FIRE_TORPEDO" }
-  | { type: "MATCH_AND_CLOSE"; depthTarget: DepthBand }
-  | { type: "EVADE_SILENT"; depthTarget: DepthBand }
-  | { type: "SET_SPEED"; speed: SpeedSetting; direction: SpeedDirection }
+  | { type: "SET_SPEED"; speed: NauticalSpeed; intent: -1 | 0 | 1 }
+  | { type: "SET_DEPTH"; target: DepthBand; diveSpeed: DiveSpeed }
+  | { type: "FIRE_WEAPON"; weaponId: string }
+  | { type: "HOLD" }
   | { type: "NONE" };
 
-/** Ticks per range band for the merchant (slower than player standard). */
-export const MERCHANT_RANGE_TICKS_PER_BAND = 20;
+export function tickEnemyAi(
+  enemy: VesselState,
+  ai: AiState,
+  player: VesselState,
+  visibility: VisibilityLevel,
+  rangeBand: RangeBand,
+  depthOffsetBand: number,
+  config: CombatConfig,
+): AiCommand[] {
+  void rangeBand;
+  void depthOffsetBand;
+  const commands: AiCommand[] = [];
 
-/** Ticks per range band for the destroyer (faster than player standard). */
-export const DESTROYER_RANGE_TICKS_PER_BAND = 10;
-
-/**
- * Merchant AI — 3 rules evaluated in priority order.
- * Flees when hull is below half.
- */
-export function merchantAi(
-  enemy: ShipState,
-  range: RangeBand,
-  initialMaxHullHP: number,
-): AiCommand {
-  if (range <= RangeBand.SHORT && enemy.deckGunCooldown === 0) {
-    return { type: "FIRE_DECK_GUN" };
-  }
-
-  if (enemy.hullHP < initialMaxHullHP * 0.5) {
-    return {
-      type: "SET_SPEED",
-      speed: SpeedSetting.AHEAD_FULL,
-      direction: SpeedDirection.OPEN,
-    };
-  }
-
-  return {
-    type: "SET_SPEED",
-    speed: SpeedSetting.STANDARD,
-    direction: SpeedDirection.HOLD,
-  };
-}
-
-/**
- * Destroyer AI — closes aggressively at all times, fires deck gun on surface targets.
- * Never holds back. playerDepth is used to decide whether the deck gun can acquire.
- */
-export function destroyerAi(enemy: ShipState, range: RangeBand, playerDepth: DepthBand): AiCommand {
-  const canFire =
-    playerDepth === DepthBand.SURFACE && range <= RangeBand.SHORT && enemy.deckGunCooldown === 0;
-  if (canFire) {
-    return { type: "FIRE_DECK_GUN" };
-  }
-
-  return {
-    type: "SET_SPEED",
-    speed: SpeedSetting.AHEAD_FULL,
-    direction: SpeedDirection.CLOSE,
-  };
-}
-
-/**
- * Destroyer Battle AI — closes with sonar tracking, fires depth charges on submerged sub,
- * deck gun on surface sub, searches last known range when contact lost.
- *
- * Priority order (highest first):
- *   1. CQ≥4, sub submerged, SHORT → FIRE_DEPTH_CHARGE
- *   2. CQ≥4, sub surface, range≤MEDIUM → FIRE_DECK_GUN
- *   3. CQ≥4, range>SHORT → close at AHEAD_FULL
- *   4. CQ<4, range ≠ lastKnownRange → navigate toward last known position
- *   5. CQ<4, range === lastKnownRange → HOLD (searching at last known position)
- */
-export function destroyerBattleAi(
-  enemy: ShipState,
-  range: RangeBand,
-  playerDepth: DepthBand,
-  contactQualityValue: number,
-  lastKnownRange: RangeBand,
-): AiCommand {
-  const playerSubmerged = playerDepth >= DepthBand.PERISCOPE;
-
-  if (contactQualityValue >= 4) {
-    if (playerSubmerged && range === RangeBand.SHORT && enemy.torpedoCooldown === 0) {
-      return { type: "FIRE_DEPTH_CHARGE" };
+  if (enemy.vesselType === VesselType.MERCHANT) {
+    if (visibility > VisibilityLevel.NONE) {
+      commands.push({ type: "SET_SPEED", speed: NauticalSpeed.FLANK, intent: -1 });
+    } else {
+      commands.push({ type: "HOLD" });
     }
-    if (!playerSubmerged && range <= RangeBand.MEDIUM && enemy.deckGunCooldown === 0) {
-      return { type: "FIRE_DECK_GUN" };
+    return commands;
+  }
+
+  if (enemy.vesselType === VesselType.DESTROYER || enemy.vesselType === VesselType.GUNBOAT) {
+    const isDestroyer = enemy.vesselType === VesselType.DESTROYER;
+    const chaseSpeed = isDestroyer ? NauticalSpeed.FULL_AHEAD : NauticalSpeed.HALF_AHEAD;
+
+    if (visibility > VisibilityLevel.NONE) {
+      // Close toward player
+      const intent: -1 | 0 | 1 = enemy.x > player.x ? -1 : 1;
+      commands.push({ type: "SET_SPEED", speed: chaseSpeed, intent });
+    } else if (!ai.holdingAtLastKnown) {
+      // Navigate toward last known position
+      const gapToLastKnown = ai.lastKnownX - enemy.x;
+      if (Math.abs(gapToLastKnown) < BAND_SIZE) {
+        // Close enough to last known — hold
+        commands.push({ type: "HOLD" });
+      } else {
+        const intent: -1 | 0 | 1 = gapToLastKnown > 0 ? 1 : -1;
+        commands.push({ type: "SET_SPEED", speed: NauticalSpeed.HALF_AHEAD, intent });
+      }
+    } else {
+      commands.push({ type: "HOLD" });
     }
-    return {
-      type: "SET_SPEED",
-      speed: SpeedSetting.AHEAD_FULL,
-      direction: SpeedDirection.CLOSE,
-    };
-  }
 
-  // Contact lost — move to last known range and hold there to search.
-  if (range > lastKnownRange) {
-    return { type: "SET_SPEED", speed: SpeedSetting.STANDARD, direction: SpeedDirection.CLOSE };
-  }
-  if (range < lastKnownRange) {
-    return { type: "SET_SPEED", speed: SpeedSetting.STANDARD, direction: SpeedDirection.OPEN };
-  }
-  return { type: "SET_SPEED", speed: SpeedSetting.STANDARD, direction: SpeedDirection.HOLD };
-}
-
-/**
- * Submarine AI — implements §5.3 Submerged Hostile rules.
- *
- * Priority order (highest first):
- *   1. CQ≥4, range≤MEDIUM, depth diff≤1, torpedo ready → FIRE_TORPEDO
- *   2. Hit within last 20 ticks + contact lost → EVADE_SILENT (change depth 1 band)
- *   3. Otherwise → MATCH_AND_CLOSE (match player depth, close at STANDARD)
- */
-export function submarineAi(
-  enemy: ShipState,
-  range: RangeBand,
-  playerDepth: DepthBand,
-  contactQualityValue: number,
-  enemyRecentlyHitTicks: number,
-): AiCommand {
-  const depthDiff = Math.abs(enemy.depth - playerDepth);
-
-  if (
-    contactQualityValue >= 4 &&
-    range <= RangeBand.MEDIUM &&
-    depthDiff <= 1 &&
-    enemy.torpedoCooldown === 0 &&
-    enemy.torpedoCount > 0
-  ) {
-    return { type: "FIRE_TORPEDO" };
-  }
-
-  if (enemyRecentlyHitTicks > 0 && contactQualityValue < 4) {
-    // Change depth by 1 band only if not already transitioning.
-    if (enemy.depth === enemy.depthTarget) {
-      const newTarget =
-        enemy.depth < DepthBand.ABYSSAL
-          ? ((enemy.depth + 1) as DepthBand)
-          : ((enemy.depth - 1) as DepthBand);
-      return { type: "EVADE_SILENT", depthTarget: newTarget };
+    // Fire all ready weapons
+    const vesselConfig = config.vessels[enemy.vesselType] ?? config.player;
+    for (const weapon of vesselConfig.weapons) {
+      const cooldown = enemy.weaponCooldowns[weapon.id] ?? 0;
+      const ammo = weapon.maxAmmo !== undefined ? (enemy.weaponAmmo[weapon.id] ?? 0) : Infinity;
+      if (cooldown === 0 && ammo > 0) {
+        commands.push({ type: "FIRE_WEAPON", weaponId: weapon.id });
+      }
     }
-    return { type: "SET_SPEED", speed: SpeedSetting.SILENT, direction: SpeedDirection.HOLD };
+
+    return commands;
   }
 
-  return { type: "MATCH_AND_CLOSE", depthTarget: playerDepth };
-}
-
-/**
- * Gunboat AI — closes aggressively when tracking, holds position when searching.
- *
- * TRACKING (CQ ≥ 4): close and fire.
- * SEARCHING (CQ < 4): hold at last known position and fire blind shots.
- *   Holding lets a diving sub open distance and accumulate the escape counter.
- */
-export function gunboatAi(
-  enemy: ShipState,
-  range: RangeBand,
-  playerDepth: DepthBand,
-  contactQualityValue: number,
-  lastKnownRange: RangeBand,
-  blindShotsFired: number,
-): AiCommand {
-  void playerDepth;
-
-  if (contactQualityValue >= 4) {
-    if (range <= RangeBand.SHORT && enemy.deckGunCooldown === 0) {
-      return { type: "FIRE_DECK_GUN" };
-    }
-    return {
-      type: "SET_SPEED",
-      speed: SpeedSetting.AHEAD_FULL,
-      direction: SpeedDirection.CLOSE,
-    };
-  }
-
-  // Searching: hold at last known position and fire blind shots there.
-  // The sub can outrun the gunboat while it circles the last known location.
-  if (range === lastKnownRange && blindShotsFired < 3 && enemy.deckGunCooldown === 0) {
-    return { type: "FIRE_BLIND_SHOT" };
-  }
-
-  return {
-    type: "SET_SPEED",
-    speed: SpeedSetting.STANDARD,
-    direction: SpeedDirection.HOLD,
-  };
+  commands.push({ type: "NONE" });
+  return commands;
 }

@@ -1,5 +1,5 @@
 import { Application, Assets, Container, Graphics, Sprite, Text, TextStyle } from "pixi.js";
-import type { CombatScenario } from "../sim/index.js";
+import { VesselType } from "../sim/combat/enums.js";
 
 const BTN_W = 300;
 const BTN_H = 28;
@@ -8,10 +8,10 @@ const BTN_GAP = 8;
 export async function showLanding(
   app: Application,
   onSettings?: () => void,
-): Promise<CombatScenario> {
+): Promise<VesselType> {
   const texture = await Assets.load(import.meta.env.BASE_URL + "landing.png");
 
-  return new Promise<CombatScenario>((resolve) => {
+  return new Promise<VesselType>((resolve) => {
     const container = new Container();
     app.stage.addChild(container);
 
@@ -46,16 +46,13 @@ export async function showLanding(
 
     app.stage.eventMode = "static";
 
-    const cleanup = (scenario: CombatScenario): void => {
+    const cleanup = (enemyType: VesselType): void => {
       window.removeEventListener("resize", onResize);
       app.stage.removeChild(container);
       container.destroy({ children: true });
-      resolve(scenario);
+      resolve(enemyType);
     };
 
-    // Each logical button is 4 sibling display objects added to container:
-    //   bgNormal, bgHover (pre-drawn, never cleared), labelText, hit (transparent, stable).
-    // The hit area is never redrawn so pointertap fires reliably.
     type BtnObjects = { bgNormal: Graphics; bgHover: Graphics; label: Text; hit: Graphics };
     const btnObjs: BtnObjects[] = [];
 
@@ -106,20 +103,18 @@ export async function showLanding(
       btnObjs.push({ bgNormal, bgHover, label, hit });
     };
 
-    const scenarios: { label: string; scenario: CombatScenario }[] = [
-      { label: "Surface Battle", scenario: "surface_battle" },
-      { label: "Destroyer Dive (escape)", scenario: "destroyer_dive" },
-      { label: "Gunboat Hunt", scenario: "gunboat_hunt" },
-      { label: "Destroyer Battle", scenario: "destroyer_battle" },
+    const encounters: { label: string; enemyType: VesselType }[] = [
+      { label: "vs Merchant", enemyType: VesselType.MERCHANT },
+      { label: "vs Gunboat", enemyType: VesselType.GUNBOAT },
+      { label: "vs Destroyer", enemyType: VesselType.DESTROYER },
     ];
 
-    for (const { label, scenario } of scenarios) {
-      makeButton(label, 0x334455, 0x0a1420, 0x162035, () => cleanup(scenario));
+    for (const { label, enemyType } of encounters) {
+      makeButton(label, 0x334455, 0x0a1420, 0x162035, () => cleanup(enemyType));
     }
 
     if (onSettings !== undefined) {
       makeButton("Settings", 0x225544, 0x0a1420, 0x0d2018, () => onSettings());
-      // Tint the settings label green
       const last = btnObjs[btnObjs.length - 1];
       if (last !== undefined) (last.label.style as TextStyle).fill = 0x88ccaa;
     }
