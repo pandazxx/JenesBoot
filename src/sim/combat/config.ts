@@ -133,31 +133,150 @@ function makeDestroyerPassiveSonarTable(): DetectionTable {
   ];
 
   // DEAD_SLOW target submerged: only CONTACT at SHORT
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SUBMERGED], [RangeBand.MEDIUM, RangeBand.LONG, RangeBand.EXTREME], VisibilityLevel.NONE);
-  setCell(t, surfaceDepths, [NauticalSpeed.DEAD_SLOW], [DepthType.SUBMERGED], [RangeBand.CONTACT_RANGE], VisibilityLevel.CONTACT);
-  setCell(t, surfaceDepths, [NauticalSpeed.DEAD_SLOW], [DepthType.SUBMERGED], [RangeBand.SHORT], VisibilityLevel.NONE);
-  setCell(t, surfaceDepths, [NauticalSpeed.DEAD_SLOW], [DepthType.SUBMERGED], [RangeBand.MEDIUM], VisibilityLevel.NONE);
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SUBMERGED],
+    [RangeBand.MEDIUM, RangeBand.LONG, RangeBand.EXTREME],
+    VisibilityLevel.NONE,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    [NauticalSpeed.DEAD_SLOW],
+    [DepthType.SUBMERGED],
+    [RangeBand.CONTACT_RANGE],
+    VisibilityLevel.CONTACT,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    [NauticalSpeed.DEAD_SLOW],
+    [DepthType.SUBMERGED],
+    [RangeBand.SHORT],
+    VisibilityLevel.NONE,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    [NauticalSpeed.DEAD_SLOW],
+    [DepthType.SUBMERGED],
+    [RangeBand.MEDIUM],
+    VisibilityLevel.NONE,
+  );
 
   // HALF_AHEAD target submerged: CONTACT at CONTACT_RANGE and SHORT
-  setCell(t, surfaceDepths, [NauticalSpeed.HALF_AHEAD], [DepthType.SUBMERGED], [RangeBand.CONTACT_RANGE], VisibilityLevel.SILHOUETTE);
-  setCell(t, surfaceDepths, [NauticalSpeed.HALF_AHEAD], [DepthType.SUBMERGED], [RangeBand.SHORT], VisibilityLevel.CONTACT);
+  setCell(
+    t,
+    surfaceDepths,
+    [NauticalSpeed.HALF_AHEAD],
+    [DepthType.SUBMERGED],
+    [RangeBand.CONTACT_RANGE],
+    VisibilityLevel.SILHOUETTE,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    [NauticalSpeed.HALF_AHEAD],
+    [DepthType.SUBMERGED],
+    [RangeBand.SHORT],
+    VisibilityLevel.CONTACT,
+  );
 
   // FULL_AHEAD target submerged: SILHOUETTE at CONTACT_RANGE, CONTACT at SHORT, NONE at MEDIUM+
-  setCell(t, surfaceDepths, [NauticalSpeed.FULL_AHEAD], [DepthType.SUBMERGED], [RangeBand.CONTACT_RANGE], VisibilityLevel.IDENTIFIED);
-  setCell(t, surfaceDepths, [NauticalSpeed.FULL_AHEAD], [DepthType.SUBMERGED], [RangeBand.SHORT], VisibilityLevel.SILHOUETTE);
-  setCell(t, surfaceDepths, [NauticalSpeed.FULL_AHEAD], [DepthType.SUBMERGED], [RangeBand.MEDIUM], VisibilityLevel.CONTACT);
+  setCell(
+    t,
+    surfaceDepths,
+    [NauticalSpeed.FULL_AHEAD],
+    [DepthType.SUBMERGED],
+    [RangeBand.CONTACT_RANGE],
+    VisibilityLevel.IDENTIFIED,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    [NauticalSpeed.FULL_AHEAD],
+    [DepthType.SUBMERGED],
+    [RangeBand.SHORT],
+    VisibilityLevel.SILHOUETTE,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    [NauticalSpeed.FULL_AHEAD],
+    [DepthType.SUBMERGED],
+    [RangeBand.MEDIUM],
+    VisibilityLevel.CONTACT,
+  );
 
   // FLANK target submerged: CONTACT at SHORT per spec, SILHOUETTE at CONTACT_RANGE
-  setCell(t, surfaceDepths, [NauticalSpeed.FLANK], [DepthType.SUBMERGED], [RangeBand.CONTACT_RANGE], VisibilityLevel.LOCKED_ON);
-  setCell(t, surfaceDepths, [NauticalSpeed.FLANK], [DepthType.SUBMERGED], [RangeBand.SHORT], VisibilityLevel.CONTACT);
-  setCell(t, surfaceDepths, [NauticalSpeed.FLANK], [DepthType.SUBMERGED], [RangeBand.MEDIUM], VisibilityLevel.SILHOUETTE);
-  setCell(t, surfaceDepths, [NauticalSpeed.FLANK], [DepthType.SUBMERGED], [RangeBand.LONG], VisibilityLevel.CONTACT);
+  setCell(
+    t,
+    surfaceDepths,
+    [NauticalSpeed.FLANK],
+    [DepthType.SUBMERGED],
+    [RangeBand.CONTACT_RANGE],
+    VisibilityLevel.LOCKED_ON,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    [NauticalSpeed.FLANK],
+    [DepthType.SUBMERGED],
+    [RangeBand.SHORT],
+    VisibilityLevel.CONTACT,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    [NauticalSpeed.FLANK],
+    [DepthType.SUBMERGED],
+    [RangeBand.MEDIUM],
+    VisibilityLevel.SILHOUETTE,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    [NauticalSpeed.FLANK],
+    [DepthType.SUBMERGED],
+    [RangeBand.LONG],
+    VisibilityLevel.CONTACT,
+  );
 
   // Surface target: SILHOUETTE+ at MEDIUM+ for any speed
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.CONTACT_RANGE], VisibilityLevel.LOCKED_ON);
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.SHORT], VisibilityLevel.IDENTIFIED);
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.MEDIUM], VisibilityLevel.SILHOUETTE);
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.LONG], VisibilityLevel.CONTACT);
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.CONTACT_RANGE],
+    VisibilityLevel.LOCKED_ON,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.SHORT],
+    VisibilityLevel.IDENTIFIED,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.MEDIUM],
+    VisibilityLevel.SILHOUETTE,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.LONG],
+    VisibilityLevel.CONTACT,
+  );
 
   return t;
 }
@@ -173,12 +292,47 @@ function makeDestroyerVisualTable(): DetectionTable {
   ];
 
   // LOCKED_ON at CONTACT_RANGE and SHORT for surface targets
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.CONTACT_RANGE], VisibilityLevel.LOCKED_ON);
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.SHORT], VisibilityLevel.LOCKED_ON);
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.MEDIUM], VisibilityLevel.IDENTIFIED);
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.LONG], VisibilityLevel.SILHOUETTE);
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.CONTACT_RANGE],
+    VisibilityLevel.LOCKED_ON,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.SHORT],
+    VisibilityLevel.LOCKED_ON,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.MEDIUM],
+    VisibilityLevel.IDENTIFIED,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.LONG],
+    VisibilityLevel.SILHOUETTE,
+  );
   // Periscope visible from surface at close range
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SUBMERGED], [RangeBand.CONTACT_RANGE], VisibilityLevel.CONTACT);
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SUBMERGED],
+    [RangeBand.CONTACT_RANGE],
+    VisibilityLevel.CONTACT,
+  );
 
   return t;
 }
@@ -194,10 +348,38 @@ function makeGunboatVisualTable(): DetectionTable {
   ];
 
   // Gunboat: visual only, surface targets
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.CONTACT_RANGE], VisibilityLevel.LOCKED_ON);
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.SHORT], VisibilityLevel.IDENTIFIED);
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.MEDIUM], VisibilityLevel.SILHOUETTE);
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.LONG], VisibilityLevel.CONTACT);
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.CONTACT_RANGE],
+    VisibilityLevel.LOCKED_ON,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.SHORT],
+    VisibilityLevel.IDENTIFIED,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.MEDIUM],
+    VisibilityLevel.SILHOUETTE,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.LONG],
+    VisibilityLevel.CONTACT,
+  );
 
   return t;
 }
@@ -213,9 +395,30 @@ function makeMerchantVisualTable(): DetectionTable {
   ];
 
   // Merchant: poor visual, only surface targets at close range
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.CONTACT_RANGE], VisibilityLevel.IDENTIFIED);
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.SHORT], VisibilityLevel.SILHOUETTE);
-  setCell(t, surfaceDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.MEDIUM], VisibilityLevel.CONTACT);
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.CONTACT_RANGE],
+    VisibilityLevel.IDENTIFIED,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.SHORT],
+    VisibilityLevel.SILHOUETTE,
+  );
+  setCell(
+    t,
+    surfaceDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.MEDIUM],
+    VisibilityLevel.CONTACT,
+  );
 
   return t;
 }
@@ -231,15 +434,64 @@ function makeSubmarinePassiveSonarTable(): DetectionTable {
   ];
 
   // Submarine passive sonar: works when submerged, detects surface vessels easily
-  setCell(t, [DepthBand.SURFACE, DepthBand.PERISCOPE], allSpeeds, [DepthType.SURFACE], [RangeBand.CONTACT_RANGE], VisibilityLevel.LOCKED_ON);
-  setCell(t, [DepthBand.SURFACE, DepthBand.PERISCOPE], allSpeeds, [DepthType.SURFACE], [RangeBand.SHORT], VisibilityLevel.IDENTIFIED);
-  setCell(t, [DepthBand.SURFACE, DepthBand.PERISCOPE], allSpeeds, [DepthType.SURFACE], [RangeBand.MEDIUM], VisibilityLevel.SILHOUETTE);
-  setCell(t, [DepthBand.SURFACE, DepthBand.PERISCOPE], allSpeeds, [DepthType.SURFACE], [RangeBand.LONG], VisibilityLevel.CONTACT);
+  setCell(
+    t,
+    [DepthBand.SURFACE, DepthBand.PERISCOPE],
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.CONTACT_RANGE],
+    VisibilityLevel.LOCKED_ON,
+  );
+  setCell(
+    t,
+    [DepthBand.SURFACE, DepthBand.PERISCOPE],
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.SHORT],
+    VisibilityLevel.IDENTIFIED,
+  );
+  setCell(
+    t,
+    [DepthBand.SURFACE, DepthBand.PERISCOPE],
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.MEDIUM],
+    VisibilityLevel.SILHOUETTE,
+  );
+  setCell(
+    t,
+    [DepthBand.SURFACE, DepthBand.PERISCOPE],
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.LONG],
+    VisibilityLevel.CONTACT,
+  );
 
   // At shallow depth, reduced range
-  setCell(t, submergedDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.CONTACT_RANGE], VisibilityLevel.IDENTIFIED);
-  setCell(t, submergedDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.SHORT], VisibilityLevel.SILHOUETTE);
-  setCell(t, submergedDepths, allSpeeds, [DepthType.SURFACE], [RangeBand.MEDIUM], VisibilityLevel.CONTACT);
+  setCell(
+    t,
+    submergedDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.CONTACT_RANGE],
+    VisibilityLevel.IDENTIFIED,
+  );
+  setCell(
+    t,
+    submergedDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.SHORT],
+    VisibilityLevel.SILHOUETTE,
+  );
+  setCell(
+    t,
+    submergedDepths,
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.MEDIUM],
+    VisibilityLevel.CONTACT,
+  );
 
   return t;
 }
@@ -254,10 +506,38 @@ function makeSubmarineVisualTable(): DetectionTable {
   ];
 
   // Periscope visual: can see surface targets
-  setCell(t, [DepthBand.SURFACE, DepthBand.PERISCOPE], allSpeeds, [DepthType.SURFACE], [RangeBand.CONTACT_RANGE], VisibilityLevel.LOCKED_ON);
-  setCell(t, [DepthBand.SURFACE, DepthBand.PERISCOPE], allSpeeds, [DepthType.SURFACE], [RangeBand.SHORT], VisibilityLevel.IDENTIFIED);
-  setCell(t, [DepthBand.SURFACE, DepthBand.PERISCOPE], allSpeeds, [DepthType.SURFACE], [RangeBand.MEDIUM], VisibilityLevel.SILHOUETTE);
-  setCell(t, [DepthBand.SURFACE, DepthBand.PERISCOPE], allSpeeds, [DepthType.SURFACE], [RangeBand.LONG], VisibilityLevel.CONTACT);
+  setCell(
+    t,
+    [DepthBand.SURFACE, DepthBand.PERISCOPE],
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.CONTACT_RANGE],
+    VisibilityLevel.LOCKED_ON,
+  );
+  setCell(
+    t,
+    [DepthBand.SURFACE, DepthBand.PERISCOPE],
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.SHORT],
+    VisibilityLevel.IDENTIFIED,
+  );
+  setCell(
+    t,
+    [DepthBand.SURFACE, DepthBand.PERISCOPE],
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.MEDIUM],
+    VisibilityLevel.SILHOUETTE,
+  );
+  setCell(
+    t,
+    [DepthBand.SURFACE, DepthBand.PERISCOPE],
+    allSpeeds,
+    [DepthType.SURFACE],
+    [RangeBand.LONG],
+    VisibilityLevel.CONTACT,
+  );
 
   return t;
 }
@@ -268,7 +548,13 @@ function makeSubmarineVisualTable(): DetectionTable {
 
 function zeroHitMatrix(): WeaponHitMatrix {
   const zeroCell: WeaponHitCell = { hitRate: 0, damage: 0 };
-  const depthRecord: Record<number, WeaponHitCell> = { 0: zeroCell, 1: zeroCell, 2: zeroCell, 3: zeroCell, 4: zeroCell };
+  const depthRecord: Record<number, WeaponHitCell> = {
+    0: zeroCell,
+    1: zeroCell,
+    2: zeroCell,
+    3: zeroCell,
+    4: zeroCell,
+  };
   return {
     [RangeBand.CONTACT_RANGE]: { ...depthRecord },
     [RangeBand.SHORT]: { ...depthRecord },
@@ -285,18 +571,18 @@ function makeDeckGunHitMatrix(): WeaponHitMatrix {
   const crRow = m[RangeBand.CONTACT_RANGE];
   if (crRow) {
     crRow[0] = { hitRate: 0.85, damage: 3 };
-    crRow[1] = { hitRate: 0.60, damage: 2 };
+    crRow[1] = { hitRate: 0.6, damage: 2 };
   }
   // SHORT: good hit rate
   const shortRow = m[RangeBand.SHORT];
   if (shortRow) {
     shortRow[0] = { hitRate: 0.65, damage: 3 };
-    shortRow[1] = { hitRate: 0.40, damage: 2 };
+    shortRow[1] = { hitRate: 0.4, damage: 2 };
   }
   // MEDIUM: moderate hit rate
   const medRow = m[RangeBand.MEDIUM];
   if (medRow) {
-    medRow[0] = { hitRate: 0.30, damage: 3 };
+    medRow[0] = { hitRate: 0.3, damage: 3 };
     medRow[1] = { hitRate: 0.15, damage: 2 };
   }
   // LONG and EXTREME: zero (out of range)
@@ -308,19 +594,19 @@ function makeDepthChargeHitMatrix(): WeaponHitMatrix {
   // Depth charges work at CONTACT_RANGE and SHORT, any depth offset
   const crRow = m[RangeBand.CONTACT_RANGE];
   if (crRow) {
-    crRow[0] = { hitRate: 0.70, damage: 3 };
+    crRow[0] = { hitRate: 0.7, damage: 3 };
     crRow[1] = { hitRate: 0.65, damage: 3 };
     crRow[2] = { hitRate: 0.55, damage: 3 };
-    crRow[3] = { hitRate: 0.40, damage: 3 };
+    crRow[3] = { hitRate: 0.4, damage: 3 };
     crRow[4] = { hitRate: 0.25, damage: 3 };
   }
   const shortRow = m[RangeBand.SHORT];
   if (shortRow) {
-    shortRow[0] = { hitRate: 0.50, damage: 3 };
+    shortRow[0] = { hitRate: 0.5, damage: 3 };
     shortRow[1] = { hitRate: 0.55, damage: 3 };
     shortRow[2] = { hitRate: 0.45, damage: 3 };
     shortRow[3] = { hitRate: 0.35, damage: 3 };
-    shortRow[4] = { hitRate: 0.20, damage: 3 };
+    shortRow[4] = { hitRate: 0.2, damage: 3 };
   }
   return m;
 }
@@ -344,7 +630,7 @@ function makeTorpedoHitMatrix(): WeaponHitMatrix {
   if (medRow) {
     medRow[0] = { hitRate: 0.55, damage: 5 };
     medRow[1] = { hitRate: 0.45, damage: 5 };
-    medRow[2] = { hitRate: 0.30, damage: 5 };
+    medRow[2] = { hitRate: 0.3, damage: 5 };
   }
   return m;
 }
@@ -528,9 +814,7 @@ function makeGunboatConfig(): VesselConfig {
   return {
     type: VesselType.GUNBOAT,
     maxHullHP: 12,
-    detectionMethods: [
-      { method: DetectionMethod.VISUAL_SURFACE, table: makeGunboatVisualTable() },
-    ],
+    detectionMethods: [{ method: DetectionMethod.VISUAL_SURFACE, table: makeGunboatVisualTable() }],
     weapons: [
       {
         id: "deck_gun",

@@ -1,5 +1,11 @@
 import { DepthBand, RangeBand, VisibilityLevel } from "./enums.js";
-import { euclideanDistance, toRangeBand, toDepthBand, depthOffsetBand, BAND_SIZE } from "./geometry.js";
+import {
+  euclideanDistance,
+  toRangeBand,
+  toDepthBand,
+  depthOffsetBand,
+  BAND_SIZE,
+} from "./geometry.js";
 import type { CombatState, CombatEvent, PlayerCommand } from "./types.js";
 import type { CombatConfig } from "./config.js";
 import { computeVisibility } from "./detection.js";
@@ -172,9 +178,7 @@ export function tickCombat(
   if (s.enemy.y !== enemyYTarget) {
     const ydiff = enemyYTarget - s.enemy.y;
     s.enemy.y =
-      Math.abs(ydiff) <= enemyVSpeed
-        ? enemyYTarget
-        : s.enemy.y + Math.sign(ydiff) * enemyVSpeed;
+      Math.abs(ydiff) <= enemyVSpeed ? enemyYTarget : s.enemy.y + Math.sign(ydiff) * enemyVSpeed;
   }
 
   // Step 10: resolve weapon fire
@@ -183,9 +187,7 @@ export function tickCombat(
     const cooldown = s.player.weaponCooldowns[weaponId] ?? 0;
     const weaponCfg = playerCfg.weapons.find((w) => w.id === weaponId);
     const ammoOk =
-      weaponCfg?.maxAmmo !== undefined
-        ? (s.player.weaponAmmo[weaponId] ?? 0) > 0
-        : true;
+      weaponCfg?.maxAmmo !== undefined ? (s.player.weaponAmmo[weaponId] ?? 0) > 0 : true;
 
     if (cooldown === 0 && weaponCfg !== undefined && ammoOk) {
       const result = resolveWeaponFire(
@@ -224,9 +226,7 @@ export function tickCombat(
     const cooldown = s.enemy.weaponCooldowns[weaponId] ?? 0;
     const weaponCfg = enemyCfg.weapons.find((w) => w.id === weaponId);
     const ammoOk =
-      weaponCfg?.maxAmmo !== undefined
-        ? (s.enemy.weaponAmmo[weaponId] ?? 0) > 0
-        : true;
+      weaponCfg?.maxAmmo !== undefined ? (s.enemy.weaponAmmo[weaponId] ?? 0) > 0 : true;
 
     if (cooldown === 0 && weaponCfg !== undefined && ammoOk) {
       const result = resolveWeaponFire(

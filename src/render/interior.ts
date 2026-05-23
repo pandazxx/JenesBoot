@@ -170,7 +170,10 @@ export class InteriorView {
 
     // Room placeholder (no rooms in new system)
     const roomPlaceholder = new Graphics();
-    roomPlaceholder.rect(ROOM_MARGIN_X, ROOM_Y, PANEL_W - ROOM_MARGIN_X * 2, 95).fill(0x0a1420).stroke({ color: 0x334455, width: 1 });
+    roomPlaceholder
+      .rect(ROOM_MARGIN_X, ROOM_Y, PANEL_W - ROOM_MARGIN_X * 2, 95)
+      .fill(0x0a1420)
+      .stroke({ color: 0x334455, width: 1 });
     this.container.addChild(roomPlaceholder);
     const roomLabel = new Text({ text: "SUBMARINE", style: makeLabelStyle() });
     roomLabel.x = ROOM_MARGIN_X + 5;
@@ -254,7 +257,8 @@ export class InteriorView {
       ["◄ OPEN", "● HOLD", "► CLOSE"],
       (idx) => {
         const intent = intentValues[idx] ?? 0;
-        const speed = this.engine.getState().combat?.player.nauticalSpeed ?? NauticalSpeed.HALF_AHEAD;
+        const speed =
+          this.engine.getState().combat?.player.nauticalSpeed ?? NauticalSpeed.HALF_AHEAD;
         this.engine.queueCommand({ type: "SET_NAUTICAL_SPEED", speed, intent });
       },
     );
@@ -314,7 +318,11 @@ export class InteriorView {
       hitArea.eventMode = "static";
       hitArea.cursor = "pointer";
       hitArea.on("pointertap", () => {
-        this.engine.queueCommand({ type: "SET_DEPTH", target: band, diveSpeed: DiveSpeed.STANDARD });
+        this.engine.queueCommand({
+          type: "SET_DEPTH",
+          target: band,
+          diveSpeed: DiveSpeed.STANDARD,
+        });
       });
       this.container.addChild(hitArea);
 
@@ -471,8 +479,7 @@ export class InteriorView {
 
     // Weapon buttons
     const deckGunCooldown = state.player.weaponCooldowns["deck_gun"] ?? 0;
-    const deckGunReady =
-      state.player.depth === DepthBand.SURFACE && deckGunCooldown === 0;
+    const deckGunReady = state.player.depth === DepthBand.SURFACE && deckGunCooldown === 0;
 
     const torpCooldown = state.player.weaponCooldowns["torpedo"] ?? 0;
     const torpAmmo = state.player.weaponAmmo["torpedo"];

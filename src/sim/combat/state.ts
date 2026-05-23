@@ -80,4 +80,3 @@ export function cloneState(s: CombatState): CombatState {
     inFlight: s.inFlight.map((p) => ({ ...p })),
   };
 }
-

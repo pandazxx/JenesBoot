@@ -30,7 +30,7 @@ describe("resolveWeaponFire", () => {
     const result = resolveWeaponFire(
       "deck_gun",
       VisibilityLevel.LOCKED_ON,
-      RangeBand.EXTREME,  // zero hitRate at EXTREME
+      RangeBand.EXTREME, // zero hitRate at EXTREME
       0,
       rng,
       config,
@@ -63,7 +63,15 @@ describe("resolveWeaponFire", () => {
     // Try up to 10 seeds to find one that hits
     for (let seed = 1; seed <= 100; seed++) {
       const r = new Mulberry32(seed);
-      const res = resolveWeaponFire("deck_gun", VisibilityLevel.LOCKED_ON, RangeBand.SHORT, 0, r, config, VesselType.DESTROYER);
+      const res = resolveWeaponFire(
+        "deck_gun",
+        VisibilityLevel.LOCKED_ON,
+        RangeBand.SHORT,
+        0,
+        r,
+        config,
+        VesselType.DESTROYER,
+      );
       if (res.fired && res.hit) {
         hitResult = res;
         break;

@@ -1,6 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { computeVisibility } from "../detection.js";
-import { DepthBand, NauticalSpeed, DiveSpeed, VisibilityLevel, VesselType, DetectionMethod } from "../enums.js";
+import {
+  DepthBand,
+  NauticalSpeed,
+  DiveSpeed,
+  VisibilityLevel,
+  VesselType,
+  DetectionMethod,
+} from "../enums.js";
 import { defaultCombatConfig } from "../config.js";
 import type { VesselState } from "../types.js";
 import { BAND_SIZE } from "../geometry.js";

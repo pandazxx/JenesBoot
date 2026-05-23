@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { euclideanDistance, toRangeBand, toDepthBand, depthOffsetBand, BAND_SIZE } from "../geometry.js";
+import {
+  euclideanDistance,
+  toRangeBand,
+  toDepthBand,
+  depthOffsetBand,
+  BAND_SIZE,
+} from "../geometry.js";
 import { RangeBand, DepthBand } from "../enums.js";
 
 describe("euclideanDistance", () => {

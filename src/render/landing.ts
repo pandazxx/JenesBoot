@@ -5,10 +5,7 @@ const BTN_W = 300;
 const BTN_H = 28;
 const BTN_GAP = 8;
 
-export async function showLanding(
-  app: Application,
-  onSettings?: () => void,
-): Promise<VesselType> {
+export async function showLanding(app: Application, onSettings?: () => void): Promise<VesselType> {
   const texture = await Assets.load(import.meta.env.BASE_URL + "landing.png");
 
   return new Promise<VesselType>((resolve) => {

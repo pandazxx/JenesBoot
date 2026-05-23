@@ -211,7 +211,10 @@ export function showCombat(
 
         case "z": {
           const currentDepth = combat?.player.depth ?? DepthBand.SURFACE;
-          const nextDepth = Math.min(DepthBand.ABYSSAL, currentDepth + 1) as typeof DepthBand[keyof typeof DepthBand];
+          const nextDepth = Math.min(
+            DepthBand.ABYSSAL,
+            currentDepth + 1,
+          ) as (typeof DepthBand)[keyof typeof DepthBand];
           engine.queueCommand({ type: "SET_DEPTH", target: nextDepth, diveSpeed: 1 });
           break;
         }
@@ -238,7 +241,10 @@ export function showCombat(
         case "arrowup":
         case "w": {
           const currentSpd = combat?.player.nauticalSpeed ?? NauticalSpeed.HALF_AHEAD;
-          const nextSpd = Math.min(NauticalSpeed.FLANK, currentSpd + 1) as typeof NauticalSpeed[keyof typeof NauticalSpeed];
+          const nextSpd = Math.min(
+            NauticalSpeed.FLANK,
+            currentSpd + 1,
+          ) as (typeof NauticalSpeed)[keyof typeof NauticalSpeed];
           const intent = combat?.player.horizontalIntent ?? 0;
           engine.queueCommand({ type: "SET_NAUTICAL_SPEED", speed: nextSpd, intent });
           break;
@@ -247,7 +253,10 @@ export function showCombat(
         case "arrowdown":
         case "s": {
           const currentSpd = combat?.player.nauticalSpeed ?? NauticalSpeed.HALF_AHEAD;
-          const prevSpd = Math.max(NauticalSpeed.DEAD_SLOW, currentSpd - 1) as typeof NauticalSpeed[keyof typeof NauticalSpeed];
+          const prevSpd = Math.max(
+            NauticalSpeed.DEAD_SLOW,
+            currentSpd - 1,
+          ) as (typeof NauticalSpeed)[keyof typeof NauticalSpeed];
           const intent = combat?.player.horizontalIntent ?? 0;
           engine.queueCommand({ type: "SET_NAUTICAL_SPEED", speed: prevSpd, intent });
           break;

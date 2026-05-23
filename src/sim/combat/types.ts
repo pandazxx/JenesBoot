@@ -75,4 +75,13 @@ export type PlayerCommand =
   | { type: "FIRE_WEAPON"; weaponId: string }
   | { type: "NONE" };
 
-export type { DepthBand, DepthType, DetectionMethod, DiveSpeed, NauticalSpeed, RangeBand, VisibilityLevel, VesselType };
+export type {
+  DepthBand,
+  DepthType,
+  DetectionMethod,
+  DiveSpeed,
+  NauticalSpeed,
+  RangeBand,
+  VisibilityLevel,
+  VesselType,
+};
