@@ -6,7 +6,7 @@
 
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import type { ISimEngine } from "../sim/index.js";
-import type { CombatState } from "../sim/combat/types.js";
+import type { CombatState, PlayerCommand } from "../sim/combat/types.js";
 import { DepthBand, NauticalSpeed, DiveSpeed } from "../sim/combat/enums.js";
 
 const PANEL_W = 460;
@@ -134,6 +134,7 @@ function buildThreeButtons(
 export class InteriorView {
   readonly container: Container;
   private engine: ISimEngine;
+  private onCommand: (() => void) | undefined;
 
   private hpBar: Graphics;
   private hpValue: Text;
@@ -154,8 +155,9 @@ export class InteriorView {
   private torpedoBtnGfx: Graphics;
   private torpedoBtnLabel: Text;
 
-  constructor(engine: ISimEngine, onPauseToggle: () => void) {
+  constructor(engine: ISimEngine, onPauseToggle: () => void, onCommand?: () => void) {
     this.engine = engine;
+    this.onCommand = onCommand;
     this.container = new Container();
 
     const bg = new Graphics();
@@ -239,7 +241,7 @@ export class InteriorView {
       (idx) => {
         const speed = speedValues[idx] ?? NauticalSpeed.HALF_AHEAD;
         const intent = this.engine.getState().combat?.player.horizontalIntent ?? 0;
-        this.engine.queueCommand({ type: "SET_NAUTICAL_SPEED", speed, intent });
+        this.issue({ type: "SET_NAUTICAL_SPEED", speed, intent });
       },
     );
 
@@ -259,7 +261,7 @@ export class InteriorView {
         const intent = intentValues[idx] ?? 0;
         const speed =
           this.engine.getState().combat?.player.nauticalSpeed ?? NauticalSpeed.HALF_AHEAD;
-        this.engine.queueCommand({ type: "SET_NAUTICAL_SPEED", speed, intent });
+        this.issue({ type: "SET_NAUTICAL_SPEED", speed, intent });
       },
     );
 
@@ -318,7 +320,7 @@ export class InteriorView {
       hitArea.eventMode = "static";
       hitArea.cursor = "pointer";
       hitArea.on("pointertap", () => {
-        this.engine.queueCommand({
+        this.issue({
           type: "SET_DEPTH",
           target: band,
           diveSpeed: DiveSpeed.STANDARD,
@@ -356,7 +358,7 @@ export class InteriorView {
     deckGunHit.eventMode = "static";
     deckGunHit.cursor = "pointer";
     deckGunHit.on("pointertap", () => {
-      this.engine.queueCommand({ type: "FIRE_WEAPON", weaponId: "deck_gun" });
+      this.issue({ type: "FIRE_WEAPON", weaponId: "deck_gun" });
     });
     this.container.addChild(deckGunHit);
 
@@ -377,9 +379,14 @@ export class InteriorView {
     torpedoHit.eventMode = "static";
     torpedoHit.cursor = "pointer";
     torpedoHit.on("pointertap", () => {
-      this.engine.queueCommand({ type: "FIRE_WEAPON", weaponId: "torpedo" });
+      this.issue({ type: "FIRE_WEAPON", weaponId: "torpedo" });
     });
     this.container.addChild(torpedoHit);
+  }
+
+  private issue(cmd: PlayerCommand): void {
+    this.engine.queueCommand(cmd);
+    this.onCommand?.();
   }
 
   update(state: CombatState, elapsed: number, paused: boolean): void {

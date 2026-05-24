@@ -11,7 +11,7 @@ import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
 import { SimEngine } from "../sim/index.js";
 import type { ISimEngine } from "../sim/index.js";
 import { DepthBand, NauticalSpeed, VesselType } from "../sim/combat/enums.js";
-import type { CombatState } from "../sim/combat/types.js";
+import type { CombatState, PlayerCommand } from "../sim/combat/types.js";
 import { InteriorView } from "./interior.js";
 import { RadarView } from "./radar.js";
 
@@ -65,9 +65,15 @@ export function showCombat(
   return new Promise<void>((resolveMenu) => {
     app.stage.removeChildren();
 
-    const interiorView = new InteriorView(engine, () => {
-      paused = !paused;
-    });
+    const interiorView = new InteriorView(
+      engine,
+      () => {
+        paused = !paused;
+      },
+      () => {
+        if (paused) engine.tick();
+      },
+    );
     const radarView = new RadarView();
 
     interiorView.container.x = 0;
@@ -157,6 +163,11 @@ export function showCombat(
     let elapsed = 0;
     let paused = true;
 
+    function issueCommand(cmd: PlayerCommand): void {
+      engine.queueCommand(cmd);
+      if (paused) engine.tick();
+    }
+
     function tickerCallback(ticker: { deltaMS: number }): void {
       if (!paused) {
         timeSinceLastTick += ticker.deltaMS;
@@ -200,12 +211,12 @@ export function showCombat(
 
       switch (e.key.toLowerCase()) {
         case "f": {
-          engine.queueCommand({ type: "FIRE_WEAPON", weaponId: "deck_gun" });
+          issueCommand({ type: "FIRE_WEAPON", weaponId: "deck_gun" });
           break;
         }
 
         case "t": {
-          engine.queueCommand({ type: "FIRE_WEAPON", weaponId: "torpedo" });
+          issueCommand({ type: "FIRE_WEAPON", weaponId: "torpedo" });
           break;
         }
 
@@ -215,26 +226,26 @@ export function showCombat(
             DepthBand.ABYSSAL,
             currentDepth + 1,
           ) as (typeof DepthBand)[keyof typeof DepthBand];
-          engine.queueCommand({ type: "SET_DEPTH", target: nextDepth, diveSpeed: 1 });
+          issueCommand({ type: "SET_DEPTH", target: nextDepth, diveSpeed: 1 });
           break;
         }
 
         case "x": {
-          engine.queueCommand({ type: "SET_DEPTH", target: DepthBand.SURFACE, diveSpeed: 1 });
+          issueCommand({ type: "SET_DEPTH", target: DepthBand.SURFACE, diveSpeed: 1 });
           break;
         }
 
         case "arrowright":
         case "d": {
           const currentSpd = combat?.player.nauticalSpeed ?? NauticalSpeed.HALF_AHEAD;
-          engine.queueCommand({ type: "SET_NAUTICAL_SPEED", speed: currentSpd, intent: 1 });
+          issueCommand({ type: "SET_NAUTICAL_SPEED", speed: currentSpd, intent: 1 });
           break;
         }
 
         case "arrowleft":
         case "a": {
           const currentSpd = combat?.player.nauticalSpeed ?? NauticalSpeed.HALF_AHEAD;
-          engine.queueCommand({ type: "SET_NAUTICAL_SPEED", speed: currentSpd, intent: -1 });
+          issueCommand({ type: "SET_NAUTICAL_SPEED", speed: currentSpd, intent: -1 });
           break;
         }
 
@@ -246,7 +257,7 @@ export function showCombat(
             currentSpd + 1,
           ) as (typeof NauticalSpeed)[keyof typeof NauticalSpeed];
           const intent = combat?.player.horizontalIntent ?? 0;
-          engine.queueCommand({ type: "SET_NAUTICAL_SPEED", speed: nextSpd, intent });
+          issueCommand({ type: "SET_NAUTICAL_SPEED", speed: nextSpd, intent });
           break;
         }
 
@@ -258,7 +269,7 @@ export function showCombat(
             currentSpd - 1,
           ) as (typeof NauticalSpeed)[keyof typeof NauticalSpeed];
           const intent = combat?.player.horizontalIntent ?? 0;
-          engine.queueCommand({ type: "SET_NAUTICAL_SPEED", speed: prevSpd, intent });
+          issueCommand({ type: "SET_NAUTICAL_SPEED", speed: prevSpd, intent });
           break;
         }
 
