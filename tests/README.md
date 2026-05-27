@@ -147,6 +147,14 @@ Common mistake: asserting on tick N when the relevant game event fires on tick N
 
 ---
 
+## Test report and replay links
+
+After `just test` completes, `just report` (or `npm run report`) reads `test-results/junit.xml` and `test-results/scenario-results.json` and emits a self-contained `test-results/index.html`. In CI this runs automatically and the resulting directory is deployed to `pr-N/test-report/` on gh-pages; a link appears in the PR comment alongside the game preview and QA viewer URLs.
+
+Every scenario row in the report carries a "Replay" link that targets the QA viewer at `../qa/?scenario=<id>`. When a scenario has a `firstFailingTick`, the link appends `&pauseAt=<tick>` so the viewer opens at the moment the assertion failed. Until PR #4 ships the full playback engine, clicks land on the PR #1 placeholder page, which echoes the URL params back — so the link is already functional in a minimal way and becomes useful the moment PR #4 merges.
+
+---
+
 ## The headless binary (`just smoke`)
 
 `src/headless/runner.ts` → `dist-node/runner.js` is still built and used by `just smoke` (CI "does the binary start" check) and for local `node dist-node/runner.js --seed 42 --ticks 10` debugging. It is not involved in scenario test execution. If you change `SimEngine`'s public API, update the runner to match.
