@@ -182,6 +182,7 @@ function buildThreeButtons(
 export class InteriorView {
   readonly container: Container;
   private engine: ISimEngine;
+  private readOnly: boolean;
   private selectedCrewId: string | null = null;
   private roomDefs: RoomLayout[];
 
@@ -222,8 +223,9 @@ export class InteriorView {
 
   private tutorialText: Text;
 
-  constructor(engine: ISimEngine, onPauseToggle: () => void) {
+  constructor(engine: ISimEngine, onPauseToggle: () => void, readOnly: boolean = false) {
     this.engine = engine;
+    this.readOnly = readOnly;
     this.container = new Container();
 
     const initialRooms = engine.getState().combat?.rooms ?? [];
@@ -258,15 +260,21 @@ export class InteriorView {
 
       const hitArea = new Graphics();
       hitArea.rect(def.x, def.y, def.w, def.h).fill({ color: 0xffffff, alpha: 0 });
-      hitArea.eventMode = "static";
-      hitArea.cursor = "pointer";
-      const roomId = def.id;
-      hitArea.on("pointertap", () => {
-        if (this.selectedCrewId !== null) {
-          this.engine.queueCommand({ type: "ASSIGN_CREW", crewId: this.selectedCrewId, roomId });
-          this.selectedCrewId = null;
-        }
-      });
+      if (!readOnly) {
+        hitArea.eventMode = "static";
+        hitArea.cursor = "pointer";
+        const roomId = def.id;
+        hitArea.on("pointertap", () => {
+          if (this.selectedCrewId !== null) {
+            this.engine.queueCommand({
+              type: "ASSIGN_CREW",
+              crewId: this.selectedCrewId,
+              roomId,
+            });
+            this.selectedCrewId = null;
+          }
+        });
+      }
       this.container.addChild(hitArea);
     }
 
@@ -373,11 +381,14 @@ export class InteriorView {
       SPEED_BTN_Y,
       SPEED_BTN_H,
       ["SILENT", "STANDARD", "AHEAD FULL"],
-      (idx) => {
-        const speed = speedValues[idx] ?? SpeedSetting.STANDARD;
-        const direction = this.engine.getState().combat?.player.direction ?? SpeedDirection.HOLD;
-        this.engine.queueCommand({ type: "SET_SPEED", speed, direction });
-      },
+      readOnly
+        ? (): void => undefined
+        : (idx): void => {
+            const speed = speedValues[idx] ?? SpeedSetting.STANDARD;
+            const direction =
+              this.engine.getState().combat?.player.direction ?? SpeedDirection.HOLD;
+            this.engine.queueCommand({ type: "SET_SPEED", speed, direction });
+          },
     );
 
     // ── Direction control buttons ────────────────────────────────────────────
@@ -397,11 +408,13 @@ export class InteriorView {
       DIR_BTN_Y,
       DIR_BTN_H,
       ["◄ OPEN", "● HOLD", "► CLOSE"],
-      (idx) => {
-        const direction = dirValues[idx] ?? SpeedDirection.HOLD;
-        const speed = this.engine.getState().combat?.player.speed ?? SpeedSetting.STANDARD;
-        this.engine.queueCommand({ type: "SET_SPEED", speed, direction });
-      },
+      readOnly
+        ? (): void => undefined
+        : (idx): void => {
+            const direction = dirValues[idx] ?? SpeedDirection.HOLD;
+            const speed = this.engine.getState().combat?.player.speed ?? SpeedSetting.STANDARD;
+            this.engine.queueCommand({ type: "SET_SPEED", speed, direction });
+          },
     );
 
     // ── Pause button ─────────────────────────────────────────────────────────
@@ -425,9 +438,11 @@ export class InteriorView {
     pauseHitArea
       .rect(ROOM_MARGIN_X, PAUSE_BTN_Y, totalW, PAUSE_BTN_H)
       .fill({ color: 0xffffff, alpha: 0 });
-    pauseHitArea.eventMode = "static";
-    pauseHitArea.cursor = "pointer";
-    pauseHitArea.on("pointertap", () => onPauseToggle());
+    if (!readOnly) {
+      pauseHitArea.eventMode = "static";
+      pauseHitArea.cursor = "pointer";
+      pauseHitArea.on("pointertap", () => onPauseToggle());
+    }
     this.container.addChild(pauseHitArea);
 
     // ── Depth selector ───────────────────────────────────────────────────────
@@ -458,11 +473,13 @@ export class InteriorView {
 
       const hitArea = new Graphics();
       hitArea.rect(bx, DEPTH_BTN_Y, btnW, DEPTH_BTN_H).fill({ color: 0xffffff, alpha: 0 });
-      hitArea.eventMode = "static";
-      hitArea.cursor = "pointer";
-      hitArea.on("pointertap", () => {
-        this.engine.queueCommand({ type: "SET_DEPTH", target: band });
-      });
+      if (!readOnly) {
+        hitArea.eventMode = "static";
+        hitArea.cursor = "pointer";
+        hitArea.on("pointertap", () => {
+          this.engine.queueCommand({ type: "SET_DEPTH", target: band });
+        });
+      }
       this.container.addChild(hitArea);
 
       this.depthBtns.push({ gfx, x: bx, w: btnW, band });
@@ -493,11 +510,13 @@ export class InteriorView {
     deckGunHit
       .rect(deckGunX, WEAPON_BTN_Y, weaponBtnW, WEAPON_BTN_H)
       .fill({ color: 0xffffff, alpha: 0 });
-    deckGunHit.eventMode = "static";
-    deckGunHit.cursor = "pointer";
-    deckGunHit.on("pointertap", () => {
-      this.engine.queueCommand({ type: "FIRE_DECK_GUN" });
-    });
+    if (!readOnly) {
+      deckGunHit.eventMode = "static";
+      deckGunHit.cursor = "pointer";
+      deckGunHit.on("pointertap", () => {
+        this.engine.queueCommand({ type: "FIRE_DECK_GUN" });
+      });
+    }
     this.container.addChild(deckGunHit);
 
     this.torpedoBtnGfx = new Graphics();
@@ -514,11 +533,13 @@ export class InteriorView {
     torpedoHit
       .rect(torpedoX, WEAPON_BTN_Y, weaponBtnW, WEAPON_BTN_H)
       .fill({ color: 0xffffff, alpha: 0 });
-    torpedoHit.eventMode = "static";
-    torpedoHit.cursor = "pointer";
-    torpedoHit.on("pointertap", () => {
-      this.engine.queueCommand({ type: "FIRE_TORPEDO" });
-    });
+    if (!readOnly) {
+      torpedoHit.eventMode = "static";
+      torpedoHit.cursor = "pointer";
+      torpedoHit.on("pointertap", () => {
+        this.engine.queueCommand({ type: "FIRE_TORPEDO" });
+      });
+    }
     this.container.addChild(torpedoHit);
 
     // Tutorial text

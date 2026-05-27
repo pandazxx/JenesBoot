@@ -151,7 +151,21 @@ Common mistake: asserting on tick N when the relevant game event fires on tick N
 
 After `just test` completes, `just report` (or `npm run report`) reads `test-results/junit.xml` and `test-results/scenario-results.json` and emits a self-contained `test-results/index.html`. In CI this runs automatically and the resulting directory is deployed to `pr-N/test-report/` on gh-pages; a link appears in the PR comment alongside the game preview and QA viewer URLs.
 
-Every scenario row in the report carries a "Replay" link that targets the QA viewer at `../qa/?scenario=<id>`. When a scenario has a `firstFailingTick`, the link appends `&pauseAt=<tick>` so the viewer opens at the moment the assertion failed. Until PR #4 ships the full playback engine, clicks land on the PR #1 placeholder page, which echoes the URL params back — so the link is already functional in a minimal way and becomes useful the moment PR #4 merges.
+Every scenario row in the report carries a "Replay" link that targets the QA viewer at `../qa/?scenario=<id>`. When a scenario has a `firstFailingTick`, the link appends `&pauseAt=<tick>` so the viewer opens at the moment the assertion failed.
+
+**QA viewer URL contract:**
+
+- `qa/` — scenario picker; lists all registered scenarios as clickable links.
+- `qa/?scenario=<id>` — loads the named scenario, runs it from tick 0, starts playing immediately.
+- `qa/?scenario=<id>&pauseAt=<N>` — fast-forwards to tick N silently (no rendering during fast-forward), then renders once and starts paused. Use this form to inspect the exact tick a failing assertion fires.
+
+The viewer is read-only. No keyboard or mouse input is accepted — the scenario's `script` array is the only source of commands. Scrubbing backward is not supported; reload the page to restart.
+
+**When to use the QA viewer (step 5 of the 6-step authoring procedure):**
+
+Open the viewer only after headless assertions are green. It is the visual sanity check that the scenario plays out as intended — confirming range transitions, visible combat flow, and crew placement look correct. Do not use it during iteration; the headless runner with `console.log(result.log)` is faster for debugging logic. The viewer is mandatory for any scenario with visible combat flow and optional for purely mechanical scenarios (resource exhaustion, detection math).
+
+Local dev: `just dev` serves the QA viewer at `http://localhost:5173/JenesBoot/qa/` alongside the main game at `http://localhost:5173/JenesBoot/`.
 
 ---
 

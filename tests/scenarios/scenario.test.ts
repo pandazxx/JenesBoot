@@ -60,7 +60,7 @@ for (const scenario of scenarios) {
     for (const ar of result.assertionResults) {
       if (!ar.passed && ar.detail !== undefined) {
         const m = /tick (\d+)/.exec(ar.detail);
-        if (m !== undefined && m[1] !== undefined) {
+        if (m !== null && m[1] !== undefined) {
           const t = parseInt(m[1], 10);
           if (firstFailingTick === null || t < firstFailingTick) {
             firstFailingTick = t;
