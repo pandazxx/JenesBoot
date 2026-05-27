@@ -1,0 +1,149 @@
+/**
+ * In-process scenario runner.
+ *
+ * Imports SimEngine directly — no subprocess, no binary build required.
+ * The same module is importable by the browser-side QA viewer (PR #4).
+ *
+ * No PixiJS, no DOM, no Math.random(), no wall-clock reads.
+ */
+
+import { SimEngine } from "../../src/sim/index.js";
+import type { SimInitialOverrides } from "../../src/sim/index.js";
+import type { Scenario, ScenarioRunResult, AssertionResult, ScenarioInitial } from "./types.js";
+
+function applyInitial(engine: ReturnType<typeof SimEngine>, initial: ScenarioInitial): void {
+  const overrides: SimInitialOverrides = {};
+
+  if (initial.playerDepth !== undefined) overrides.playerDepth = initial.playerDepth;
+  if (initial.playerSpeed !== undefined) overrides.playerSpeed = initial.playerSpeed;
+  if (initial.playerDirection !== undefined) overrides.playerDirection = initial.playerDirection;
+  if (initial.enemyX !== undefined) overrides.enemyX = initial.enemyX;
+  if (initial.enemyY !== undefined) overrides.enemyY = initial.enemyY;
+  if (initial.enemySpeed !== undefined) overrides.enemySpeed = initial.enemySpeed;
+  if (initial.enemyDirection !== undefined) overrides.enemyDirection = initial.enemyDirection;
+
+  engine.setInitialState(overrides);
+}
+
+export function runScenario(scenario: Scenario): ScenarioRunResult {
+  const maxTicks = scenario.maxTicks ?? 1000;
+  const engine = SimEngine(scenario.seed);
+
+  if (scenario.scenario !== undefined) {
+    engine.startCombat(scenario.scenario);
+  }
+
+  if (scenario.initial !== undefined) {
+    applyInitial(engine, scenario.initial);
+  }
+
+  const assertionResults: AssertionResult[] = [];
+  const sortedScript = [...scenario.script].sort((a, b) => a.atTick - b.atTick);
+  let scriptIndex = 0;
+  let tickReached = 0;
+
+  for (let tick = 1; tick <= maxTicks; tick++) {
+    while (scriptIndex < sortedScript.length && sortedScript[scriptIndex]!.atTick === tick) {
+      engine.queueCommand(sortedScript[scriptIndex]!.cmd);
+      scriptIndex++;
+    }
+
+    engine.tick();
+    tickReached = tick;
+
+    const state = engine.getState();
+
+    if (scenario.expect.atTick !== undefined) {
+      for (const assertion of scenario.expect.atTick) {
+        if (assertion.tick === tick) {
+          const passed = assertion.predicate(state);
+          assertionResults.push({
+            label: assertion.label,
+            passed,
+            detail: passed ? undefined : `predicate returned false at tick ${tick}`,
+          });
+        }
+      }
+    }
+
+    const hasCombatEnd = state.log.some((e) => e.type === "combat_end");
+    const pendingScriptEntries = scriptIndex < sortedScript.length;
+
+    if (hasCombatEnd && !pendingScriptEntries) {
+      break;
+    }
+  }
+
+  const finalState = engine.getState();
+  const log = finalState.log;
+
+  if (scenario.expect.finalState !== undefined) {
+    const passed = scenario.expect.finalState(finalState);
+    assertionResults.push({
+      label: "finalState predicate",
+      passed,
+      detail: passed ? undefined : "finalState predicate returned false",
+    });
+  }
+
+  if (scenario.expect.eventCounts !== undefined) {
+    for (const [eventType, bounds] of Object.entries(scenario.expect.eventCounts)) {
+      if (bounds === undefined) continue;
+      const count = log.filter((e) => e.type === eventType).length;
+
+      if (bounds.exact !== undefined) {
+        const passed = count === bounds.exact;
+        assertionResults.push({
+          label: `eventCounts["${eventType}"] exact ${bounds.exact}`,
+          passed,
+          detail: passed
+            ? undefined
+            : `expected exactly ${bounds.exact} "${eventType}" events, got ${count}`,
+        });
+      } else {
+        if (bounds.min !== undefined) {
+          const passed = count >= bounds.min;
+          assertionResults.push({
+            label: `eventCounts["${eventType}"] min ${bounds.min}`,
+            passed,
+            detail: passed
+              ? undefined
+              : `expected at least ${bounds.min} "${eventType}" events, got ${count}`,
+          });
+        }
+        if (bounds.max !== undefined) {
+          const passed = count <= bounds.max;
+          assertionResults.push({
+            label: `eventCounts["${eventType}"] max ${bounds.max}`,
+            passed,
+            detail: passed
+              ? undefined
+              : `expected at most ${bounds.max} "${eventType}" events, got ${count}`,
+          });
+        }
+      }
+    }
+  }
+
+  if (scenario.expect.finalCombatResult !== undefined) {
+    const combatResult = finalState.combat?.result ?? null;
+    const passed = combatResult === scenario.expect.finalCombatResult;
+    assertionResults.push({
+      label: `finalCombatResult === "${scenario.expect.finalCombatResult}"`,
+      passed,
+      detail: passed
+        ? undefined
+        : `expected combat result "${scenario.expect.finalCombatResult}", got "${combatResult ?? "null (no combat)"}"`,
+    });
+  }
+
+  const passed = assertionResults.length === 0 ? true : assertionResults.every((r) => r.passed);
+
+  return {
+    final: finalState,
+    log,
+    assertionResults,
+    passed,
+    tickReached,
+  };
+}
