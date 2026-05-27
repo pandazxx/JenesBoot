@@ -14,9 +14,12 @@ export default defineConfig({
       "tests/scenarios/hello-world.scenario.ts",
       "tests/scenarios/surface-battle.scenario.ts",
     ],
-    reporters: process.env.CI ? ["default", "junit"] : ["default"],
+    reporters: process.env.CI
+      ? ["default", "junit", "html"]
+      : ["default"],
     outputFile: {
       junit: "test-results/junit.xml",
+      html: "test-results/vitest.html",
     },
     coverage: {
       reporter: ["text"],
