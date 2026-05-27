@@ -31,8 +31,12 @@ build:
 smoke:
     npm run headless -- --seed 42 --ticks 10
 
-# Vite dev server
+# Vite dev server (serves game at /JenesBoot/ and QA viewer at /JenesBoot/qa/)
 dev:
+    npm run dev
+
+# Alias: open the QA viewer entry via the same dev server
+dev-qa:
     npm run dev
 
 # Preview production build
