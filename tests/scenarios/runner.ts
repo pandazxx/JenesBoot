@@ -25,6 +25,13 @@ function applyInitial(engine: ReturnType<typeof SimEngine>, initial: ScenarioIni
   engine.setInitialState(overrides);
 }
 
+function makeResult(label: string, passed: boolean, detail?: string): AssertionResult {
+  if (!passed && detail !== undefined) {
+    return { label, passed, detail };
+  }
+  return { label, passed };
+}
+
 export function runScenario(scenario: Scenario): ScenarioRunResult {
   const maxTicks = scenario.maxTicks ?? 1000;
   const engine = SimEngine(scenario.seed);
@@ -57,11 +64,13 @@ export function runScenario(scenario: Scenario): ScenarioRunResult {
       for (const assertion of scenario.expect.atTick) {
         if (assertion.tick === tick) {
           const passed = assertion.predicate(state);
-          assertionResults.push({
-            label: assertion.label,
-            passed,
-            detail: passed ? undefined : `predicate returned false at tick ${tick}`,
-          });
+          assertionResults.push(
+            makeResult(
+              assertion.label,
+              passed,
+              passed ? undefined : `predicate returned false at tick ${tick}`,
+            ),
+          );
         }
       }
     }
@@ -79,11 +88,13 @@ export function runScenario(scenario: Scenario): ScenarioRunResult {
 
   if (scenario.expect.finalState !== undefined) {
     const passed = scenario.expect.finalState(finalState);
-    assertionResults.push({
-      label: "finalState predicate",
-      passed,
-      detail: passed ? undefined : "finalState predicate returned false",
-    });
+    assertionResults.push(
+      makeResult(
+        "finalState predicate",
+        passed,
+        passed ? undefined : "finalState predicate returned false",
+      ),
+    );
   }
 
   if (scenario.expect.eventCounts !== undefined) {
@@ -93,33 +104,39 @@ export function runScenario(scenario: Scenario): ScenarioRunResult {
 
       if (bounds.exact !== undefined) {
         const passed = count === bounds.exact;
-        assertionResults.push({
-          label: `eventCounts["${eventType}"] exact ${bounds.exact}`,
-          passed,
-          detail: passed
-            ? undefined
-            : `expected exactly ${bounds.exact} "${eventType}" events, got ${count}`,
-        });
+        assertionResults.push(
+          makeResult(
+            `eventCounts["${eventType}"] exact ${bounds.exact}`,
+            passed,
+            passed
+              ? undefined
+              : `expected exactly ${bounds.exact} "${eventType}" events, got ${count}`,
+          ),
+        );
       } else {
         if (bounds.min !== undefined) {
           const passed = count >= bounds.min;
-          assertionResults.push({
-            label: `eventCounts["${eventType}"] min ${bounds.min}`,
-            passed,
-            detail: passed
-              ? undefined
-              : `expected at least ${bounds.min} "${eventType}" events, got ${count}`,
-          });
+          assertionResults.push(
+            makeResult(
+              `eventCounts["${eventType}"] min ${bounds.min}`,
+              passed,
+              passed
+                ? undefined
+                : `expected at least ${bounds.min} "${eventType}" events, got ${count}`,
+            ),
+          );
         }
         if (bounds.max !== undefined) {
           const passed = count <= bounds.max;
-          assertionResults.push({
-            label: `eventCounts["${eventType}"] max ${bounds.max}`,
-            passed,
-            detail: passed
-              ? undefined
-              : `expected at most ${bounds.max} "${eventType}" events, got ${count}`,
-          });
+          assertionResults.push(
+            makeResult(
+              `eventCounts["${eventType}"] max ${bounds.max}`,
+              passed,
+              passed
+                ? undefined
+                : `expected at most ${bounds.max} "${eventType}" events, got ${count}`,
+            ),
+          );
         }
       }
     }
@@ -128,13 +145,15 @@ export function runScenario(scenario: Scenario): ScenarioRunResult {
   if (scenario.expect.finalCombatResult !== undefined) {
     const combatResult = finalState.combat?.result ?? null;
     const passed = combatResult === scenario.expect.finalCombatResult;
-    assertionResults.push({
-      label: `finalCombatResult === "${scenario.expect.finalCombatResult}"`,
-      passed,
-      detail: passed
-        ? undefined
-        : `expected combat result "${scenario.expect.finalCombatResult}", got "${combatResult ?? "null (no combat)"}"`,
-    });
+    assertionResults.push(
+      makeResult(
+        `finalCombatResult === "${scenario.expect.finalCombatResult}"`,
+        passed,
+        passed
+          ? undefined
+          : `expected combat result "${scenario.expect.finalCombatResult}", got "${combatResult ?? "null (no combat)"}"`,
+      ),
+    );
   }
 
   const passed = assertionResults.length === 0 ? true : assertionResults.every((r) => r.passed);

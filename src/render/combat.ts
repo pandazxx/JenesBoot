@@ -86,13 +86,18 @@ export function showCombat(
   engine: ISimEngine,
   scenario: CombatScenario,
   onSettings?: () => void,
+  readOnly: boolean = false,
 ): Promise<void> {
   return new Promise<void>((resolveMenu) => {
     app.stage.removeChildren();
 
-    const interiorView = new InteriorView(engine, () => {
-      paused = !paused;
-    });
+    const interiorView = new InteriorView(
+      engine,
+      () => {
+        paused = !paused;
+      },
+      readOnly,
+    );
     const radarView = new RadarView();
 
     interiorView.container.x = 0;
@@ -305,18 +310,24 @@ export function showCombat(
       }
     };
 
-    window.addEventListener("keydown", onKey);
+    if (!readOnly) {
+      window.addEventListener("keydown", onKey);
+    }
 
     function goToMenu(): void {
       app.ticker.remove(tickerCallback);
-      window.removeEventListener("keydown", onKey);
+      if (!readOnly) {
+        window.removeEventListener("keydown", onKey);
+      }
       app.stage.removeChildren();
       resolveMenu();
     }
 
     function restart(): void {
       app.ticker.remove(tickerCallback);
-      window.removeEventListener("keydown", onKey);
+      if (!readOnly) {
+        window.removeEventListener("keydown", onKey);
+      }
 
       const urlSeed = new URLSearchParams(window.location.search).get("seed");
       const seed = urlSeed !== null ? parseInt(urlSeed, 10) : 0;
