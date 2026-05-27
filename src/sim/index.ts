@@ -18,7 +18,7 @@
 
 import { Mulberry32 } from "./prng.js";
 import type { SimEvent, SimState } from "./types.js";
-import type { CombatState } from "./combat/types.js";
+import type { CombatState, DepthBand, SpeedSetting, SpeedDirection } from "./combat/types.js";
 import { RoomType } from "./combat/types.js";
 import {
   tickCombat,
@@ -34,6 +34,22 @@ import { type SimConfig, defaultSimConfig } from "./combat/config.js";
 export type { SimEvent, SimState } from "./types.js";
 export type { PlayerCommand } from "./combat/tick.js";
 export type { SimConfig } from "./combat/config.js";
+export type { DepthBand, SpeedSetting, SpeedDirection } from "./combat/types.js";
+
+/**
+ * Initial-state overrides applied after startCombat() and before tick 1.
+ * Only callable once; ignored if called after the first tick.
+ * Keep this minimal — add fields only when scenarios actually need them.
+ */
+export interface SimInitialOverrides {
+  playerDepth?: DepthBand;
+  playerSpeed?: SpeedSetting;
+  playerDirection?: SpeedDirection;
+  enemyX?: number;
+  enemyY?: number;
+  enemySpeed?: SpeedSetting;
+  enemyDirection?: SpeedDirection;
+}
 
 export type CombatScenario =
   | "surface_battle"
@@ -47,6 +63,12 @@ export interface ISimEngine {
   tick(): void;
   getState(): SimState;
   startCombat(scenario: CombatScenario): void;
+  /**
+   * Apply initial-state overrides to the combat state.
+   * Must be called after startCombat() and before the first tick().
+   * Calling after tick 1 is a no-op.
+   */
+  setInitialState(overrides: SimInitialOverrides): void;
   queueCommand(cmd: PlayerCommand): void;
   setConfig(config: SimConfig): void;
 }
@@ -85,6 +107,29 @@ class SimEngineImpl implements ISimEngine {
       this.combatState = buildSubmergedAmbushState(this.config);
     }
     this.combatRng = new Mulberry32((this.seed ^ 0xdead) >>> 0);
+  }
+
+  setInitialState(overrides: SimInitialOverrides): void {
+    if (this.currentTick > 0 || this.combatState === null) return;
+
+    const p = this.combatState.player;
+    const e = this.combatState.enemy;
+
+    if (overrides.playerDepth !== undefined) {
+      p.depth = overrides.playerDepth;
+      p.depthTarget = overrides.playerDepth;
+      p.y = overrides.playerDepth * 150;
+    }
+    if (overrides.playerSpeed !== undefined) p.speed = overrides.playerSpeed;
+    if (overrides.playerDirection !== undefined) p.direction = overrides.playerDirection;
+    if (overrides.enemyX !== undefined) e.x = overrides.enemyX;
+    if (overrides.enemyY !== undefined) {
+      e.y = overrides.enemyY;
+      e.depth = Math.min(4, Math.floor(overrides.enemyY / 150)) as DepthBand;
+      e.depthTarget = e.depth;
+    }
+    if (overrides.enemySpeed !== undefined) e.speed = overrides.enemySpeed;
+    if (overrides.enemyDirection !== undefined) e.direction = overrides.enemyDirection;
   }
 
   /**

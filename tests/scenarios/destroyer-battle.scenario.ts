@@ -73,8 +73,7 @@ describe("destroyer_battle scenario", () => {
       const { newState, events } = tickCombat(s, i, rng, null);
       const fired = events.some(
         (e) =>
-          e.type === "shot_fired" &&
-          (e.payload as { weapon?: string }).weapon === "depth_charge",
+          e.type === "shot_fired" && (e.payload as { weapon?: string }).weapon === "depth_charge",
       );
       if (fired && firstFireTick < 0) {
         firstFireTick = i;
@@ -109,7 +108,13 @@ describe("destroyer_battle scenario", () => {
     // Use a state where we can measure movement cleanly: enemy at x=750, player at HOLD.
     const rng0 = new Mulberry32(0);
     const { newState: nsDefault } = tickCombat(stateDefault, 1, rng0, null, defaultCfg);
-    const { newState: nsModified } = tickCombat(stateModified, 1, new Mulberry32(0), null, modifiedCfg);
+    const { newState: nsModified } = tickCombat(
+      stateModified,
+      1,
+      new Mulberry32(0),
+      null,
+      modifiedCfg,
+    );
 
     // In both cases, the destroyer should have moved by at least 9 units toward the player.
     // (STANDARD = 10, AHEAD_FULL = 15; the AI may choose either at LONG range.)

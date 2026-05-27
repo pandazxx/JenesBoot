@@ -4,186 +4,47 @@
 // starting at LONG range. Player should close range, enter deck-gun range,
 // and destroy the merchant before tick 150.
 //
-// Seed: 42. Ticks: 150. Scenario: surface_battle.
+// Seed: 42. maxTicks: 150. Scenario: surface_battle.
 //
-// Also contains in-process unit tests for crew assignment mechanics.
+// This file also contains in-process unit tests for crew assignment mechanics.
+// Those run as plain vitest describe blocks (no Scenario wrapper needed).
 
 import { describe, it, expect } from "vitest";
-import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
 import { SimEngine } from "../../src/sim/index.js";
+import type { SimState } from "../../src/sim/index.js";
+import { DepthBand, RangeBand } from "../../src/sim/combat/types.js";
+import { defineScenario } from "./types.js";
 
-interface SimEvent {
-  tick: number;
-  type: string;
-  payload: unknown;
-}
-
-interface HeadlessOutput {
-  seed: number;
-  ticks: number;
-  rngState: number;
-  log: SimEvent[];
-}
-
-const SEED = 42;
-const TICKS = 150;
-const SCENARIO = "surface_battle";
-
-const REPO_ROOT = resolve(import.meta.dirname, "../..");
-const RUNNER_PATH = resolve(REPO_ROOT, "dist-node/runner.js");
-
-function runHeadless(
-  seed: number,
-  ticks: number,
-  scenario: string,
-): { exitCode: number; stdout: string; stderr: string; parsed: HeadlessOutput | null } {
-  if (!existsSync(RUNNER_PATH)) {
-    throw new Error(
-      `Headless runner not found at ${RUNNER_PATH}. ` +
-        "Run `npm run headless:build` before executing scenarios.",
-    );
-  }
-
-  const result = spawnSync(
-    process.execPath,
-    [RUNNER_PATH, "--seed", String(seed), "--ticks", String(ticks), "--scenario", scenario],
-    {
-      encoding: "utf-8",
-      timeout: 30_000,
+export default defineScenario({
+  id: "surface-battle",
+  title: "Surface battle — merchant destroyed before tick 150",
+  seed: 42,
+  scenario: "surface_battle",
+  script: [{ atTick: 1, cmd: { type: "ASSIGN_CREW", crewId: "mate", roomId: "deck_gun" } }],
+  maxTicks: 150,
+  expect: {
+    eventCounts: {
+      combat_start: { min: 1 },
+      range_change: { min: 1 },
+      shot_fired: { min: 1 },
+      combat_end: { exact: 1 },
     },
-  );
-
-  const exitCode = result.status ?? 1;
-  const stdout = result.stdout ?? "";
-  const stderr = result.stderr ?? "";
-
-  let parsed: HeadlessOutput | null = null;
-  try {
-    parsed = JSON.parse(stdout) as HeadlessOutput;
-  } catch {
-    // surfaces as assertion failure below
-  }
-
-  return { exitCode, stdout, stderr, parsed };
-}
-
-let runResult: ReturnType<typeof runHeadless> | null = null;
-let runError: string | null = null;
-
-try {
-  runResult = runHeadless(SEED, TICKS, SCENARIO);
-} catch (err: unknown) {
-  runError = err instanceof Error ? err.message : String(err);
-}
-
-describe(`surface-battle scenario — seed ${SEED}, ${TICKS} ticks`, () => {
-  it("headless binary must be present and runnable", () => {
-    if (runError !== null) {
-      expect.fail(runError);
-    }
-    expect(runResult).not.toBeNull();
-  });
-
-  // 1. Exit code 0
-  it("exits with code 0", () => {
-    if (runResult === null) return;
-    if (runResult.exitCode !== 0) {
-      console.error("stderr:", runResult.stderr);
-    }
-    expect(runResult.exitCode).toBe(0);
-  });
-
-  // stdout valid JSON
-  it("stdout is valid JSON", () => {
-    if (runResult === null) return;
-    expect(runResult.parsed).not.toBeNull();
-  });
-
-  // 2. combat_start event exists
-  it("log contains a combat_start event", () => {
-    if (runResult?.parsed === null || runResult?.parsed === undefined) return;
-    const log = runResult.parsed.log;
-    const events = log.filter((e) => e.type === "combat_start");
-    expect(events.length).toBeGreaterThanOrEqual(1);
-  });
-
-  // 3. At least one range_change event
-  it("log contains at least one range_change event (range closes)", () => {
-    if (runResult?.parsed === null || runResult?.parsed === undefined) return;
-    const log = runResult.parsed.log;
-    const events = log.filter((e) => e.type === "range_change");
-    if (events.length === 0) {
-      console.error("No range_change events found. Full log:", JSON.stringify(log, null, 2));
-    }
-    expect(events.length).toBeGreaterThanOrEqual(1);
-  });
-
-  // 4. At least one shot_fired by player with weapon: deck_gun
-  it("log contains at least one player deck_gun shot_fired event", () => {
-    if (runResult?.parsed === null || runResult?.parsed === undefined) return;
-    const log = runResult.parsed.log;
-    const events = log.filter((e) => {
-      if (e.type !== "shot_fired") return false;
-      const p = e.payload as Record<string, unknown>;
-      return p["by"] === "player" && p["weapon"] === "deck_gun";
-    });
-    if (events.length === 0) {
-      console.error(
-        "No player deck_gun shot_fired events found. Full log:",
-        JSON.stringify(log, null, 2),
-      );
-    }
-    expect(events.length).toBeGreaterThanOrEqual(1);
-  });
-
-  // 5. combat_end with result: player_win
-  it("log contains a combat_end event with result: player_win", () => {
-    if (runResult?.parsed === null || runResult?.parsed === undefined) return;
-    const log = runResult.parsed.log;
-    const events = log.filter((e) => {
-      if (e.type !== "combat_end") return false;
-      const p = e.payload as Record<string, unknown>;
-      return p["result"] === "player_win";
-    });
-    if (events.length === 0) {
-      console.error(
-        "No player_win combat_end event found. Full log:",
-        JSON.stringify(log, null, 2),
-      );
-    }
-    expect(events.length).toBeGreaterThanOrEqual(1);
-  });
-
-  // 6. combat_end tick <= 150
-  it("combat_end occurs at or before tick 150", () => {
-    if (runResult?.parsed === null || runResult?.parsed === undefined) return;
-    const log = runResult.parsed.log;
-    const endEvent = log.find((e) => e.type === "combat_end");
-    if (endEvent === undefined) {
-      expect.fail("No combat_end event found in log");
-    }
-    const p = endEvent.payload as Record<string, unknown>;
-    const atTick = p["atTick"] as number;
-    expect(atTick).toBeLessThanOrEqual(150);
-  });
-
-  // 7. No combat_end with result: player_lose
-  it("log does not contain a player_lose combat_end event", () => {
-    if (runResult?.parsed === null || runResult?.parsed === undefined) return;
-    const log = runResult.parsed.log;
-    const events = log.filter((e) => {
-      if (e.type !== "combat_end") return false;
-      const p = e.payload as Record<string, unknown>;
-      return p["result"] === "player_lose";
-    });
-    expect(events).toHaveLength(0);
-  });
+    finalState: (s: SimState): boolean => {
+      const log = s.log;
+      const endEvent = log.find((e) => e.type === "combat_end");
+      if (endEvent === undefined) return false;
+      const p = endEvent.payload as Record<string, unknown>;
+      const atTick = p["atTick"] as number;
+      const result = p["result"] as string;
+      return result === "player_win" && atTick <= 150;
+    },
+    finalCombatResult: "player_win",
+  },
 });
 
 // ---------------------------------------------------------------------------
-// In-process unit tests for crew / room assignment mechanics
+// In-process unit tests for crew / room assignment mechanics.
+// These are orthogonal to the playthrough scenario above.
 // ---------------------------------------------------------------------------
 
 describe("crew assignment — in-process unit tests", () => {
@@ -228,5 +89,62 @@ describe("crew assignment — in-process unit tests", () => {
     expect(combatEnd).toBeDefined();
     const result = (combatEnd!.payload as Record<string, unknown>)["result"];
     expect(result).toBe("player_win");
+  });
+
+  it("setInitialState overrides enemy starting position before tick 1", () => {
+    const engine = SimEngine(42);
+    engine.startCombat("surface_battle");
+    engine.setInitialState({ enemyX: 300 });
+
+    const combat = engine.getState().combat;
+    expect(combat).not.toBeNull();
+    expect(combat!.enemy.x).toBe(300);
+  });
+
+  it("setInitialState is a no-op after tick 1", () => {
+    const engine = SimEngine(42);
+    engine.startCombat("surface_battle");
+    engine.tick();
+    const xBefore = engine.getState().combat!.enemy.x;
+    engine.setInitialState({ enemyX: 1 });
+    expect(engine.getState().combat!.enemy.x).toBe(xBefore);
+  });
+
+  it("setInitialState playerDepth overrides depth and y consistently", () => {
+    const engine = SimEngine(42);
+    engine.startCombat("destroyer_dive");
+    engine.setInitialState({ playerDepth: DepthBand.PERISCOPE });
+    const combat = engine.getState().combat;
+    expect(combat!.player.depth).toBe(DepthBand.PERISCOPE);
+    expect(combat!.player.depthTarget).toBe(DepthBand.PERISCOPE);
+    expect(combat!.player.y).toBe(150);
+  });
+
+  it("ScenarioInitial.enemyX affects combat via runScenario", async () => {
+    const { runScenario } = await import("./runner.js");
+    const { defineScenario: define } = await import("./types.js");
+
+    const result = runScenario(
+      define({
+        id: "test-initial-override",
+        title: "test",
+        seed: 42,
+        scenario: "surface_battle",
+        initial: { enemyX: 300 },
+        script: [],
+        maxTicks: 1,
+        expect: {
+          atTick: [
+            {
+              tick: 1,
+              label: "enemy starts at x=300 after override; combat is at SHORT range after tick 1",
+              predicate: (s: SimState): boolean => (s.combat?.range ?? 99) <= RangeBand.SHORT,
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(result.passed).toBe(true);
   });
 });
