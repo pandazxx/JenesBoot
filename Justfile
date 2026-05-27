@@ -16,6 +16,13 @@ lint:
 test:
     npm run test
 
+# Generate HTML test report from junit.xml + scenario-results.json
+# Runs after `just test`. Fails loudly locally so errors are visible.
+# In CI the caller wraps this with || true so a generator error never
+# masks the test pass/fail signal.
+report:
+    npm run report
+
 # Production web build → dist/
 build:
     npm run build
@@ -33,4 +40,4 @@ preview:
     npm run preview
 
 # Full CI sequence
-ci: typecheck lint test build smoke
+ci: typecheck lint test report build smoke
