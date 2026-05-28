@@ -9,10 +9,13 @@ export default defineConfig({
       "tests/scenarios/scenario.test.ts",
     ],
     exclude: [
-      // Converted scenarios export a Scenario object; scenario.test.ts runs them.
+      // All *.scenario.ts files export a Scenario object; scenario.test.ts runs them.
       // Direct pickup via the *.scenario.ts glob would produce "No test suite" errors.
       "tests/scenarios/hello-world.scenario.ts",
       "tests/scenarios/surface-battle.scenario.ts",
+      "tests/scenarios/destroyer-battle.scenario.ts",
+      "tests/scenarios/destroyer-dive.scenario.ts",
+      "tests/scenarios/gunboat-hunt.scenario.ts",
     ],
     reporters: process.env.CI
       ? ["default", "junit", "html"]
