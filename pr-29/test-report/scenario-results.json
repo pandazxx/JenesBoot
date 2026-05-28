@@ -1,0 +1,170 @@
+{
+  "generatedAt": "2026-05-28T00:49:53.569Z",
+  "scenarios": [
+    {
+      "id": "hello-world",
+      "title": "Smoke — runner emits hello on tick 1, 10-tick passive run",
+      "passed": true,
+      "durationMs": 1,
+      "ticksReached": 10,
+      "terminatingEvent": null,
+      "assertions": [
+        {
+          "label": "hello event emitted at tick 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "finalState predicate",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"hello\"] exact 1",
+          "passed": true,
+          "detail": null
+        }
+      ],
+      "firstFailingTick": null
+    },
+    {
+      "id": "surface-battle",
+      "title": "Surface battle — merchant destroyed before tick 150",
+      "passed": true,
+      "durationMs": 4,
+      "ticksReached": 32,
+      "terminatingEvent": "combat_end",
+      "assertions": [
+        {
+          "label": "finalState predicate",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"combat_start\"] min 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"range_change\"] min 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"shot_fired\"] min 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"combat_end\"] exact 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "finalCombatResult === \"player_win\"",
+          "passed": true,
+          "detail": null
+        }
+      ],
+      "firstFailingTick": null
+    },
+    {
+      "id": "destroyer-battle",
+      "title": "Destroyer closes from LONG to SHORT within 60 ticks (player holds surface)",
+      "passed": true,
+      "durationMs": 1,
+      "ticksReached": 60,
+      "terminatingEvent": null,
+      "assertions": [
+        {
+          "label": "finalState predicate",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"combat_start\"] exact 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"range_change\"] min 1",
+          "passed": true,
+          "detail": null
+        }
+      ],
+      "firstFailingTick": null
+    },
+    {
+      "id": "destroyer-dive",
+      "title": "Destroyer dive — player dives and torpedoes destroyer within 300 ticks",
+      "passed": true,
+      "durationMs": 1,
+      "ticksReached": 34,
+      "terminatingEvent": "combat_end",
+      "assertions": [
+        {
+          "label": "finalState predicate",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"combat_start\"] exact 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"combat_end\"] exact 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"shot_fired\"] min 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "finalCombatResult === \"player_win\"",
+          "passed": true,
+          "detail": null
+        }
+      ],
+      "firstFailingTick": null
+    },
+    {
+      "id": "gunboat-hunt",
+      "title": "Gunboat hunt — player closes and wins with torpedoes within 400 ticks",
+      "passed": true,
+      "durationMs": 1,
+      "ticksReached": 73,
+      "terminatingEvent": "combat_end",
+      "assertions": [
+        {
+          "label": "finalState predicate",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"combat_start\"] exact 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"combat_end\"] exact 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"shot_fired\"] min 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "finalCombatResult === \"player_win\"",
+          "passed": true,
+          "detail": null
+        }
+      ],
+      "firstFailingTick": null
+    }
+  ]
+}
