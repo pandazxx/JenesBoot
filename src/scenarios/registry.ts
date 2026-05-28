@@ -17,10 +17,16 @@ const modules = import.meta.glob<ScenarioModule>("../../tests/scenarios/*.scenar
 });
 
 const allScenarios: Scenario[] = [];
+const failedPaths: string[] = [];
 
-for (const mod of Object.values(modules)) {
-  if (mod.default !== undefined) {
-    allScenarios.push(mod.default);
+for (const [path, mod] of Object.entries(modules)) {
+  try {
+    if (mod.default !== undefined) {
+      allScenarios.push(mod.default);
+    }
+  } catch (err) {
+    console.warn(`[scenario-registry] Failed to load scenario from ${path}:`, err);
+    failedPaths.push(path);
   }
 }
 
@@ -32,4 +38,9 @@ export function getScenarios(): Scenario[] {
 
 export function getScenarioById(id: string): Scenario | undefined {
   return allScenarios.find((s) => s.id === id);
+}
+
+/** Returns paths of scenario modules that threw on import, for UI display. */
+export function getFailedScenarioPaths(): readonly string[] {
+  return failedPaths;
 }
