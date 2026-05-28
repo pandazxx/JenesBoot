@@ -16,6 +16,7 @@ export default defineConfig({
       "tests/scenarios/destroyer-battle.scenario.ts",
       "tests/scenarios/destroyer-dive.scenario.ts",
       "tests/scenarios/gunboat-hunt.scenario.ts",
+      "tests/scenarios/merchant-hunt.scenario.ts",
     ],
     reporters: process.env.CI
       ? ["default", "junit", "html"]
