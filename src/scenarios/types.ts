@@ -114,3 +114,34 @@ export interface ScenarioRunResult {
 export function defineScenario(s: Scenario): Scenario {
   return s;
 }
+
+/**
+ * A player-facing starting position.
+ *
+ * Unlike Scenario (which has a script and assertions), PlayerScenario is just
+ * "set up this situation and hand control to the human." Same idea as a chess
+ * puzzle: the position is given, the player makes the moves.
+ *
+ * id          — stable slug, used in URL ?scenario=<id>
+ * title       — menu label shown in the Scenarios picker
+ * description — one-paragraph blurb shown when the player hovers / selects
+ * seed        — seeds the SimEngine for deterministic RNG
+ * scenario    — optional starting combat (same CombatScenario enum used by SimEngine.startCombat)
+ * initial     — optional state overrides applied before tick 1
+ */
+export interface PlayerScenario {
+  id: string;
+  title: string;
+  description: string;
+  seed: number;
+  scenario?: CombatScenario;
+  initial?: ScenarioInitial;
+}
+
+/**
+ * Identity helper for type inference. Usage:
+ *   export default definePlayerScenario({ id: "calm-merchant", ... });
+ */
+export function definePlayerScenario(s: PlayerScenario): PlayerScenario {
+  return s;
+}
