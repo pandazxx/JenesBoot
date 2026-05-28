@@ -20,8 +20,17 @@ import type { Scenario } from "./types.js";
 
 import helloWorld from "./hello-world.scenario.js";
 import surfaceBattle from "./surface-battle.scenario.js";
+import destroyerBattle from "./destroyer-battle.scenario.js";
+import destroyerDive from "./destroyer-dive.scenario.js";
+import gunboatHunt from "./gunboat-hunt.scenario.js";
 
-const scenarios: Scenario[] = [helloWorld, surfaceBattle];
+const scenarios: Scenario[] = [
+  helloWorld,
+  surfaceBattle,
+  destroyerBattle,
+  destroyerDive,
+  gunboatHunt,
+];
 
 interface ScenarioResultEntry {
   id: string;
@@ -51,8 +60,7 @@ for (const scenario of scenarios) {
     const durationMs = Date.now() - start;
 
     // Determine terminating event from the log
-    const terminatingEvent =
-      result.log.find((e) => e.type === "combat_end")?.type ?? null;
+    const terminatingEvent = result.log.find((e) => e.type === "combat_end")?.type ?? null;
 
     // Find the first failing tick: look at atTick assertions if the runner
     // annotates the tick. For non-atTick assertions, leave null.
@@ -109,11 +117,7 @@ afterAll(() => {
   const outDir = join(process.cwd(), "test-results");
   try {
     mkdirSync(outDir, { recursive: true });
-    writeFileSync(
-      join(outDir, "scenario-results.json"),
-      JSON.stringify(manifest, null, 2),
-      "utf8",
-    );
+    writeFileSync(join(outDir, "scenario-results.json"), JSON.stringify(manifest, null, 2), "utf8");
   } catch (err) {
     // Non-fatal: report generation should not break the test signal.
     console.warn("[scenario.test] Failed to write scenario-results.json:", err);

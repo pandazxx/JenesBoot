@@ -16,7 +16,7 @@ import { InteriorView } from "../render/interior.js";
 import { RadarView } from "../render/radar.js";
 import { getTutorialStep } from "../render/tutorial.js";
 import type { CombatState } from "../sim/combat/types.js";
-import { getScenarios, getScenarioById } from "../scenarios/registry.js";
+import { getScenarios, getScenarioById, getFailedScenarioPaths } from "../scenarios/registry.js";
 import type { Scenario, ScenarioInitial } from "../scenarios/types.js";
 import type { DepthBand, SpeedSetting, SpeedDirection } from "../sim/combat/types.js";
 
@@ -40,25 +40,34 @@ if (scenarioId === null) {
 
 function renderPicker(): void {
   const scenarios = getScenarios();
+  const failed = getFailedScenarioPaths();
   const list = document.getElementById("scenario-list");
   if (list === null) return;
 
-  if (scenarios.length === 0) {
+  const rows: string[] = scenarios.map(
+    (s) =>
+      `<a class="scenario-row" href="?scenario=${encodeURIComponent(s.id)}">` +
+      `<span class="play">&#9654;</span>` +
+      `<span class="sid">${escapeHtml(s.id)}</span>` +
+      `<span class="stitle">${escapeHtml(s.title)}</span>` +
+      `</a>`,
+  );
+
+  if (scenarios.length === 0 && failed.length === 0) {
     list.innerHTML =
       '<div class="scenario-row" style="color:#778899">No scenarios registered.</div>';
     return;
   }
 
-  list.innerHTML = scenarios
-    .map(
-      (s) =>
-        `<a class="scenario-row" href="?scenario=${encodeURIComponent(s.id)}">` +
-        `<span class="play">&#9654;</span>` +
-        `<span class="sid">${escapeHtml(s.id)}</span>` +
-        `<span class="stitle">${escapeHtml(s.title)}</span>` +
-        `</a>`,
-    )
-    .join("");
+  if (failed.length > 0) {
+    rows.push(
+      `<div class="scenario-row" style="color:#ff6666">` +
+        `One or more scenarios failed to load: ${failed.map(escapeHtml).join(", ")}` +
+        `</div>`,
+    );
+  }
+
+  list.innerHTML = rows.join("");
 }
 
 function renderError(msg: string): void {
