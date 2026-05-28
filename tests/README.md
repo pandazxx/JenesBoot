@@ -26,13 +26,37 @@ Each `*.scenario.ts` file covers one named gameplay situation. Two formats co-ex
 
 Converted scenario files (`hello-world.scenario.ts`, `surface-battle.scenario.ts`) are excluded from the direct glob in `vitest.config.ts` because they have no describe blocks — `scenario.test.ts` runs them.
 
-**Where scenarios will live (future):** `src/scenarios/player/*.ts` — player-facing test scenarios exposed through the in-game test menu (PR #5). They use the same `Scenario` type and `runScenario()` function.
+**Where player scenarios live:** `src/scenarios/player/*.ts` — player-facing starting positions exposed via the landing page Scenarios picker (PR #5). They use the `PlayerScenario` type, not `Scenario` — no script, no assertions.
 
 ---
 
-## Layer 3 — Player-test mode
+## Layer 3 — Player scenarios
 
-Not yet implemented. PR #5 will add an in-game menu where players launch scenarios from the browser. Same `Scenario` objects, same runner — no separate code path.
+**Location:** `src/scenarios/player/`
+
+Player scenarios are *starting positions for the human player*, not automated test runs. Think of them as chess puzzles: the board is set up, the player makes the moves. There is no script and no assertions — the player has full control after the scenario boots.
+
+This is distinct from layer-2 scenario playthrough tests (`tests/scenarios/`), which pair a starting position with a scripted command sequence and assertions. Layer-2 files live in `tests/` and are never imported into the player bundle. Layer-3 files live in `src/scenarios/player/` and ship in the player bundle only.
+
+**Authoring a player scenario:**
+1. Pick a seed and, optionally, a `scenario` (combat preset) and `initial` overrides.
+2. Write a one-sentence `description` (evocative, not technical — "A calm morning. A lone merchant on the horizon." beats "VesselType.MERCHANT hullHP=8").
+3. No `script`, no `expect`, no goldens. That's the whole file.
+
+```ts
+export default definePlayerScenario({
+  id: "calm-merchant",
+  title: "Calm Merchant",
+  description: "A calm morning. A lone merchant on the horizon. Sink it.",
+  seed: 1,
+  scenario: "surface_battle",
+  initial: { playerDepth: DepthBand.SURFACE, enemyX: 450 },
+});
+```
+
+**URL deep-link:** `?scenario=<id>` on the main game URL boots directly into the scenario, skipping the landing screen. Example: `/JenesBoot/?scenario=calm-merchant`. Share this link to let the user jump straight into a specific setup.
+
+**Launching from the game:** the landing page exposes a "Scenarios" button that opens a picker listing all registered player scenarios. Selecting one starts the game from that setup. The regular "quick-start" combat buttons remain available and unchanged.
 
 ---
 
