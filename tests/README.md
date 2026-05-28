@@ -134,7 +134,7 @@ Do not adjust assertions to match broken behavior. If a predicate fails and the 
 
 ### Step 6 — Capture the golden
 
-*Last step, only when the scenario is stable.* PR #6 will introduce a `--update-goldens` flag that records the full event log as a JSON file. Subsequent runs diff against that file. Do not enable goldens during iteration — the point of a golden is to catch regressions, not to lock in bugs.
+*Last step, only when the scenario is stable.* Run `UPDATE_GOLDENS=1 npm test` to write `tests/scenarios/<id>.golden.json`. Eyeball the generated file for sanity (no NaN, no undefined-as-null, event count looks right). Commit it. Subsequent runs diff against the golden; a divergence in the event log is an additional failing test. See the [Goldens](#goldens) section for details.
 
 ---
 
@@ -161,12 +161,47 @@ Common mistake: asserting on tick N when the relevant game event fires on tick N
 
 ---
 
+## Goldens
+
+A golden file (`tests/scenarios/<id>.golden.json`) records the full event log and a minimal state snapshot from a known-good run. Subsequent test runs diff against it. A divergence emits an additional failing test named `golden mismatch: see <id>.golden.json` with a short description of the first divergence.
+
+**Goldens are opt-in.** Scenarios without a golden file pass on story assertions alone. Do not add goldens to existing scenarios unless you are specifically hardening them against regression.
+
+**Golden format:**
+
+```json
+{
+  "scenarioId": "merchant-hunt",
+  "scenarioSeed": 42,
+  "finalTick": 28,
+  "finalCombatResult": "player_win",
+  "finalState": {
+    "playerHP": 15, "enemyHP": 0,
+    "range": 1, "playerDepth": 0, "enemyDepth": 0,
+    "playerSpeed": 2, "enemySpeed": 2
+  },
+  "eventLog": [ … full log … ]
+}
+```
+
+**Writing or updating a golden:**
+
+```
+UPDATE_GOLDENS=1 npm test
+```
+
+When `UPDATE_GOLDENS=1`, the runner writes the golden file instead of comparing. After writing, eyeball the JSON — if `finalTick` or event counts look wrong, the scenario has a bug, not the golden. Only commit a golden you have actually inspected.
+
+**Do not set `UPDATE_GOLDENS=1` during iteration.** The golden is a regression fence. Capturing it while the run is still being debugged locks in bugs instead of catching them.
+
+---
+
 ## What NOT to do
 
 - **No `Math.random()`.** Every source of randomness must flow through `SimEngine`'s seeded PRNG. A scenario with `Math.random()` is not reproducible.
 - **No wall-clock reads.** `Date.now()`, `performance.now()`, `setTimeout` — none of these belong in a scenario or in the sim.
 - **No hand-predicted RNG values.** Do not assert `rngState === 12345`. The RNG state is an implementation detail; assert on observable outcomes instead (events, HP, range).
-- **No enabling `--update-goldens` during iteration.** Goldens are a regression fence, not a scratch pad.
+- **No enabling `UPDATE_GOLDENS=1` during iteration.** Goldens are a regression fence, not a scratch pad.
 - **No spawnSync.** The old scenario style spawned `dist-node/runner.js` as a child process. That pattern is retired. All new scenarios use `runScenario()` directly.
 
 ---
