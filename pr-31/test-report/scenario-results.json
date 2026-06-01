@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-28T04:33:55.029Z",
+  "generatedAt": "2026-06-01T14:27:10.367Z",
   "scenarios": [
     {
       "id": "hello-world",
@@ -32,7 +32,7 @@
       "title": "Surface battle — merchant destroyed before tick 150",
       "passed": true,
       "durationMs": 4,
-      "ticksReached": 32,
+      "ticksReached": 73,
       "terminatingEvent": "combat_end",
       "assertions": [
         {
@@ -134,7 +134,7 @@
       "id": "gunboat-hunt",
       "title": "Gunboat hunt — player closes and wins with torpedoes within 400 ticks",
       "passed": true,
-      "durationMs": 1,
+      "durationMs": 2,
       "ticksReached": 73,
       "terminatingEvent": "combat_end",
       "assertions": [
@@ -168,19 +168,34 @@
     },
     {
       "id": "merchant-hunt",
-      "title": "Merchant hunt — surface, close, and destroy",
+      "title": "Merchant hunt — approach from PERISCOPE, surface, and destroy",
       "passed": true,
-      "durationMs": 0,
-      "ticksReached": 28,
+      "durationMs": 1,
+      "ticksReached": 42,
       "terminatingEvent": "combat_end",
       "assertions": [
+        {
+          "label": "player at PERISCOPE during approach (tick 15)",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "player at SURFACE when entering SHORT range (tick 21)",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "combat ongoing at tick 40 (meaningful duration)",
+          "passed": true,
+          "detail": null
+        },
         {
           "label": "finalState predicate",
           "passed": true,
           "detail": null
         },
         {
-          "label": "eventCounts[\"shot_fired\"] min 3",
+          "label": "eventCounts[\"merchant_fled\"] min 1",
           "passed": true,
           "detail": null
         },
@@ -191,6 +206,11 @@
         },
         {
           "label": "eventCounts[\"range_change\"] min 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"shot_fired\"] min 3",
           "passed": true,
           "detail": null
         },
