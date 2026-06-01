@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-01T12:32:00.886Z",
+  "generatedAt": "2026-06-01T12:32:32.590Z",
   "scenarios": [
     {
       "id": "hello-world",
@@ -31,7 +31,7 @@
       "id": "surface-battle",
       "title": "Surface battle — merchant destroyed before tick 150",
       "passed": true,
-      "durationMs": 4,
+      "durationMs": 3,
       "ticksReached": 73,
       "terminatingEvent": "combat_end",
       "assertions": [
@@ -72,7 +72,7 @@
       "id": "destroyer-battle",
       "title": "Destroyer closes from LONG to SHORT within 60 ticks (player holds surface)",
       "passed": true,
-      "durationMs": 2,
+      "durationMs": 1,
       "ticksReached": 60,
       "terminatingEvent": null,
       "assertions": [
