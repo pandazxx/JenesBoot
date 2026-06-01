@@ -117,6 +117,11 @@ export interface CombatState {
   /** Ticks remaining since player last hit the enemy — used by submarine AI rule 2. */
   enemyRecentlyHitTicks: number;
   oxygenDepletedTicks: number;
+  /**
+   * True once the merchant has spotted the player (CQ ≥ 4 for the first time).
+   * Committed-flight flag: once set, the merchant flees even if it briefly loses contact.
+   */
+  merchantHasSpotted: boolean;
 }
 
 export interface InFlightProjectile {
@@ -135,6 +140,7 @@ export type CombatEventType =
   | "combat_end"
   | "enemy_spotted"
   | "enemy_contact_lost"
+  | "merchant_fled"
   | "oxygen_low"
   | "oxygen_critical"
   | "oxygen_depleted"
