@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-05-28T01:10:41.895Z",
+  "generatedAt": "2026-06-01T14:28:55.350Z",
   "scenarios": [
     {
       "id": "hello-world",
       "title": "Smoke — runner emits hello on tick 1, 10-tick passive run",
       "passed": true,
-      "durationMs": 0,
+      "durationMs": 1,
       "ticksReached": 10,
       "terminatingEvent": null,
       "assertions": [
@@ -31,8 +31,8 @@
       "id": "surface-battle",
       "title": "Surface battle — merchant destroyed before tick 150",
       "passed": true,
-      "durationMs": 4,
-      "ticksReached": 32,
+      "durationMs": 5,
+      "ticksReached": 73,
       "terminatingEvent": "combat_end",
       "assertions": [
         {
@@ -72,7 +72,7 @@
       "id": "destroyer-battle",
       "title": "Destroyer closes from LONG to SHORT within 60 ticks (player holds surface)",
       "passed": true,
-      "durationMs": 1,
+      "durationMs": 2,
       "ticksReached": 60,
       "terminatingEvent": null,
       "assertions": [
@@ -98,7 +98,7 @@
       "id": "destroyer-dive",
       "title": "Destroyer dive — player dives and torpedoes destroyer within 300 ticks",
       "passed": true,
-      "durationMs": 4,
+      "durationMs": 2,
       "ticksReached": 34,
       "terminatingEvent": "combat_end",
       "assertions": [
@@ -155,6 +155,62 @@
         },
         {
           "label": "eventCounts[\"shot_fired\"] min 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "finalCombatResult === \"player_win\"",
+          "passed": true,
+          "detail": null
+        }
+      ],
+      "firstFailingTick": null
+    },
+    {
+      "id": "merchant-hunt",
+      "title": "Merchant hunt — approach from PERISCOPE, surface, and destroy",
+      "passed": true,
+      "durationMs": 4,
+      "ticksReached": 42,
+      "terminatingEvent": "combat_end",
+      "assertions": [
+        {
+          "label": "player at PERISCOPE during approach (tick 15)",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "player at SURFACE when entering SHORT range (tick 21)",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "combat ongoing at tick 40 (meaningful duration)",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "finalState predicate",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"merchant_fled\"] min 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"combat_end\"] exact 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"range_change\"] min 1",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "label": "eventCounts[\"shot_fired\"] min 3",
           "passed": true,
           "detail": null
         },
