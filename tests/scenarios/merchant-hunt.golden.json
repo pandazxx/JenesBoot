@@ -1,10 +1,10 @@
 {
   "scenarioId": "merchant-hunt",
   "scenarioSeed": 42,
-  "finalTick": 28,
+  "finalTick": 42,
   "finalCombatResult": "player_win",
   "finalState": {
-    "playerHP": 15,
+    "playerHP": 20,
     "enemyHP": 0,
     "range": 1,
     "playerDepth": 0,
@@ -30,51 +30,23 @@
       }
     },
     {
-      "tick": 1,
+      "tick": 11,
       "type": "range_change",
       "payload": {
         "from": 4,
+        "to": 3
+      }
+    },
+    {
+      "tick": 21,
+      "type": "range_change",
+      "payload": {
+        "from": 3,
         "to": 2
       }
     },
     {
-      "tick": 1,
-      "type": "depth_change",
-      "payload": {
-        "who": "player",
-        "depth": 1
-      }
-    },
-    {
-      "tick": 2,
-      "type": "enemy_spotted",
-      "payload": {
-        "range": 2,
-        "playerDepth": 1,
-        "playerX": 15,
-        "playerY": 275
-      }
-    },
-    {
-      "tick": 2,
-      "type": "shot_fired",
-      "payload": {
-        "by": "enemy",
-        "weapon": "deck_gun",
-        "range": 2
-      }
-    },
-    {
-      "tick": 3,
-      "type": "shot_hit",
-      "payload": {
-        "by": "enemy",
-        "damage": 2,
-        "targetHP": 18
-      }
-    },
-    {
-      "tick": 7,
+      "tick": 21,
       "type": "depth_change",
       "payload": {
         "who": "player",
@@ -82,7 +54,7 @@
       }
     },
     {
-      "tick": 7,
+      "tick": 21,
       "type": "shot_fired",
       "payload": {
         "by": "player",
@@ -91,7 +63,7 @@
       }
     },
     {
-      "tick": 8,
+      "tick": 22,
       "type": "shot_hit",
       "payload": {
         "by": "player",
@@ -100,42 +72,34 @@
       }
     },
     {
-      "tick": 11,
-      "type": "range_change",
+      "tick": 22,
+      "type": "enemy_spotted",
       "payload": {
-        "from": 2,
-        "to": 1
+        "range": 2,
+        "playerDepth": 0,
+        "playerX": 315,
+        "playerY": 125
       }
     },
     {
-      "tick": 12,
-      "type": "shot_fired",
+      "tick": 22,
+      "type": "merchant_fled",
       "payload": {
-        "by": "enemy",
-        "weapon": "deck_gun",
-        "range": 1
+        "range": 2,
+        "atTick": 22
       }
     },
     {
-      "tick": 13,
-      "type": "shot_hit",
-      "payload": {
-        "by": "enemy",
-        "damage": 3,
-        "targetHP": 15
-      }
-    },
-    {
-      "tick": 17,
+      "tick": 31,
       "type": "shot_fired",
       "payload": {
         "by": "player",
         "weapon": "deck_gun",
-        "range": 1
+        "range": 2
       }
     },
     {
-      "tick": 18,
+      "tick": 32,
       "type": "shot_hit",
       "payload": {
         "by": "player",
@@ -144,24 +108,15 @@
       }
     },
     {
-      "tick": 22,
-      "type": "shot_fired",
+      "tick": 41,
+      "type": "range_change",
       "payload": {
-        "by": "enemy",
-        "weapon": "deck_gun",
-        "range": 1
+        "from": 2,
+        "to": 1
       }
     },
     {
-      "tick": 22,
-      "type": "shot_miss",
-      "payload": {
-        "by": "enemy",
-        "weapon": "deck_gun"
-      }
-    },
-    {
-      "tick": 27,
+      "tick": 41,
       "type": "shot_fired",
       "payload": {
         "by": "player",
@@ -170,7 +125,7 @@
       }
     },
     {
-      "tick": 28,
+      "tick": 42,
       "type": "shot_hit",
       "payload": {
         "by": "player",
@@ -179,11 +134,11 @@
       }
     },
     {
-      "tick": 28,
+      "tick": 42,
       "type": "combat_end",
       "payload": {
         "result": "player_win",
-        "atTick": 28
+        "atTick": 42
       }
     }
   ]
