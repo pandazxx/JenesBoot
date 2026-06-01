@@ -15,12 +15,17 @@ function applyInitial(engine: ReturnType<typeof SimEngine>, initial: ScenarioIni
   const overrides: SimInitialOverrides = {};
 
   if (initial.playerDepth !== undefined) overrides.playerDepth = initial.playerDepth;
-  if (initial.playerSpeed !== undefined) overrides.playerSpeed = initial.playerSpeed;
-  if (initial.playerDirection !== undefined) overrides.playerDirection = initial.playerDirection;
+  if (initial.playerNauticalSpeed !== undefined)
+    overrides.playerNauticalSpeed = initial.playerNauticalSpeed;
+  if (initial.playerHorizontalIntent !== undefined)
+    overrides.playerHorizontalIntent = initial.playerHorizontalIntent;
+  if (initial.playerDiveSpeed !== undefined) overrides.playerDiveSpeed = initial.playerDiveSpeed;
   if (initial.enemyX !== undefined) overrides.enemyX = initial.enemyX;
   if (initial.enemyY !== undefined) overrides.enemyY = initial.enemyY;
-  if (initial.enemySpeed !== undefined) overrides.enemySpeed = initial.enemySpeed;
-  if (initial.enemyDirection !== undefined) overrides.enemyDirection = initial.enemyDirection;
+  if (initial.enemyNauticalSpeed !== undefined)
+    overrides.enemyNauticalSpeed = initial.enemyNauticalSpeed;
+  if (initial.enemyHorizontalIntent !== undefined)
+    overrides.enemyHorizontalIntent = initial.enemyHorizontalIntent;
 
   engine.setInitialState(overrides);
 }

@@ -1,86 +1,99 @@
 /**
- * Unit tests for destroyer_dive combat mechanics.
+ * Unit tests for destroyer combat mechanics — diving and torpedo engagement.
  *
- * Covers: initial crew placement, depth/crew commands, and a full
+ * Covers: initial state, depth commands, depth transitions, and a full
  * playthrough where the player dives and fires torpedoes to win.
- *
- * Moved here from tests/scenarios/destroyer-dive.scenario.ts so scenario
- * files contain only defineScenario default exports (no vitest boilerplate).
  */
 
 import { describe, it, expect } from "vitest";
 import { SimEngine } from "../index.js";
-import { DepthBand, RoomType } from "../combat/types.js";
+import { VesselType, DepthBand, DiveSpeed, NauticalSpeed } from "../combat/enums.js";
 
-describe("destroyer_dive scenario", () => {
-  it("initial state: two crew, bridge + engine, torpedo room empty", () => {
-    const engine = new SimEngine(0);
-    engine.startCombat("destroyer_dive");
+describe("destroyer dive scenario", () => {
+  it("initial state: player at SURFACE, enemy DESTROYER at default starting x", () => {
+    const engine = SimEngine(0);
+    engine.startCombat(VesselType.DESTROYER);
 
     const state = engine.getState();
     const combat = state.combat;
     expect(combat).not.toBeNull();
     if (!combat) return;
 
-    expect(combat.scenario).toBe("destroyer_dive");
-    expect(combat.crew).toHaveLength(2);
-    expect(combat.crew.find((c) => c.id === "mate")?.roomId).toBe("bridge");
-    expect(combat.crew.find((c) => c.id === "engineer")?.roomId).toBe("engine");
-    expect(combat.rooms.find((r) => r.type === RoomType.TORPEDO)?.crewIds).toHaveLength(0);
+    expect(combat.enemyType).toBe(VesselType.DESTROYER);
     expect(combat.player.depth).toBe(DepthBand.SURFACE);
     expect(combat.player.depthTarget).toBe(DepthBand.SURFACE);
+    expect(combat.enemy.x).toBeGreaterThan(0);
+    expect(combat.enemy.hullHP).toBeGreaterThan(0);
   });
 
-  it("SET_DEPTH is gated on bridge crew; ASSIGN_CREW moves engineer to torpedo", () => {
-    const engine = new SimEngine(0);
-    engine.startCombat("destroyer_dive");
+  it("SET_DEPTH command updates depthTarget immediately", () => {
+    const engine = SimEngine(0);
+    engine.startCombat(VesselType.DESTROYER);
 
-    // Bridge is crewed by mate — depth command should work
-    engine.queueCommand({ type: "SET_DEPTH", target: DepthBand.PERISCOPE });
+    engine.queueCommand({
+      type: "SET_DEPTH",
+      target: DepthBand.PERISCOPE,
+      diveSpeed: DiveSpeed.STANDARD,
+    });
+    engine.tick();
     expect(engine.getState().combat?.player.depthTarget).toBe(DepthBand.PERISCOPE);
-
-    // Move engineer to torpedo room
-    engine.queueCommand({ type: "ASSIGN_CREW", crewId: "engineer", roomId: "torpedo" });
-    const state = engine.getState();
-    const combat = state.combat;
-    expect(combat?.crew.find((c) => c.id === "engineer")?.roomId).toBe("torpedo");
-    expect(combat?.rooms.find((r) => r.type === RoomType.TORPEDO)?.crewIds).toContain("engineer");
-    expect(combat?.rooms.find((r) => r.type === RoomType.ENGINE)?.crewIds).not.toContain(
-      "engineer",
-    );
   });
 
-  it("depth transitions: player reaches PERISCOPE after 6 ticks", () => {
-    const engine = new SimEngine(0);
-    engine.startCombat("destroyer_dive");
-    engine.queueCommand({ type: "SET_DEPTH", target: DepthBand.PERISCOPE });
+  it("depth transitions: player reaches PERISCOPE after enough ticks", () => {
+    const engine = SimEngine(0);
+    engine.startCombat(VesselType.DESTROYER);
+    engine.queueCommand({
+      type: "SET_DEPTH",
+      target: DepthBand.PERISCOPE,
+      diveSpeed: DiveSpeed.STANDARD,
+    });
 
-    for (let i = 0; i < 6; i++) engine.tick();
+    // Standard dive speed = 15 units/tick. PERISCOPE band starts at y=150.
+    // Should reach it within 15 ticks.
+    for (let i = 0; i < 15; i++) engine.tick();
 
     const combat = engine.getState().combat;
     expect(combat?.player.depth).toBe(DepthBand.PERISCOPE);
   });
 
-  it("full playthrough: dive + torpedo crew leads to player_win within 300 ticks", () => {
-    const engine = new SimEngine(42);
-    engine.startCombat("destroyer_dive");
+  it("full playthrough: dive + DEAD_SLOW stealth + torpedo wins within 200 ticks", () => {
+    const engine = SimEngine(42);
+    engine.startCombat(VesselType.DESTROYER);
 
-    // Pre-assign for headless: order dive and crew torpedo room immediately
-    engine.queueCommand({ type: "SET_DEPTH", target: DepthBand.PERISCOPE });
-    engine.queueCommand({ type: "ASSIGN_CREW", crewId: "engineer", roomId: "torpedo" });
+    // Dive to PERISCOPE and go silent — DEAD_SLOW makes sub undetectable by destroyer sonar
+    engine.queueCommand({
+      type: "SET_DEPTH",
+      target: DepthBand.PERISCOPE,
+      diveSpeed: DiveSpeed.STANDARD,
+    });
 
-    for (let i = 0; i < 300; i++) {
+    let wentSilent = false;
+    for (let i = 0; i < 200; i++) {
       engine.tick();
-      const result = engine.getState().combat?.result;
-      if (result === "player_win") break;
+      const combat = engine.getState().combat;
+      if (!combat || combat.result !== "ongoing") break;
+
+      // Go DEAD_SLOW once submerged to avoid sonar detection
+      if (!wentSilent && combat.player.depth === DepthBand.PERISCOPE) {
+        engine.queueCommand({
+          type: "SET_NAUTICAL_SPEED",
+          speed: NauticalSpeed.DEAD_SLOW,
+          intent: 0,
+        });
+        wentSilent = true;
+      } else if (wentSilent && combat.player.depth === DepthBand.PERISCOPE) {
+        // Fire torpedo when submerged and silent
+        engine.queueCommand({ type: "FIRE_WEAPON", weaponId: "torpedo" });
+      }
     }
 
     const finalState = engine.getState();
     expect(finalState.combat?.result).toBe("player_win");
 
-    const shotsFired = finalState.log.filter(
-      (e) => e.type === "shot_fired" && (e.payload as { weapon?: string }).weapon === "torpedo",
+    const weaponFiredEvents = finalState.log.filter(
+      (e) =>
+        e.type === "weapon_fired" && (e.payload as { weaponId?: string }).weaponId === "torpedo",
     );
-    expect(shotsFired.length).toBeGreaterThan(0);
+    expect(weaponFiredEvents.length).toBeGreaterThan(0);
   });
 });

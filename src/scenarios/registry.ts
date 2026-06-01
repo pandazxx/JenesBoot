@@ -12,9 +12,12 @@ import type { Scenario } from "./types.js";
 
 type ScenarioModule = { default?: Scenario };
 
-const modules = import.meta.glob<ScenarioModule>("../../tests/scenarios/*.scenario.ts", {
-  eager: true,
-});
+// Exclude battle.scenario.ts: it is a headless-only test that spawns a subprocess
+// and imports Node.js APIs (child_process, fs, path) incompatible with browser bundling.
+const modules = import.meta.glob<ScenarioModule>(
+  ["../../tests/scenarios/*.scenario.ts", "!../../tests/scenarios/battle.scenario.ts"],
+  { eager: true },
+);
 
 const allScenarios: Scenario[] = [];
 const failedPaths: string[] = [];

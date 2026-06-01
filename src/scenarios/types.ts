@@ -10,26 +10,26 @@
  */
 
 import type { SimState, SimEvent } from "../sim/index.js";
-import type { PlayerCommand } from "../sim/combat/tick.js";
-import type { CombatScenario } from "../sim/index.js";
-import type { DepthBand, SpeedSetting, SpeedDirection } from "../sim/combat/types.js";
+import type { PlayerCommand } from "../sim/combat/types.js";
+import type { VesselType, NauticalSpeed, DiveSpeed, DepthBand } from "../sim/combat/enums.js";
 
-export type { PlayerCommand, CombatScenario };
+export type CombatScenario = VesselType;
+export type { PlayerCommand };
 export type { SimState, SimEvent };
 
 /**
  * Optional state overrides applied immediately after startCombat() and
- * before tick 1. Keeps the minimal surface area needed today; extend as
- * new scenarios require it.
+ * before tick 1.
  */
 export interface ScenarioInitial {
   playerDepth?: DepthBand;
-  playerSpeed?: SpeedSetting;
-  playerDirection?: SpeedDirection;
+  playerNauticalSpeed?: NauticalSpeed;
+  playerHorizontalIntent?: -1 | 0 | 1;
+  playerDiveSpeed?: DiveSpeed;
   enemyX?: number;
   enemyY?: number;
-  enemySpeed?: SpeedSetting;
-  enemyDirection?: SpeedDirection;
+  enemyNauticalSpeed?: NauticalSpeed;
+  enemyHorizontalIntent?: -1 | 0 | 1;
 }
 
 /** A command scheduled at a specific tick. */
@@ -50,22 +50,9 @@ export interface AtTickAssertion {
  * what the scenario's intent actually requires.
  */
 export interface ExpectClause {
-  /** Per-tick state predicates. Evaluated immediately after that tick resolves. */
   atTick?: AtTickAssertion[];
-
-  /** Evaluated against the final state after the run ends. */
   finalState?: (state: SimState) => boolean;
-
-  /**
-   * Event-log count constraints by event type.
-   * `min`, `max`, `exact` are all optional; include only the bound you care about.
-   */
   eventCounts?: Partial<Record<string, { min?: number; max?: number; exact?: number }>>;
-
-  /**
-   * Asserts the combat result in the final state.
-   * The run must reach a terminal combat_end event for this to pass.
-   */
   finalCombatResult?: "player_win" | "player_lose" | "escaped" | "ongoing";
 }
 
@@ -92,7 +79,6 @@ export interface Scenario {
   maxTicks?: number;
 }
 
-/** Result returned by runScenario(). */
 export interface AssertionResult {
   label: string;
   passed: boolean;
@@ -107,27 +93,12 @@ export interface ScenarioRunResult {
   tickReached: number;
 }
 
-/**
- * Identity helper for type inference. Usage:
- *   export default defineScenario({ id: "foo", ... });
- */
 export function defineScenario(s: Scenario): Scenario {
   return s;
 }
 
 /**
  * A player-facing starting position.
- *
- * Unlike Scenario (which has a script and assertions), PlayerScenario is just
- * "set up this situation and hand control to the human." Same idea as a chess
- * puzzle: the position is given, the player makes the moves.
- *
- * id          — stable slug, used in URL ?scenario=<id>
- * title       — menu label shown in the Scenarios picker
- * description — one-paragraph blurb shown when the player hovers / selects
- * seed        — seeds the SimEngine for deterministic RNG
- * scenario    — optional starting combat (same CombatScenario enum used by SimEngine.startCombat)
- * initial     — optional state overrides applied before tick 1
  */
 export interface PlayerScenario {
   id: string;
@@ -138,10 +109,6 @@ export interface PlayerScenario {
   initial?: ScenarioInitial;
 }
 
-/**
- * Identity helper for type inference. Usage:
- *   export default definePlayerScenario({ id: "calm-merchant", ... });
- */
 export function definePlayerScenario(s: PlayerScenario): PlayerScenario {
   return s;
 }

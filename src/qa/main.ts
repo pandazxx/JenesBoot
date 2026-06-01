@@ -14,11 +14,9 @@ import { SimEngine } from "../sim/index.js";
 import type { SimInitialOverrides } from "../sim/index.js";
 import { InteriorView } from "../render/interior.js";
 import { RadarView } from "../render/radar.js";
-import { getTutorialStep } from "../render/tutorial.js";
 import type { CombatState } from "../sim/combat/types.js";
 import { getScenarios, getScenarioById, getFailedScenarioPaths } from "../scenarios/registry.js";
 import type { Scenario, ScenarioInitial } from "../scenarios/types.js";
-import type { DepthBand, SpeedSetting, SpeedDirection } from "../sim/combat/types.js";
 
 const params = new URLSearchParams(window.location.search);
 const scenarioId = params.get("scenario");
@@ -75,7 +73,6 @@ function renderError(msg: string): void {
 }
 
 async function renderViewer(scenario: Scenario, pauseAt: number | null): Promise<void> {
-  // Switch from picker to viewer layout
   const pickerEl = document.getElementById("picker");
   const viewerEl = document.getElementById("viewer");
   if (pickerEl !== null) pickerEl.style.display = "none";
@@ -86,7 +83,6 @@ async function renderViewer(scenario: Scenario, pauseAt: number | null): Promise
     titleEl.textContent = `${scenario.id}   seed=${scenario.seed}`;
   }
 
-  // Initialize sim
   const engine = SimEngine(scenario.seed);
 
   if (scenario.scenario !== undefined) {
@@ -111,7 +107,6 @@ async function renderViewer(scenario: Scenario, pauseAt: number | null): Promise
     }
   }
 
-  // ── Fast-forward to pauseAt (no rendering) ────────────────────────────────
   const ffOverlay = document.getElementById("ff-overlay");
   if (pauseAt !== null && pauseAt > 0) {
     if (ffOverlay !== null) ffOverlay.style.display = "flex";
@@ -123,7 +118,6 @@ async function renderViewer(scenario: Scenario, pauseAt: number | null): Promise
     }
   }
 
-  // ── Init PixiJS ───────────────────────────────────────────────────────────
   const app = new Application();
   await app.init({
     width: 960,
@@ -141,7 +135,6 @@ async function renderViewer(scenario: Scenario, pauseAt: number | null): Promise
   fitCanvas(app.canvas);
   window.addEventListener("resize", () => fitCanvas(app.canvas));
 
-  // ── Build read-only combat view ───────────────────────────────────────────
   const interiorView = new InteriorView(engine, (): void => undefined, true);
   const radarView = new RadarView();
 
@@ -155,7 +148,6 @@ async function renderViewer(scenario: Scenario, pauseAt: number | null): Promise
   app.stage.addChild(radarView.container);
   app.stage.addChild(divider);
 
-  // ── Controls ──────────────────────────────────────────────────────────────
   const tickCounter = document.getElementById("tick-counter");
   const btnPlay = document.getElementById("btn-play") as HTMLButtonElement | null;
   const btnPause = document.getElementById("btn-pause") as HTMLButtonElement | null;
@@ -164,9 +156,6 @@ async function renderViewer(scenario: Scenario, pauseAt: number | null): Promise
   const scenarioCompleteEl = document.getElementById("scenario-complete");
   const logEntries = document.getElementById("log-entries");
 
-  // Always start paused — combat resolves in a few seconds at 1x speed, so
-  // auto-playing on load means the scenario ends before the viewer can observe.
-  // The user clicks Play to start; ?pauseAt= still fast-forwards to that tick first.
   let playing = false;
   let complete = false;
   let elapsed = 0;
@@ -202,8 +191,7 @@ async function renderViewer(scenario: Scenario, pauseAt: number | null): Promise
     const combat: CombatState | null = state.combat ?? null;
 
     if (combat !== null) {
-      const step = getTutorialStep(combat, scenario.scenario ?? "surface_battle");
-      interiorView.update(combat, step, elapsed, !playing);
+      interiorView.update(combat, elapsed, !playing);
       radarView.update(combat, state);
     }
 
@@ -239,10 +227,8 @@ async function renderViewer(scenario: Scenario, pauseAt: number | null): Promise
       .join("");
   }
 
-  // Initial render at pauseAt position (or tick 0)
   renderFrame();
 
-  // ── RAF loop ──────────────────────────────────────────────────────────────
   let rafId: number | null = null;
   let lastRafTime: number | null = null;
 
@@ -267,7 +253,6 @@ async function renderViewer(scenario: Scenario, pauseAt: number | null): Promise
 
   rafId = requestAnimationFrame(rafLoop);
 
-  // ── Button wiring ─────────────────────────────────────────────────────────
   if (btnPlay !== null) {
     btnPlay.addEventListener("click", () => {
       if (!complete) {
@@ -300,7 +285,6 @@ async function renderViewer(scenario: Scenario, pauseAt: number | null): Promise
     });
   }
 
-  // Back link cleans up PixiJS
   const backLink = document.getElementById("back-link");
   if (backLink !== null) {
     backLink.addEventListener("click", () => {
@@ -310,23 +294,23 @@ async function renderViewer(scenario: Scenario, pauseAt: number | null): Promise
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────
-
 function applyInitial(
   setInitialState: (overrides: SimInitialOverrides) => void,
   initial: ScenarioInitial,
 ): void {
   const overrides: SimInitialOverrides = {};
-  if (initial.playerDepth !== undefined) overrides.playerDepth = initial.playerDepth as DepthBand;
-  if (initial.playerSpeed !== undefined)
-    overrides.playerSpeed = initial.playerSpeed as SpeedSetting;
-  if (initial.playerDirection !== undefined)
-    overrides.playerDirection = initial.playerDirection as SpeedDirection;
+  if (initial.playerDepth !== undefined) overrides.playerDepth = initial.playerDepth;
+  if (initial.playerNauticalSpeed !== undefined)
+    overrides.playerNauticalSpeed = initial.playerNauticalSpeed;
+  if (initial.playerHorizontalIntent !== undefined)
+    overrides.playerHorizontalIntent = initial.playerHorizontalIntent;
+  if (initial.playerDiveSpeed !== undefined) overrides.playerDiveSpeed = initial.playerDiveSpeed;
   if (initial.enemyX !== undefined) overrides.enemyX = initial.enemyX;
   if (initial.enemyY !== undefined) overrides.enemyY = initial.enemyY;
-  if (initial.enemySpeed !== undefined) overrides.enemySpeed = initial.enemySpeed as SpeedSetting;
-  if (initial.enemyDirection !== undefined)
-    overrides.enemyDirection = initial.enemyDirection as SpeedDirection;
+  if (initial.enemyNauticalSpeed !== undefined)
+    overrides.enemyNauticalSpeed = initial.enemyNauticalSpeed;
+  if (initial.enemyHorizontalIntent !== undefined)
+    overrides.enemyHorizontalIntent = initial.enemyHorizontalIntent;
   setInitialState(overrides);
 }
 

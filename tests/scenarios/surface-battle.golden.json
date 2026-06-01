@@ -1,5 +1,5 @@
 {
-  "scenarioId": "merchant-hunt",
+  "scenarioId": "surface-battle",
   "scenarioSeed": 42,
   "finalTick": 190,
   "finalCombatResult": "player_win",

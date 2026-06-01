@@ -1,47 +1,48 @@
 /**
- * Unit tests for crew / room assignment mechanics.
+ * Unit tests for setInitialState and basic combat engine mechanics.
  *
- * Moved here from tests/scenarios/surface-battle.scenario.ts so scenario
- * files contain only defineScenario default exports (no vitest boilerplate).
+ * The crew/room system from qa-build-entry was not carried forward into
+ * battle-rework. These tests cover the setInitialState API and verifying
+ * that combat resolves correctly via the engine.
  */
 
 import { describe, it, expect } from "vitest";
 import { SimEngine } from "../index.js";
 import type { SimState } from "../index.js";
-import { DepthBand, RangeBand } from "../combat/types.js";
+import { VesselType, DepthBand, NauticalSpeed } from "../combat/enums.js";
 
-describe("crew assignment — in-process unit tests", () => {
-  it("initial state has crew[0].roomId === 'bridge'", () => {
-    const engine = new SimEngine(42);
-    engine.startCombat("surface_battle");
-    engine.tick();
+describe("setInitialState and engine basics", () => {
+  it("initial state: player at SURFACE, enemy at default x after startCombat", () => {
+    const engine = SimEngine(42);
+    engine.startCombat(VesselType.MERCHANT);
     const combat = engine.getState().combat;
     expect(combat).not.toBeNull();
-    expect(combat!.crew[0]!.roomId).toBe("bridge");
+    expect(combat!.player.depth).toBe(DepthBand.SURFACE);
+    expect(combat!.enemy.x).toBeGreaterThan(0);
   });
 
-  it("ASSIGN_CREW moves mate to deck_gun and updates both rooms", () => {
-    const engine = new SimEngine(42);
-    engine.startCombat("surface_battle");
+  it("startCombat emits combat_start on first tick", () => {
+    const engine = SimEngine(42);
+    engine.startCombat(VesselType.MERCHANT);
     engine.tick();
-
-    engine.queueCommand({ type: "ASSIGN_CREW", crewId: "mate", roomId: "deck_gun" });
-    engine.tick();
-
-    const combat = engine.getState().combat!;
-    expect(combat.crew[0]!.roomId).toBe("deck_gun");
-    const deckGunRoom = combat.rooms.find((r) => r.id === "deck_gun");
-    expect(deckGunRoom?.crewIds).toContain("mate");
-    const bridgeRoom = combat.rooms.find((r) => r.id === "bridge");
-    expect(bridgeRoom?.crewIds).not.toContain("mate");
+    const log = engine.getState().log;
+    const startEvent = log.find((e) => e.type === "combat_start");
+    expect(startEvent).toBeDefined();
   });
 
-  it("run 150 ticks with crew at deck_gun — combat ends with player_win", () => {
-    const engine = new SimEngine(42);
-    engine.startCombat("surface_battle");
-    engine.queueCommand({ type: "ASSIGN_CREW", crewId: "mate", roomId: "deck_gun" });
+  it("run 300 ticks vs merchant — combat ends with player_win when firing deck gun", () => {
+    const engine = SimEngine(42);
+    engine.startCombat(VesselType.MERCHANT);
+    engine.setInitialState({
+      playerNauticalSpeed: NauticalSpeed.FULL_AHEAD,
+      playerHorizontalIntent: 1,
+    });
 
-    for (let i = 0; i < 150; i++) {
+    for (let i = 0; i < 300; i++) {
+      // Fire deck gun every 10 ticks
+      if ((i + 1) % 10 === 0) {
+        engine.queueCommand({ type: "FIRE_WEAPON", weaponId: "deck_gun" });
+      }
       engine.tick();
       const combat = engine.getState().combat;
       if (combat?.result !== "ongoing") break;
@@ -55,8 +56,8 @@ describe("crew assignment — in-process unit tests", () => {
   });
 
   it("setInitialState overrides enemy starting position before tick 1", () => {
-    const engine = new SimEngine(42);
-    engine.startCombat("surface_battle");
+    const engine = SimEngine(42);
+    engine.startCombat(VesselType.MERCHANT);
     engine.setInitialState({ enemyX: 300 });
 
     const combat = engine.getState().combat;
@@ -65,8 +66,8 @@ describe("crew assignment — in-process unit tests", () => {
   });
 
   it("setInitialState is a no-op after tick 1", () => {
-    const engine = new SimEngine(42);
-    engine.startCombat("surface_battle");
+    const engine = SimEngine(42);
+    engine.startCombat(VesselType.MERCHANT);
     engine.tick();
     const xBefore = engine.getState().combat!.enemy.x;
     engine.setInitialState({ enemyX: 1 });
@@ -74,8 +75,8 @@ describe("crew assignment — in-process unit tests", () => {
   });
 
   it("setInitialState playerDepth overrides depth and y consistently", () => {
-    const engine = new SimEngine(42);
-    engine.startCombat("destroyer_dive");
+    const engine = SimEngine(42);
+    engine.startCombat(VesselType.DESTROYER);
     engine.setInitialState({ playerDepth: DepthBand.PERISCOPE });
     const combat = engine.getState().combat;
     expect(combat!.player.depth).toBe(DepthBand.PERISCOPE);
@@ -86,13 +87,14 @@ describe("crew assignment — in-process unit tests", () => {
   it("ScenarioInitial.enemyX affects combat via runScenario", async () => {
     const { runScenario } = await import("../../../tests/scenarios/runner.js");
     const { defineScenario: define } = await import("../../../tests/scenarios/types.js");
+    const { VesselType: VT } = await import("../combat/enums.js");
 
     const result = runScenario(
       define({
         id: "test-initial-override",
         title: "test",
         seed: 42,
-        scenario: "surface_battle",
+        scenario: VT.MERCHANT,
         initial: { enemyX: 300 },
         script: [],
         maxTicks: 1,
@@ -100,8 +102,12 @@ describe("crew assignment — in-process unit tests", () => {
           atTick: [
             {
               tick: 1,
-              label: "enemy starts at x=300 after override; combat is at SHORT range after tick 1",
-              predicate: (s: SimState): boolean => (s.combat?.range ?? 99) <= RangeBand.SHORT,
+              label: "enemy starts at x=300 after override",
+              predicate: (s: SimState): boolean => {
+                const ex = s.combat?.enemy.x;
+                // After 1 tick the merchant may have moved slightly; it started at 300
+                return ex !== undefined && ex >= 280 && ex <= 320;
+              },
             },
           ],
         },

@@ -1,5 +1,5 @@
 import { definePlayerScenario } from "../types.js";
-import { DepthBand, SpeedSetting, SpeedDirection } from "../../sim/combat/types.js";
+import { VesselType, DepthBand, NauticalSpeed } from "../../sim/combat/enums.js";
 
 export default definePlayerScenario({
   id: "destroyer-encounter",
@@ -7,12 +7,12 @@ export default definePlayerScenario({
   description:
     "A destroyer at long range, already turning toward you. Dive and run silent, or surface and fight — the choice is yours.",
   seed: 2,
-  scenario: "destroyer_dive",
+  scenario: VesselType.DESTROYER,
   initial: {
     playerDepth: DepthBand.PERISCOPE,
-    playerSpeed: SpeedSetting.STANDARD,
-    playerDirection: SpeedDirection.HOLD,
+    playerNauticalSpeed: NauticalSpeed.HALF_AHEAD,
+    playerHorizontalIntent: 0,
     enemyX: 750,
-    enemyDirection: SpeedDirection.CLOSE,
+    enemyHorizontalIntent: -1,
   },
 });

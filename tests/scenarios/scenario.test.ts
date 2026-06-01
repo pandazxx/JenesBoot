@@ -53,11 +53,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 interface GoldenFinalState {
   playerHP: number;
   enemyHP: number;
-  range: number;
+  playerX: number;
+  enemyX: number;
   playerDepth: number;
   enemyDepth: number;
-  playerSpeed: number;
-  enemySpeed: number;
+  playerNauticalSpeed: number;
+  enemyNauticalSpeed: number;
 }
 
 interface GoldenFile {
@@ -73,11 +74,12 @@ function buildGoldenFinalState(state: SimState): GoldenFinalState {
   return {
     playerHP: state.combat?.player.hullHP ?? 0,
     enemyHP: state.combat?.enemy.hullHP ?? 0,
-    range: state.combat?.range ?? 0,
+    playerX: Math.round(state.combat?.player.x ?? 0),
+    enemyX: Math.round(state.combat?.enemy.x ?? 0),
     playerDepth: state.combat?.player.depth ?? 0,
     enemyDepth: state.combat?.enemy.depth ?? 0,
-    playerSpeed: state.combat?.player.speed ?? 0,
-    enemySpeed: state.combat?.enemy.speed ?? 0,
+    playerNauticalSpeed: state.combat?.player.nauticalSpeed ?? 0,
+    enemyNauticalSpeed: state.combat?.enemy.nauticalSpeed ?? 0,
   };
 }
 

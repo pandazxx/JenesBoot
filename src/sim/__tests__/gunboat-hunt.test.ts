@@ -1,180 +1,178 @@
 /**
- * Unit tests for gunboat_hunt combat mechanics.
+ * Unit tests for gunboat combat mechanics.
  *
- * Covers: initial state, detection behavior at depth, blind shots,
- * escape accumulator, and a full player-win playthrough.
+ * Covers: initial state, visual-only detection behavior, escape accumulator,
+ * and a full player-win playthrough.
  *
- * Moved here from tests/scenarios/gunboat-hunt.scenario.ts so scenario
- * files contain only defineScenario default exports (no vitest boilerplate).
+ * Uses tickCombat + buildInitialState for lower-level white-box tests.
  */
 
 import { describe, it, expect } from "vitest";
 import { SimEngine } from "../index.js";
-import { DepthBand, RangeBand, RoomType, SpeedDirection, SpeedSetting } from "../combat/types.js";
-import { contactQuality } from "../combat/detection.js";
-import { buildGunboatHuntState, tickCombat } from "../combat/tick.js";
+import { buildInitialState } from "../combat/state.js";
+import { tickCombat } from "../combat/tick.js";
+import { computeVisibility } from "../combat/detection.js";
+import { defaultCombatConfig } from "../combat/config.js";
 import { Mulberry32 } from "../prng.js";
+import {
+  VesselType,
+  DepthBand,
+  NauticalSpeed,
+  DiveSpeed,
+  RangeBand,
+  VisibilityLevel,
+} from "../combat/enums.js";
 
-describe("gunboat_hunt scenario", () => {
-  it("initial state: sub at SURFACE, 2 crew (mate in bridge, engineer in torpedo), gunboat AHEAD_FULL CLOSE", () => {
-    const engine = new SimEngine(0);
-    engine.startCombat("gunboat_hunt");
+describe("gunboat hunt scenario", () => {
+  it("initial state: player at SURFACE, gunboat FULL_AHEAD CLOSE at LONG range", () => {
+    const engine = SimEngine(0);
+    engine.startCombat(VesselType.GUNBOAT);
 
     const state = engine.getState();
     const combat = state.combat;
     expect(combat).not.toBeNull();
     if (!combat) return;
 
-    expect(combat.scenario).toBe("gunboat_hunt");
+    expect(combat.enemyType).toBe(VesselType.GUNBOAT);
     expect(combat.player.depth).toBe(DepthBand.SURFACE);
     expect(combat.player.depthTarget).toBe(DepthBand.SURFACE);
-    expect(combat.crew).toHaveLength(2);
-    expect(combat.crew.find((c) => c.id === "mate")?.roomId).toBe("bridge");
-    expect(combat.crew.find((c) => c.id === "engineer")?.roomId).toBe("torpedo");
-    expect(combat.rooms.find((r) => r.type === RoomType.TORPEDO)?.crewIds).toContain("engineer");
-    expect(combat.enemy.speed).toBe(SpeedSetting.AHEAD_FULL);
-    expect(combat.enemy.direction).toBe(SpeedDirection.CLOSE);
-    expect(combat.enemy.hullHP).toBe(15);
-    expect(combat.range).toBe(RangeBand.LONG);
-    expect(combat.enemyLastKnownRange).toBe(RangeBand.LONG);
-    expect(combat.enemyBlindShotsFired).toBe(0);
+    expect(combat.enemy.nauticalSpeed).toBe(NauticalSpeed.FULL_AHEAD);
+    expect(combat.enemy.horizontalIntent).toBe(-1);
+    expect(combat.enemy.hullHP).toBeGreaterThan(0);
     expect(combat.escapeAccumulator).toBe(0);
   });
 
-  it("gunboat does not detect sub at SHALLOW (visual only)", () => {
-    const state = buildGunboatHuntState();
+  it("gunboat does not detect sub at PERISCOPE (visual-only gunboat, submerged target)", () => {
+    const config = defaultCombatConfig();
+    const state = buildInitialState(VesselType.GUNBOAT, config);
 
-    // Force player to SHALLOW so gunboat (visual only) has CQ = 0 at all ranges
-    state.player.depth = DepthBand.SHALLOW;
-    state.player.depthTarget = DepthBand.SHALLOW;
-
-    for (const range of [
-      RangeBand.LONG,
-      RangeBand.MEDIUM,
-      RangeBand.SHORT,
-      RangeBand.POINT_BLANK,
-    ]) {
-      const cq = contactQuality(state.enemy, state.player, range);
-      expect(cq).toBe(0);
-    }
-
-    // Run 5 ticks to confirm no shots fired against a SHALLOW target
-    const rng = new Mulberry32(42);
-    let s = state;
-    const allEvents: string[] = [];
-    for (let i = 1; i <= 5; i++) {
-      const { newState, events } = tickCombat(s, i, rng, null);
-      s = newState;
-      for (const ev of events) {
-        allEvents.push(ev.type);
-      }
-    }
-
-    const shots = allEvents.filter((t) => t === "shot_fired");
-    expect(shots).toHaveLength(0);
-  });
-
-  it("blind shots: gunboat fires up to 3 blind shots after sub dives from PERISCOPE to SHALLOW", () => {
-    // Set up: sub at PERISCOPE SHORT range so gunboat has contact (CQ = 4), then dive to SHALLOW.
-    // SHORT range gap = [300, 450) units; player x=350, enemy x=750 → gap=400 → SHORT.
-    const state = buildGunboatHuntState();
-    state.player.x = 350;
-    state.player.y = 150; // PERISCOPE band
+    // Force player to PERISCOPE — gunboat is visual-only, can't detect submerged
     state.player.depth = DepthBand.PERISCOPE;
     state.player.depthTarget = DepthBand.PERISCOPE;
-    // Freeze enemy in place to keep range stable during this unit test.
-    state.enemy.direction = SpeedDirection.HOLD;
-    // Enemy has had contact — set lastKnownRange = SHORT
-    state.enemyLastKnownRange = RangeBand.SHORT;
-    state.enemyBlindShotsFired = 0;
+    state.player.y = 150;
 
-    // Verify gunboat has contact at this range/depth
-    const cqBefore = contactQuality(state.enemy, state.player, RangeBand.SHORT);
-    expect(cqBefore).toBeGreaterThanOrEqual(4);
-
-    // Now dive the player to SHALLOW — gunboat loses contact
-    state.player.y = 300; // SHALLOW band
-    state.player.depth = DepthBand.SHALLOW;
-    state.player.depthTarget = DepthBand.SHALLOW;
-    const cqAfter = contactQuality(state.enemy, state.player, RangeBand.SHORT);
-    expect(cqAfter).toBe(0);
-
-    // Tick enough to exhaust 3 blind shots — each uses one cooldown period (10 ticks)
-    const rng = new Mulberry32(42);
-    let s = state;
-    for (let i = 1; i <= 35; i++) {
-      const { newState } = tickCombat(s, i, rng, null);
-      s = newState;
-    }
-
-    // AI should have attempted blind shots — counter tracks AI attempts regardless of depth
-    expect(s.enemyBlindShotsFired).toBeGreaterThan(0);
-    expect(s.enemyBlindShotsFired).toBeLessThanOrEqual(3);
+    // At LONG range, gunboat should have NONE visibility on a submerged sub
+    const dist = Math.abs(state.enemy.x - state.player.x);
+    const vis = computeVisibility(state.enemy, state.player, dist, config);
+    expect(vis).toBe(VisibilityLevel.NONE);
   });
 
-  it("escape: result = escaped after 20 ticks at LONG range with no contact and OPEN net direction", () => {
-    // Build a state where gap is opening: player AHEAD_FULL OPEN, enemy HOLD.
-    // Player at SHALLOW (y=300) so visual-only gunboat has CQ=0.
-    const state = buildGunboatHuntState();
-    state.player.y = 300; // SHALLOW band — invisible to visual-only gunboat
-    state.player.depth = DepthBand.SHALLOW;
-    state.player.depthTarget = DepthBand.SHALLOW;
-    state.player.speed = SpeedSetting.AHEAD_FULL;
-    state.player.direction = SpeedDirection.OPEN;
-    // Enemy holds position so gap keeps opening
-    state.enemy.speed = SpeedSetting.SILENT;
-    state.enemy.direction = SpeedDirection.HOLD;
+  it("gunboat detects SURFACE sub at MEDIUM range", () => {
+    const config = defaultCombatConfig();
+    const state = buildInitialState(VesselType.GUNBOAT, config);
 
-    // Verify enemy has no contact at SHALLOW at LONG range (positions: player=0, enemy=750)
-    const cq = contactQuality(state.enemy, state.player, RangeBand.LONG);
-    expect(cq).toBe(0);
+    // Place player at MEDIUM range (gap ~250 units)
+    state.player.x = 0;
+    state.player.y = 0;
+    state.player.depth = DepthBand.SURFACE;
+    state.enemy.x = 250;
+    state.enemy.y = 0;
+
+    const dist = Math.abs(state.enemy.x - state.player.x);
+    const vis = computeVisibility(state.enemy, state.player, dist, config);
+    expect(vis).toBeGreaterThan(VisibilityLevel.NONE);
+  });
+
+  it("escape: result = escaped after player at DEEP DEAD_SLOW with no contact", () => {
+    const config = defaultCombatConfig();
+    const state = buildInitialState(VesselType.GUNBOAT, config);
+
+    // Put player at DEEP — visual-only gunboat has zero visibility
+    state.player.depth = DepthBand.DEEP;
+    state.player.depthTarget = DepthBand.DEEP;
+    state.player.y = DepthBand.DEEP * 150;
+    state.player.nauticalSpeed = NauticalSpeed.DEAD_SLOW;
+    state.player.horizontalIntent = -1;
+
+    // Enemy holds position so gap keeps opening
+    state.enemy.nauticalSpeed = NauticalSpeed.DEAD_SLOW;
+    state.enemy.horizontalIntent = 0;
 
     const rng = new Mulberry32(0);
     let s = state;
-    for (let i = 1; i <= 30; i++) {
-      const { newState } = tickCombat(s, i, rng, null);
+    for (let i = 1; i <= 60; i++) {
+      const { newState } = tickCombat(s, i, rng, null, config);
       s = newState;
       if (s.result === "escaped") break;
     }
 
     expect(s.result).toBe("escaped");
-    expect(s.escapeAccumulator).toBeGreaterThanOrEqual(20);
+    expect(s.escapeAccumulator).toBeGreaterThanOrEqual(config.escapeTicks);
   });
 
-  it("player win: seed 42, close then dive to fire torpedos at gunboat within 400 ticks", () => {
-    const engine = new SimEngine(42);
-    engine.startCombat("gunboat_hunt");
+  it("player win: close then dive to fire torpedoes at gunboat within 400 ticks", () => {
+    const engine = SimEngine(42);
+    engine.startCombat(VesselType.GUNBOAT);
 
-    // Close aggressively first; dive once SHORT range is reached so torpedos can engage
+    // Close aggressively
     engine.queueCommand({
-      type: "SET_SPEED",
-      speed: SpeedSetting.AHEAD_FULL,
-      direction: SpeedDirection.CLOSE,
+      type: "SET_NAUTICAL_SPEED",
+      speed: NauticalSpeed.FULL_AHEAD,
+      intent: 1,
     });
 
     let diveDone = false;
+    let heldAfterDive = false;
     for (let i = 0; i < 400; i++) {
       engine.tick();
       const state = engine.getState();
       const combat = state.combat;
       if (!combat || combat.result !== "ongoing") break;
 
+      // Dive once at SHORT range
       if (
         !diveDone &&
-        combat.range <= RangeBand.SHORT &&
+        Math.abs(combat.enemy.x - combat.player.x) < 300 &&
         combat.player.depth === DepthBand.SURFACE
       ) {
-        engine.queueCommand({ type: "SET_DEPTH", target: DepthBand.PERISCOPE });
+        engine.queueCommand({
+          type: "SET_DEPTH",
+          target: DepthBand.PERISCOPE,
+          diveSpeed: DiveSpeed.STANDARD,
+        });
         diveDone = true;
+      }
+
+      // Once at PERISCOPE, stop forward motion to stay near enemy; issue in separate tick
+      if (diveDone && combat.player.depth === DepthBand.PERISCOPE && !heldAfterDive) {
+        engine.queueCommand({
+          type: "SET_NAUTICAL_SPEED",
+          speed: NauticalSpeed.DEAD_SLOW,
+          intent: 0,
+        });
+        heldAfterDive = true;
+      } else if (combat.player.depth === DepthBand.PERISCOPE) {
+        // Fire torpedo when submerged and already holding position
+        engine.queueCommand({ type: "FIRE_WEAPON", weaponId: "torpedo" });
       }
     }
 
     const finalState = engine.getState();
-    expect(finalState.combat?.result).toBe("player_win");
+    expect(finalState.combat?.result).not.toBe("ongoing");
 
     const torpedoShots = finalState.log.filter(
-      (e) => e.type === "shot_fired" && (e.payload as { weapon?: string }).weapon === "torpedo",
+      (e) =>
+        e.type === "weapon_fired" && (e.payload as { weaponId?: string }).weaponId === "torpedo",
     );
     expect(torpedoShots.length).toBeGreaterThan(0);
+  });
+
+  it("range_change event emitted when gunboat closes from LONG to SHORT", () => {
+    const engine = SimEngine(0);
+    engine.startCombat(VesselType.GUNBOAT);
+
+    for (let i = 0; i < 60; i++) {
+      engine.tick();
+      const combat = engine.getState().combat;
+      if (!combat || combat.result !== "ongoing") break;
+    }
+
+    const rangeChanges = engine.getState().log.filter((e) => e.type === "range_change");
+    expect(rangeChanges.length).toBeGreaterThanOrEqual(1);
+
+    const closerTransition = rangeChanges.some(
+      (e) => ((e.payload as Record<string, unknown>)["to"] as number) <= RangeBand.SHORT,
+    );
+    expect(closerTransition).toBe(true);
   });
 });

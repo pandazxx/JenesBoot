@@ -1,17 +1,17 @@
 {
-  "scenarioId": "merchant-hunt",
+  "scenarioId": "gunboat-hunt",
   "scenarioSeed": 42,
-  "finalTick": 190,
+  "finalTick": 90,
   "finalCombatResult": "player_win",
   "finalState": {
-    "playerHP": 20,
+    "playerHP": 14,
     "enemyHP": 0,
-    "playerX": 714,
-    "enemyX": 370,
-    "playerDepth": 0,
+    "playerX": 704,
+    "enemyX": 460,
+    "playerDepth": 1,
     "enemyDepth": 0,
     "playerNauticalSpeed": 2,
-    "enemyNauticalSpeed": 3
+    "enemyNauticalSpeed": 1
   },
   "eventLog": [
     {
@@ -26,8 +26,8 @@
       "type": "combat_start",
       "payload": {
         "playerHP": 20,
-        "enemyHP": 10,
-        "enemyType": "MERCHANT"
+        "enemyHP": 12,
+        "enemyType": "GUNBOAT"
       }
     },
     {
@@ -39,7 +39,7 @@
       }
     },
     {
-      "tick": 9,
+      "tick": 6,
       "type": "range_change",
       "payload": {
         "from": 4,
@@ -47,15 +47,7 @@
       }
     },
     {
-      "tick": 19,
-      "type": "range_change",
-      "payload": {
-        "from": 3,
-        "to": 2
-      }
-    },
-    {
-      "tick": 19,
+      "tick": 6,
       "type": "visibility_change",
       "payload": {
         "who": "enemy",
@@ -63,21 +55,65 @@
       }
     },
     {
-      "tick": 19,
+      "tick": 6,
       "type": "enemy_spotted",
       "payload": {
-        "rangeBand": 2,
+        "rangeBand": 3,
         "playerDepth": 0,
-        "playerX": 252,
+        "playerX": 70,
         "playerY": 0
       }
     },
     {
-      "tick": 19,
-      "type": "merchant_fled",
+      "tick": 13,
+      "type": "range_change",
       "payload": {
+        "from": 3,
+        "to": 2
+      }
+    },
+    {
+      "tick": 13,
+      "type": "visibility_change",
+      "payload": {
+        "who": "enemy",
+        "visibility": 2
+      }
+    },
+    {
+      "tick": 13,
+      "type": "weapon_fired",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "deck_gun",
         "rangeBand": 2,
-        "atTick": 19
+        "depthOffset": 0
+      }
+    },
+    {
+      "tick": 14,
+      "type": "weapon_hit",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "deck_gun",
+        "damage": 3,
+        "targetHP": 17
+      }
+    },
+    {
+      "tick": 20,
+      "type": "range_change",
+      "payload": {
+        "from": 2,
+        "to": 1
+      }
+    },
+    {
+      "tick": 20,
+      "type": "visibility_change",
+      "payload": {
+        "who": "enemy",
+        "visibility": 3
       }
     },
     {
@@ -86,7 +122,7 @@
       "payload": {
         "firedBy": "player",
         "weaponId": "deck_gun",
-        "rangeBand": 2,
+        "rangeBand": 1,
         "depthOffset": 0
       }
     },
@@ -97,47 +133,31 @@
         "firedBy": "player",
         "weaponId": "deck_gun",
         "damage": 3,
-        "targetHP": 7
+        "targetHP": 9
       }
     },
     {
-      "tick": 26,
-      "type": "range_change",
-      "payload": {
-        "from": 2,
-        "to": 1
-      }
-    },
-    {
-      "tick": 26,
-      "type": "visibility_change",
-      "payload": {
-        "who": "enemy",
-        "visibility": 2
-      }
-    },
-    {
-      "tick": 30,
+      "tick": 23,
       "type": "weapon_fired",
       "payload": {
-        "firedBy": "player",
+        "firedBy": "enemy",
         "weaponId": "deck_gun",
         "rangeBand": 1,
         "depthOffset": 0
       }
     },
     {
-      "tick": 31,
+      "tick": 24,
       "type": "weapon_hit",
       "payload": {
-        "firedBy": "player",
+        "firedBy": "enemy",
         "weaponId": "deck_gun",
         "damage": 3,
-        "targetHP": 4
+        "targetHP": 14
       }
     },
     {
-      "tick": 32,
+      "tick": 27,
       "type": "range_change",
       "payload": {
         "from": 1,
@@ -145,35 +165,53 @@
       }
     },
     {
-      "tick": 32,
+      "tick": 27,
       "type": "visibility_change",
       "payload": {
         "who": "enemy",
-        "visibility": 3
+        "visibility": 4
       }
     },
     {
-      "tick": 40,
+      "tick": 30,
       "type": "weapon_fired",
       "payload": {
         "firedBy": "player",
+        "weaponId": "torpedo",
+        "rangeBand": 0,
+        "depthOffset": 0
+      }
+    },
+    {
+      "tick": 33,
+      "type": "weapon_hit",
+      "payload": {
+        "firedBy": "player",
+        "weaponId": "torpedo",
+        "damage": 5,
+        "targetHP": 4
+      }
+    },
+    {
+      "tick": 33,
+      "type": "weapon_fired",
+      "payload": {
+        "firedBy": "enemy",
         "weaponId": "deck_gun",
         "rangeBand": 0,
         "depthOffset": 0
       }
     },
     {
-      "tick": 41,
-      "type": "weapon_hit",
+      "tick": 33,
+      "type": "weapon_miss",
       "payload": {
-        "firedBy": "player",
-        "weaponId": "deck_gun",
-        "damage": 3,
-        "targetHP": 1
+        "firedBy": "enemy",
+        "weaponId": "deck_gun"
       }
     },
     {
-      "tick": 44,
+      "tick": 35,
       "type": "range_change",
       "payload": {
         "from": 0,
@@ -181,11 +219,26 @@
       }
     },
     {
-      "tick": 44,
+      "tick": 35,
+      "type": "depth_change",
+      "payload": {
+        "who": "player",
+        "depth": 1
+      }
+    },
+    {
+      "tick": 35,
       "type": "visibility_change",
       "payload": {
         "who": "enemy",
-        "visibility": 2
+        "visibility": 0
+      }
+    },
+    {
+      "tick": 35,
+      "type": "enemy_contact_lost",
+      "payload": {
+        "atTick": 35
       }
     },
     {
@@ -193,54 +246,38 @@
       "type": "weapon_fired",
       "payload": {
         "firedBy": "player",
-        "weaponId": "deck_gun",
+        "weaponId": "torpedo",
         "rangeBand": 1,
-        "depthOffset": 0
+        "depthOffset": 1
       }
     },
     {
       "tick": 50,
       "type": "position_report",
       "payload": {
-        "playerX": 700,
-        "playerY": 0,
-        "enemyX": 380,
+        "playerX": 668,
+        "playerY": 150,
+        "enemyX": 460,
         "enemyY": 0,
         "rangeBand": 1
       }
     },
     {
-      "tick": 51,
+      "tick": 53,
       "type": "weapon_hit",
       "payload": {
         "firedBy": "player",
-        "weaponId": "deck_gun",
-        "damage": 3,
+        "weaponId": "torpedo",
+        "damage": 5,
         "targetHP": 0
       }
     },
     {
-      "tick": 51,
-      "type": "range_change",
-      "payload": {
-        "from": 1,
-        "to": 2
-      }
-    },
-    {
-      "tick": 51,
-      "type": "visibility_change",
-      "payload": {
-        "who": "enemy",
-        "visibility": 1
-      }
-    },
-    {
-      "tick": 51,
+      "tick": 53,
       "type": "combat_end",
       "payload": {
         "result": "player_win",
-        "atTick": 51
+        "atTick": 53
       }
     }
   ]

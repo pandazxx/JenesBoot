@@ -1,17 +1,17 @@
 import { definePlayerScenario } from "../types.js";
-import { DepthBand, SpeedSetting, SpeedDirection } from "../../sim/combat/types.js";
+import { VesselType, DepthBand, NauticalSpeed } from "../../sim/combat/enums.js";
 
 export default definePlayerScenario({
   id: "calm-merchant",
   title: "Calm Merchant",
   description:
-    "A calm morning. A lone merchant on the horizon. Assign your gunner and sink it before it flees.",
+    "A calm morning. A lone merchant on the horizon. Close at full speed and sink it before it flees.",
   seed: 1,
-  scenario: "surface_battle",
+  scenario: VesselType.MERCHANT,
   initial: {
     playerDepth: DepthBand.SURFACE,
-    playerSpeed: SpeedSetting.AHEAD_FULL,
-    playerDirection: SpeedDirection.HOLD,
+    playerNauticalSpeed: NauticalSpeed.FULL_AHEAD,
+    playerHorizontalIntent: 1,
     enemyX: 450,
   },
 });

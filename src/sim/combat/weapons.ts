@@ -1,79 +1,42 @@
-/**
- * Weapon resolution — hit/miss calculation for deck gun and torpedoes.
- *
- * No PixiJS, no DOM, no Math.random(), no wall-clock reads.
- */
-
-import { DepthBand, RangeBand } from "./types.js";
+import { VisibilityLevel, VesselType } from "./enums.js";
+import type { RangeBand } from "./enums.js";
 import type { Mulberry32 } from "../prng.js";
+import type { CombatConfig } from "./config.js";
 
-/**
- * Deck gun base accuracy by range band.
- * LONG is out of range — callers must not invoke fire at LONG range.
- */
-export const DECK_GUN_ACCURACY: Record<RangeBand, number> = {
-  [RangeBand.LONG]: 0,
-  [RangeBand.MEDIUM]: 15,
-  [RangeBand.SHORT]: 60,
-  [RangeBand.POINT_BLANK]: 85,
-  [RangeBand.RAMMING]: 85,
-};
+export function resolveWeaponFire(
+  weaponId: string,
+  attackerVisibility: VisibilityLevel,
+  rangeBand: RangeBand,
+  depthOffset: number,
+  rng: Mulberry32,
+  config: CombatConfig,
+  vesselType: VesselType,
+): { fired: boolean; hit: boolean; damage: number } {
+  if (attackerVisibility <= VisibilityLevel.NONE) {
+    return { fired: false, hit: false, damage: 0 };
+  }
 
-export const DECK_GUN_DAMAGE = 3;
-export const DECK_GUN_COOLDOWN_TICKS = 10;
+  const vesselConfig =
+    vesselType === VesselType.SUBMARINE
+      ? config.player
+      : (config.vessels[vesselType] ?? config.player);
 
-/**
- * Torpedo base accuracy by range band.
- * LONG is out of range. Torpedoes require depth ≤ PERISCOPE to fire.
- */
-export const TORPEDO_ACCURACY: Record<RangeBand, number> = {
-  [RangeBand.LONG]: 0,
-  [RangeBand.MEDIUM]: 55,
-  [RangeBand.SHORT]: 75,
-  [RangeBand.POINT_BLANK]: 85,
-  [RangeBand.RAMMING]: 85,
-};
+  const weaponConfig = vesselConfig.weapons.find((w) => w.id === weaponId);
+  if (weaponConfig === undefined) {
+    return { fired: false, hit: false, damage: 0 };
+  }
 
-export const TORPEDO_DAMAGE = 5;
-export const TORPEDO_COOLDOWN_TICKS = 20;
-export const TORPEDO_FLIGHT_TICKS = 3;
+  const rangeRow = weaponConfig.hitMatrix[rangeBand];
+  if (rangeRow === undefined) {
+    return { fired: false, hit: false, damage: 0 };
+  }
 
-/**
- * Returns true if the shot hits.
- * hit_chance = clamp(5, 95, accuracy - evasion)
- */
-export function resolveDeckGun(accuracy: number, evasion: number, rng: Mulberry32): boolean {
-  const hitChance = Math.max(5, Math.min(95, accuracy - evasion));
-  return rng.next() * 100 < hitChance;
-}
+  const cell = rangeRow[depthOffset];
+  if (cell === undefined || cell.hitRate <= 0) {
+    return { fired: false, hit: false, damage: 0 };
+  }
 
-export function resolveTorpedo(accuracy: number, evasion: number, rng: Mulberry32): boolean {
-  const hitChance = Math.max(5, Math.min(95, accuracy - evasion));
-  return rng.next() * 100 < hitChance;
-}
-
-export function deckGunDepthDamageMultiplier(targetDepth: DepthBand): number {
-  if (targetDepth === DepthBand.SURFACE) return 1.0;
-  if (targetDepth === DepthBand.PERISCOPE) return 0.6;
-  return 0;
-}
-
-/**
- * Depth charge accuracy by target depth band.
- * SURFACE: inapplicable (sub must be submerged). SHORT range only.
- */
-export const DEPTH_CHARGE_ACCURACY: Record<DepthBand, number> = {
-  [DepthBand.SURFACE]: 0,
-  [DepthBand.PERISCOPE]: 70,
-  [DepthBand.SHALLOW]: 60,
-  [DepthBand.DEEP]: 55,
-  [DepthBand.ABYSSAL]: 35,
-};
-
-export const DEPTH_CHARGE_DAMAGE = 3;
-export const DEPTH_CHARGE_COOLDOWN_TICKS = 10;
-
-export function resolveDepthCharge(accuracy: number, evasion: number, rng: Mulberry32): boolean {
-  const hitChance = Math.max(5, Math.min(95, accuracy - evasion));
-  return rng.next() * 100 < hitChance;
+  const roll = rng.next();
+  const hit = roll < cell.hitRate;
+  return { fired: true, hit, damage: cell.damage };
 }

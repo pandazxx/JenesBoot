@@ -61,8 +61,8 @@ async function main(): Promise<void> {
       if (ps.initial !== undefined) {
         engine.setInitialState(ps.initial);
       }
-      const combatScenario = ps.scenario ?? "surface_battle";
-      await showCombat(app, engine, combatScenario, () => {
+      const enemyTypeDeepLink = ps.scenario ?? "MERCHANT";
+      await showCombat(app, engine, enemyTypeDeepLink, () => {
         settingsPanel.show(currentConfig);
       });
     }
@@ -77,8 +77,8 @@ async function main(): Promise<void> {
 
     if (result.kind === "quick-start") {
       const engine = new SimEngine(seed, currentConfig);
-      engine.startCombat(result.scenario);
-      await showCombat(app, engine, result.scenario, () => {
+      engine.startCombat(result.enemyType);
+      await showCombat(app, engine, result.enemyType, () => {
         settingsPanel.show(currentConfig);
       });
     } else {
@@ -90,8 +90,8 @@ async function main(): Promise<void> {
       if (ps.initial !== undefined) {
         engine.setInitialState(ps.initial);
       }
-      const combatScenario = ps.scenario ?? "surface_battle";
-      await showCombat(app, engine, combatScenario, () => {
+      const enemyType = ps.scenario ?? "MERCHANT";
+      await showCombat(app, engine, enemyType, () => {
         settingsPanel.show(currentConfig);
       });
     }

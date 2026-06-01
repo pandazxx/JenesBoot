@@ -1,5 +1,5 @@
 import { Application, Assets, Container, Graphics, Sprite, Text, TextStyle } from "pixi.js";
-import type { CombatScenario } from "../sim/index.js";
+import { VesselType } from "../sim/combat/enums.js";
 import type { PlayerScenario } from "../scenarios/types.js";
 import { getPlayerScenarios } from "../scenarios/player/registry.js";
 
@@ -8,7 +8,7 @@ const BTN_H = 28;
 const BTN_GAP = 8;
 
 export type LandingResult =
-  | { kind: "quick-start"; scenario: CombatScenario }
+  | { kind: "quick-start"; enemyType: VesselType }
   | { kind: "player-scenario"; playerScenario: PlayerScenario };
 
 export async function showLanding(
@@ -59,9 +59,6 @@ export async function showLanding(
       resolve(result);
     };
 
-    // Each logical button is 4 sibling display objects added to container:
-    //   bgNormal, bgHover (pre-drawn, never cleared), labelText, hit (transparent, stable).
-    // The hit area is never redrawn so pointertap fires reliably.
     type BtnObjects = { bgNormal: Graphics; bgHover: Graphics; label: Text; hit: Graphics };
     const btnObjs: BtnObjects[] = [];
 
@@ -292,27 +289,24 @@ export async function showLanding(
 
     // --- Main landing buttons ---
 
-    const quickStartScenarios: { label: string; scenario: CombatScenario }[] = [
-      { label: "Surface Battle", scenario: "surface_battle" },
-      { label: "Destroyer Dive (escape)", scenario: "destroyer_dive" },
-      { label: "Gunboat Hunt", scenario: "gunboat_hunt" },
-      { label: "Destroyer Battle", scenario: "destroyer_battle" },
+    const encounters: { label: string; enemyType: VesselType }[] = [
+      { label: "vs Merchant", enemyType: VesselType.MERCHANT },
+      { label: "vs Gunboat", enemyType: VesselType.GUNBOAT },
+      { label: "vs Destroyer", enemyType: VesselType.DESTROYER },
     ];
 
-    for (const { label, scenario } of quickStartScenarios) {
+    for (const { label, enemyType } of encounters) {
       makeButton(label, 0x334455, 0x0a1420, 0x162035, () =>
-        cleanup({ kind: "quick-start", scenario }),
+        cleanup({ kind: "quick-start", enemyType }),
       );
     }
 
     makeButton("Scenarios", 0x335566, 0x0a1a2a, 0x162840, () => showScenarioPicker());
-    // Tint the Scenarios label cyan
     const scenariosBtn = btnObjs[btnObjs.length - 1];
     if (scenariosBtn !== undefined) (scenariosBtn.label.style as TextStyle).fill = 0x88ccdd;
 
     if (onSettings !== undefined) {
       makeButton("Settings", 0x225544, 0x0a1420, 0x0d2018, () => onSettings());
-      // Tint the settings label green
       const last = btnObjs[btnObjs.length - 1];
       if (last !== undefined) (last.label.style as TextStyle).fill = 0x88ccaa;
     }
