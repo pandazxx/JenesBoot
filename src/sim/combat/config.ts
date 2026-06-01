@@ -43,6 +43,7 @@ export interface SimConfig {
   enemyHullSubmergedAmbush: number;
 
   // Enemy speed (units/tick at AHEAD_FULL; SILENT/STANDARD scale proportionally)
+  merchantSpeed: number;
   gunboatSpeed: number;
   destroyerSpeed: number;
 
@@ -86,6 +87,7 @@ export function defaultSimConfig(): SimConfig {
     enemyHullDestroyerBattle: 10,
     enemyHullSubmergedAmbush: 10,
 
+    merchantSpeed: 8,
     gunboatSpeed: 15,
     destroyerSpeed: 15,
 
