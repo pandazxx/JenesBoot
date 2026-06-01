@@ -140,6 +140,8 @@ Do not adjust assertions to match broken behavior. If a predicate fails and the 
 
 ## Reading scenario failures
 
+*Convergence in one iteration is a warning sign* — it usually means your assertions are too loose to enforce the scenario's narrative. A real story-driven scenario should take 3–10 iterations to settle.
+
 When a scenario fails, `runScenario()` populates `assertionResults` with per-assertion `{ label, passed, detail }` entries. The Vitest output shows the `detail` string. Typical workflow:
 
 1. Find the first failing assertion — assertions run in order.
