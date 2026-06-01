@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-01T12:32:32.590Z",
+  "generatedAt": "2026-06-01T14:24:14.792Z",
   "scenarios": [
     {
       "id": "hello-world",
@@ -31,7 +31,7 @@
       "id": "surface-battle",
       "title": "Surface battle — merchant destroyed before tick 150",
       "passed": true,
-      "durationMs": 3,
+      "durationMs": 4,
       "ticksReached": 73,
       "terminatingEvent": "combat_end",
       "assertions": [
@@ -72,7 +72,7 @@
       "id": "destroyer-battle",
       "title": "Destroyer closes from LONG to SHORT within 60 ticks (player holds surface)",
       "passed": true,
-      "durationMs": 1,
+      "durationMs": 4,
       "ticksReached": 60,
       "terminatingEvent": null,
       "assertions": [
@@ -134,7 +134,7 @@
       "id": "gunboat-hunt",
       "title": "Gunboat hunt — player closes and wins with torpedoes within 400 ticks",
       "passed": true,
-      "durationMs": 1,
+      "durationMs": 2,
       "ticksReached": 73,
       "terminatingEvent": "combat_end",
       "assertions": [
@@ -170,7 +170,7 @@
       "id": "merchant-hunt",
       "title": "Merchant hunt — approach from PERISCOPE, surface, and destroy",
       "passed": true,
-      "durationMs": 5,
+      "durationMs": 1,
       "ticksReached": 42,
       "terminatingEvent": "combat_end",
       "assertions": [

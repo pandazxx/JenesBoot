@@ -90,7 +90,7 @@
 <div class="header">
   <div>
     <h1>JenesBoot — Test Report</h1>
-    <div class="generated">Generated: 2026-06-01T12:32:32.590Z</div>
+    <div class="generated">Generated: 2026-06-01T14:24:14.792Z</div>
   </div>
   <div class="header-links">
     <a href="../">Open game</a>
@@ -120,7 +120,7 @@
 
       <tr class="">
         <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Smoke — runner emits hello on tick 1, 10-tick passive run &amp;gt; hello event emitted at tick 1</td>
-        <td class="num">0 ms</td>
+        <td class="num">2 ms</td>
         <td></td>
       </tr>
 
@@ -186,7 +186,7 @@
 
       <tr class="">
         <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Destroyer closes from LONG to SHORT within 60 ticks (player holds surface) &amp;gt; finalState predicate</td>
-        <td class="num">0 ms</td>
+        <td class="num">1 ms</td>
         <td></td>
       </tr>
 
@@ -276,7 +276,7 @@
 
       <tr class="">
         <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Merchant hunt — approach from PERISCOPE, surface, and destroy &amp;gt; completed within 200 ticks (reached tick 42)</td>
-        <td class="num">0 ms</td>
+        <td class="num">1 ms</td>
         <td></td>
       </tr>
 
@@ -336,19 +336,19 @@
 
       <tr class="">
         <td><span class="icon pass">+</span> src/sim/__tests__/crew-assignment.test.ts &gt; crew assignment — in-process unit tests &amp;gt; initial state has crew[0].roomId === &amp;apos;bridge&amp;apos;</td>
-        <td class="num">3 ms</td>
+        <td class="num">9 ms</td>
         <td></td>
       </tr>
 
       <tr class="">
         <td><span class="icon pass">+</span> src/sim/__tests__/crew-assignment.test.ts &gt; crew assignment — in-process unit tests &amp;gt; ASSIGN_CREW moves mate to deck_gun and updates both rooms</td>
-        <td class="num">1 ms</td>
+        <td class="num">3 ms</td>
         <td></td>
       </tr>
 
       <tr class="">
         <td><span class="icon pass">+</span> src/sim/__tests__/crew-assignment.test.ts &gt; crew assignment — in-process unit tests &amp;gt; run 150 ticks with crew at deck_gun — combat ends with player_win</td>
-        <td class="num">2 ms</td>
+        <td class="num">3 ms</td>
         <td></td>
       </tr>
 
@@ -372,7 +372,7 @@
 
       <tr class="">
         <td><span class="icon pass">+</span> src/sim/__tests__/crew-assignment.test.ts &gt; crew assignment — in-process unit tests &amp;gt; ScenarioInitial.enemyX affects combat via runScenario</td>
-        <td class="num">3 ms</td>
+        <td class="num">4 ms</td>
         <td></td>
       </tr>
 
@@ -390,7 +390,7 @@
 
       <tr class="">
         <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-dive.test.ts &gt; destroyer_dive scenario &amp;gt; depth transitions: player reaches PERISCOPE after 6 ticks</td>
-        <td class="num">2 ms</td>
+        <td class="num">1 ms</td>
         <td></td>
       </tr>
 
@@ -402,7 +402,7 @@
 
       <tr class="">
         <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-pursuit.test.ts &gt; destroyer_battle scenario &amp;gt; initial state: player at SURFACE HOLD, enemy at LONG AHEAD_FULL CLOSE, destroyerSpeed=15</td>
-        <td class="num">6 ms</td>
+        <td class="num">8 ms</td>
         <td></td>
       </tr>
 
@@ -444,7 +444,7 @@
 
       <tr class="">
         <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-pursuit.test.ts &gt; destroyer_battle scenario &amp;gt; position_report event emitted at tick 50 and 100</td>
-        <td class="num">5 ms</td>
+        <td class="num">3 ms</td>
         <td></td>
       </tr>
 
@@ -474,7 +474,7 @@
 
       <tr class="">
         <td><span class="icon pass">+</span> src/sim/__tests__/engine.test.ts &gt; SimEngine &amp;gt; is deterministic: same seed produces same rngState after N ticks</td>
-        <td class="num">0 ms</td>
+        <td class="num">1 ms</td>
         <td></td>
       </tr>
 
@@ -492,13 +492,13 @@
 
       <tr class="">
         <td><span class="icon pass">+</span> src/sim/__tests__/gunboat-hunt.test.ts &gt; gunboat_hunt scenario &amp;gt; initial state: sub at SURFACE, 2 crew (mate in bridge, engineer in torpedo), gunboat AHEAD_FULL CLOSE</td>
-        <td class="num">9 ms</td>
+        <td class="num">7 ms</td>
         <td></td>
       </tr>
 
       <tr class="">
         <td><span class="icon pass">+</span> src/sim/__tests__/gunboat-hunt.test.ts &gt; gunboat_hunt scenario &amp;gt; gunboat does not detect sub at SHALLOW (visual only)</td>
-        <td class="num">2 ms</td>
+        <td class="num">3 ms</td>
         <td></td>
       </tr>
 
@@ -522,7 +522,7 @@
 
       <tr class="">
         <td><span class="icon pass">+</span> src/sim/__tests__/sim.test.ts &gt; determinism &amp;gt; same seed produces identical tick-by-tick state</td>
-        <td class="num">5 ms</td>
+        <td class="num">4 ms</td>
         <td></td>
       </tr>
 
@@ -576,7 +576,7 @@
 
       <tr class="">
         <td><span class="icon pass">+</span> src/sim/__tests__/sim.test.ts &gt; getState() returns a snapshot &amp;gt; mutating the returned snapshot does not corrupt engine state</td>
-        <td class="num">1 ms</td>
+        <td class="num">0 ms</td>
         <td></td>
       </tr>
   </tbody>
@@ -605,7 +605,7 @@
           <span class="scenario-title">Surface battle — merchant destroyed before tick 150</span>
           
         </td>
-        <td class="num">3 ms &middot; 73 ticks</td>
+        <td class="num">4 ms &middot; 73 ticks</td>
         <td class="replay-cell"><a class="replay-link" href="../qa/?scenario=surface-battle">Replay</a></td>
       </tr>
 
@@ -615,7 +615,7 @@
           <span class="scenario-title">Destroyer closes from LONG to SHORT within 60 ticks (player holds surface)</span>
           
         </td>
-        <td class="num">1 ms &middot; 60 ticks</td>
+        <td class="num">4 ms &middot; 60 ticks</td>
         <td class="replay-cell"><a class="replay-link" href="../qa/?scenario=destroyer-battle">Replay</a></td>
       </tr>
 
@@ -635,7 +635,7 @@
           <span class="scenario-title">Gunboat hunt — player closes and wins with torpedoes within 400 ticks</span>
           
         </td>
-        <td class="num">1 ms &middot; 73 ticks</td>
+        <td class="num">2 ms &middot; 73 ticks</td>
         <td class="replay-cell"><a class="replay-link" href="../qa/?scenario=gunboat-hunt">Replay</a></td>
       </tr>
 
@@ -645,7 +645,7 @@
           <span class="scenario-title">Merchant hunt — approach from PERISCOPE, surface, and destroy</span>
           
         </td>
-        <td class="num">5 ms &middot; 42 ticks</td>
+        <td class="num">1 ms &middot; 42 ticks</td>
         <td class="replay-cell"><a class="replay-link" href="../qa/?scenario=merchant-hunt">Replay</a></td>
       </tr>
   </tbody>
