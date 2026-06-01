@@ -14,66 +14,239 @@
         background: #0a0a1a;
         color: #c8c8d8;
         font-family: monospace;
-        font-size: 14px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        font-size: 13px;
         min-height: 100vh;
       }
-      .container {
-        max-width: 640px;
+
+      /* ── Picker layout ─────────────────────────────────────────────── */
+      #picker {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
         padding: 2rem;
-        text-align: center;
+      }
+      #picker h1 {
+        font-size: 1.1rem;
+        color: #e0e0f0;
+        margin-bottom: 2rem;
+        letter-spacing: 0.06em;
+      }
+      .scenario-list {
+        width: 100%;
+        max-width: 620px;
         border: 1px solid #2a2a4a;
         background: #0f0f22;
       }
-      h1 {
-        font-size: 1.2rem;
-        color: #e0e0f0;
-        margin-bottom: 1rem;
-        letter-spacing: 0.05em;
+      .scenario-row {
+        display: flex;
+        align-items: baseline;
+        gap: 0.75rem;
+        padding: 0.65rem 1rem;
+        border-bottom: 1px solid #1a1a30;
+        text-decoration: none;
+        color: inherit;
       }
-      p {
-        margin-bottom: 0.75rem;
-        line-height: 1.6;
+      .scenario-row:last-child {
+        border-bottom: none;
       }
-      .params {
-        margin-top: 1.5rem;
-        padding: 1rem;
-        background: #050510;
-        border: 1px solid #1a1a3a;
-        text-align: left;
+      .scenario-row:hover {
+        background: #161628;
       }
-      .params dt {
-        color: #8888aa;
+      .scenario-row .play {
+        color: #44aaff;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+      }
+      .scenario-row .sid {
+        color: #88bbee;
+        min-width: 180px;
+        flex-shrink: 0;
+      }
+      .scenario-row .stitle {
+        color: #9999bb;
         font-size: 0.85rem;
-        margin-top: 0.5rem;
       }
-      .params dd {
-        color: #b0b0cc;
-        margin-left: 1rem;
+
+      /* ── Viewer layout ─────────────────────────────────────────────── */
+      #viewer {
+        display: none;
+        flex-direction: column;
+        height: 100vh;
       }
-      .label {
-        color: #6666aa;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        margin-bottom: 0.5rem;
+      #viewer.active {
+        display: flex;
+      }
+      #viewer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.4rem 0.75rem;
+        background: #0c0c1e;
+        border-bottom: 1px solid #2a2a4a;
+        flex-shrink: 0;
+      }
+      #viewer-header a {
+        color: #5577aa;
+        text-decoration: none;
+        font-size: 0.85rem;
+      }
+      #viewer-header a:hover {
+        color: #88aadd;
+      }
+      #viewer-title {
+        color: #aabbcc;
+        font-size: 0.85rem;
+      }
+      #canvas-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #060610;
+        overflow: hidden;
+        position: relative;
+      }
+      #canvas-wrap canvas {
         display: block;
+        image-rendering: pixelated;
+      }
+      #ff-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #060610;
+        color: #556677;
+        font-size: 0.9rem;
+      }
+      #controls-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.4rem 0.75rem;
+        background: #0c0c1e;
+        border-top: 1px solid #2a2a4a;
+        flex-shrink: 0;
+      }
+      #tick-counter {
+        color: #778899;
+        min-width: 130px;
+        font-size: 0.85rem;
+      }
+      .ctrl-btn {
+        background: #111128;
+        border: 1px solid #334455;
+        color: #aabbcc;
+        font-family: monospace;
+        font-size: 0.85rem;
+        padding: 0.25rem 0.6rem;
+        cursor: pointer;
+      }
+      .ctrl-btn:hover:not(:disabled) {
+        background: #1a1a38;
+        border-color: #4466aa;
+      }
+      .ctrl-btn:disabled {
+        color: #445566;
+        cursor: default;
+        border-color: #222233;
+      }
+      #speed-select {
+        background: #111128;
+        border: 1px solid #334455;
+        color: #aabbcc;
+        font-family: monospace;
+        font-size: 0.85rem;
+        padding: 0.2rem 0.4rem;
+      }
+      #scenario-complete {
+        color: #44cc88;
+        font-size: 0.85rem;
+        display: none;
+      }
+      #log-panel {
+        height: 120px;
+        overflow-y: hidden;
+        background: #08081a;
+        border-top: 1px solid #1a1a30;
+        padding: 0.4rem 0.75rem;
+        flex-shrink: 0;
+      }
+      #log-panel .log-header {
+        color: #556677;
+        font-size: 0.78rem;
+        margin-bottom: 0.3rem;
+      }
+      #log-entries {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        overflow: hidden;
+      }
+      .log-entry {
+        color: #778899;
+        font-size: 0.78rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .log-entry .log-tick {
+        color: #445566;
+        min-width: 52px;
+        display: inline-block;
+      }
+      .log-entry .log-type {
+        color: #6688aa;
+        min-width: 120px;
+        display: inline-block;
       }
     </style>
-    <script type="module" crossorigin src="/JenesBoot/pr-26/qa/assets/qa-DoMSqHq6.js"></script>
-    <link rel="modulepreload" crossorigin href="/JenesBoot/pr-26/assets/modulepreload-polyfill-B5Qt9EMX.js">
+    <script type="module" crossorigin src="/JenesBoot/pr-26/qa/assets/qa-BjvLzXcX.js"></script>
+    <link rel="modulepreload" crossorigin href="/JenesBoot/pr-26/assets/radar-DLHn_DR_.js">
   </head>
   <body>
-    <div class="container">
-      <span class="label">JenesBoot / QA</span>
-      <h1>QA Viewer</h1>
-      <p>Scenario playback lands in PR #4.</p>
-      <p>This page is a build-pipeline placeholder confirming the two-entry Vite build and GitHub Pages deploy work correctly.</p>
-      <div class="params">
-        <dl id="params"></dl>
+    <!-- Picker: shown when no ?scenario= param -->
+    <div id="picker">
+      <h1>JenesBoot QA Viewer</h1>
+      <div class="scenario-list" id="scenario-list">
+        <div class="scenario-row" style="color:#445566;font-size:0.8rem;padding:0.5rem 1rem;">
+          Loading scenarios...
+        </div>
       </div>
     </div>
+
+    <!-- Viewer: shown when ?scenario= param is present -->
+    <div id="viewer">
+      <div id="viewer-header">
+        <a href="?" id="back-link">[&lt; Back to picker]</a>
+        <span id="viewer-title"></span>
+      </div>
+      <div id="canvas-wrap">
+        <div id="ff-overlay">Fast-forwarding...</div>
+      </div>
+      <div id="controls-bar">
+        <span id="tick-counter">tick 0 / --</span>
+        <button class="ctrl-btn" id="btn-play">Play</button>
+        <button class="ctrl-btn" id="btn-pause">Pause</button>
+        <button class="ctrl-btn" id="btn-step">Step</button>
+        <span style="color:#334455">|</span>
+        <select id="speed-select">
+          <option value="0.5">0.5x</option>
+          <option value="1" selected>1x</option>
+          <option value="2">2x</option>
+          <option value="4">4x</option>
+          <option value="8">8x</option>
+        </select>
+        <span id="scenario-complete">scenario complete</span>
+      </div>
+      <div id="log-panel">
+        <div class="log-header">Event log (last 20, newest first):</div>
+        <div id="log-entries"></div>
+      </div>
+    </div>
+
   </body>
 </html>
