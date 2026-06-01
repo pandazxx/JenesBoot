@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JenesBoot — Test Report</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: monospace;
+      font-size: 14px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 16px;
+    }
+    h1 { font-size: 1.1em; margin: 0 0 4px 0; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px solid #444;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .header-links { font-size: 0.85em; }
+    .header-links a { color: #7ab4f5; text-decoration: none; margin-left: 12px; }
+    .header-links a:hover { text-decoration: underline; }
+    .summary {
+      background: #252525;
+      border: 1px solid #444;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      border-radius: 3px;
+    }
+    .summary .pass  { color: #7ec87e; }
+    .summary .fail  { color: #e06c6c; }
+    .summary .skip  { color: #aaa; }
+    .generated { font-size: 0.8em; color: #888; margin-top: 4px; }
+    h2 { font-size: 1em; border-bottom: 1px solid #333; padding-bottom: 4px; margin: 16px 0 6px 0; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 4px 6px; vertical-align: top; }
+    th { font-weight: bold; color: #aaa; border-bottom: 1px solid #333; }
+    td.num { white-space: nowrap; text-align: right; color: #aaa; width: 130px; }
+    td.replay-cell { width: 80px; text-align: right; white-space: nowrap; }
+    tr.row-fail { background: rgba(200, 60, 60, 0.12); border-left: 3px solid #c03c3c; }
+    tr.row-skip { color: #888; }
+    .icon { font-weight: bold; margin-right: 4px; }
+    .icon.pass { color: #7ec87e; }
+    .icon.fail { color: #e06c6c; }
+    .icon.skip { color: #aaa; }
+    .fail-detail {
+      font-size: 0.85em;
+      color: #e06c6c;
+      margin-top: 3px;
+      padding-left: 12px;
+    }
+    .fail-detail pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 120px;
+      overflow-y: auto;
+      background: #2a1a1a;
+      padding: 4px;
+      border-radius: 2px;
+    }
+    .scenario-title {
+      color: #aaa;
+      margin-left: 6px;
+      font-size: 0.9em;
+    }
+    .replay-link {
+      color: #7ab4f5;
+      text-decoration: none;
+      font-size: 0.85em;
+      border: 1px solid #7ab4f5;
+      padding: 1px 5px;
+      border-radius: 2px;
+    }
+    .replay-link:hover { background: #7ab4f533; }
+    td.empty { color: #666; font-style: italic; }
+    tr:not(.row-fail):hover > td { background: #242424; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>JenesBoot — Test Report</h1>
+    <div class="generated">Generated: 2026-06-01T15:37:43.602Z</div>
+  </div>
+  <div class="header-links">
+    <a href="../">Open game</a>
+    <a href="vitest.html">Vitest HTML report</a>
+  </div>
+</div>
+
+<div class="summary">
+  Summary: <span class="pass">119 passed</span>
+  &middot; <span class="fail">0 failed</span>
+  &middot; <span class="skip">0 skipped</span>
+  &middot; 119 total
+</div>
+
+<h2>Unit tests</h2>
+<table>
+  <thead>
+    <tr><th>Test</th><th class="num">Duration</th><th></th></tr>
+  </thead>
+  <tbody>
+    
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/battle.scenario.ts &gt; battle scenario — destroyer, seed 42, 300 ticks &amp;gt; headless binary must be present</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/battle.scenario.ts &gt; battle scenario — destroyer, seed 42, 300 ticks &amp;gt; exits with code 0</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/battle.scenario.ts &gt; battle scenario — destroyer, seed 42, 300 ticks &amp;gt; stdout is valid JSON</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/battle.scenario.ts &gt; battle scenario — destroyer, seed 42, 300 ticks &amp;gt; ticks field equals requested ticks</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/battle.scenario.ts &gt; battle scenario — destroyer, seed 42, 300 ticks &amp;gt; log contains at least one range_change event</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/battle.scenario.ts &gt; battle scenario — destroyer, seed 42, 300 ticks &amp;gt; log contains a combat_start event</td>
+        <td class="num">3 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/battle.scenario.ts &gt; battle scenario — destroyer, seed 42, 300 ticks &amp;gt; log contains a combat_end event within 300 ticks</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/battle.scenario.ts &gt; battle scenario — destroyer, seed 42, 300 ticks &amp;gt; determinism: two runs with seed 42 produce identical log lengths</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/battle.scenario.ts &gt; battle scenario — destroyer, seed 42, 300 ticks &amp;gt; determinism: two runs with seed 42 produce identical rngState</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Smoke — runner emits hello on tick 1, 10-tick passive run &amp;gt; completed within 10 ticks (reached tick 10)</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Smoke — runner emits hello on tick 1, 10-tick passive run &amp;gt; hello event emitted at tick 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Smoke — runner emits hello on tick 1, 10-tick passive run &amp;gt; finalState predicate</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Smoke — runner emits hello on tick 1, 10-tick passive run &amp;gt; eventCounts[&amp;quot;hello&amp;quot;] exact 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Surface battle — merchant destroyed before tick 200 &amp;gt; completed within 200 ticks (reached tick 190)</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Surface battle — merchant destroyed before tick 200 &amp;gt; finalState predicate</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Surface battle — merchant destroyed before tick 200 &amp;gt; eventCounts[&amp;quot;combat_start&amp;quot;] min 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Surface battle — merchant destroyed before tick 200 &amp;gt; eventCounts[&amp;quot;range_change&amp;quot;] min 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Surface battle — merchant destroyed before tick 200 &amp;gt; eventCounts[&amp;quot;weapon_fired&amp;quot;] min 1</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Surface battle — merchant destroyed before tick 200 &amp;gt; eventCounts[&amp;quot;combat_end&amp;quot;] exact 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Surface battle — merchant destroyed before tick 200 &amp;gt; finalCombatResult === &amp;quot;player_win&amp;quot;</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Destroyer closes from LONG to SHORT within 60 ticks (player holds surface) &amp;gt; completed within 60 ticks (reached tick 60)</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Destroyer closes from LONG to SHORT within 60 ticks (player holds surface) &amp;gt; finalState predicate</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Destroyer closes from LONG to SHORT within 60 ticks (player holds surface) &amp;gt; eventCounts[&amp;quot;combat_start&amp;quot;] exact 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Destroyer closes from LONG to SHORT within 60 ticks (player holds surface) &amp;gt; eventCounts[&amp;quot;range_change&amp;quot;] min 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Destroyer dive — player goes silent and torpedoes destroyer within 200 ticks &amp;gt; completed within 200 ticks (reached tick 103)</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Destroyer dive — player goes silent and torpedoes destroyer within 200 ticks &amp;gt; finalState predicate</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Destroyer dive — player goes silent and torpedoes destroyer within 200 ticks &amp;gt; eventCounts[&amp;quot;combat_start&amp;quot;] exact 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Destroyer dive — player goes silent and torpedoes destroyer within 200 ticks &amp;gt; eventCounts[&amp;quot;combat_end&amp;quot;] exact 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Destroyer dive — player goes silent and torpedoes destroyer within 200 ticks &amp;gt; finalCombatResult === &amp;quot;player_win&amp;quot;</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Gunboat hunt — player closes and wins within 400 ticks &amp;gt; completed within 400 ticks (reached tick 90)</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Gunboat hunt — player closes and wins within 400 ticks &amp;gt; finalState predicate</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Gunboat hunt — player closes and wins within 400 ticks &amp;gt; eventCounts[&amp;quot;combat_start&amp;quot;] exact 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Gunboat hunt — player closes and wins within 400 ticks &amp;gt; eventCounts[&amp;quot;combat_end&amp;quot;] exact 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Gunboat hunt — player closes and wins within 400 ticks &amp;gt; eventCounts[&amp;quot;weapon_fired&amp;quot;] min 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Gunboat hunt — player closes and wins within 400 ticks &amp;gt; finalCombatResult === &amp;quot;player_win&amp;quot;</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Merchant hunt — approach at FULL_AHEAD and destroy &amp;gt; completed within 200 ticks (reached tick 190)</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Merchant hunt — approach at FULL_AHEAD and destroy &amp;gt; finalState predicate</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Merchant hunt — approach at FULL_AHEAD and destroy &amp;gt; eventCounts[&amp;quot;merchant_fled&amp;quot;] min 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Merchant hunt — approach at FULL_AHEAD and destroy &amp;gt; eventCounts[&amp;quot;combat_end&amp;quot;] exact 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Merchant hunt — approach at FULL_AHEAD and destroy &amp;gt; eventCounts[&amp;quot;range_change&amp;quot;] min 1</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Merchant hunt — approach at FULL_AHEAD and destroy &amp;gt; eventCounts[&amp;quot;weapon_fired&amp;quot;] min 3</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> tests/scenarios/scenario.test.ts &gt; Merchant hunt — approach at FULL_AHEAD and destroy &amp;gt; finalCombatResult === &amp;quot;player_win&amp;quot;</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/crew-assignment.test.ts &gt; setInitialState and engine basics &amp;gt; initial state: player at SURFACE, enemy at default x after startCombat</td>
+        <td class="num">7 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/crew-assignment.test.ts &gt; setInitialState and engine basics &amp;gt; startCombat emits combat_start on first tick</td>
+        <td class="num">3 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/crew-assignment.test.ts &gt; setInitialState and engine basics &amp;gt; run 300 ticks vs merchant — combat ends with player_win when firing deck gun</td>
+        <td class="num">3 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/crew-assignment.test.ts &gt; setInitialState and engine basics &amp;gt; setInitialState overrides enemy starting position before tick 1</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/crew-assignment.test.ts &gt; setInitialState and engine basics &amp;gt; setInitialState is a no-op after tick 1</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/crew-assignment.test.ts &gt; setInitialState and engine basics &amp;gt; setInitialState playerDepth overrides depth and y consistently</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/crew-assignment.test.ts &gt; setInitialState and engine basics &amp;gt; ScenarioInitial.enemyX affects combat via runScenario</td>
+        <td class="num">12 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-dive.test.ts &gt; destroyer dive scenario &amp;gt; initial state: player at SURFACE, enemy DESTROYER at default starting x</td>
+        <td class="num">4 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-dive.test.ts &gt; destroyer dive scenario &amp;gt; SET_DEPTH command updates depthTarget immediately</td>
+        <td class="num">3 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-dive.test.ts &gt; destroyer dive scenario &amp;gt; depth transitions: player reaches PERISCOPE after enough ticks</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-dive.test.ts &gt; destroyer dive scenario &amp;gt; full playthrough: dive + DEAD_SLOW stealth + torpedo wins within 200 ticks</td>
+        <td class="num">3 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-pursuit.test.ts &gt; destroyer pursuit scenario &amp;gt; initial state: player at SURFACE, destroyer FULL_AHEAD CLOSE at LONG range</td>
+        <td class="num">5 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-pursuit.test.ts &gt; destroyer pursuit scenario &amp;gt; destroyer closes gap: enemy x decreases toward player over time</td>
+        <td class="num">4 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-pursuit.test.ts &gt; destroyer pursuit scenario &amp;gt; destroyer closes from LONG to SHORT within 60 ticks when player holds surface</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-pursuit.test.ts &gt; destroyer pursuit scenario &amp;gt; tickCombat: destroyer fires depth_charge when player is submerged and close</td>
+        <td class="num">4 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-pursuit.test.ts &gt; destroyer pursuit scenario &amp;gt; tickCombat: enemy speed config is absolute and independent of player speed config</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-pursuit.test.ts &gt; destroyer pursuit scenario &amp;gt; player win: dive silent and torpedo the destroyer within 400 ticks (seed 42)</td>
+        <td class="num">3 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-pursuit.test.ts &gt; destroyer pursuit scenario &amp;gt; position_report events emitted at configured interval</td>
+        <td class="num">3 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/destroyer-pursuit.test.ts &gt; destroyer pursuit scenario &amp;gt; range_change event emitted when destroyer closes from LONG to SHORT</td>
+        <td class="num">9 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/engine.test.ts &gt; SimEngine &amp;gt; starts at tick 0</td>
+        <td class="num">7 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/engine.test.ts &gt; SimEngine &amp;gt; increments tick on each call to tick()</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/engine.test.ts &gt; SimEngine &amp;gt; emits a hello event on tick 1</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/engine.test.ts &gt; SimEngine &amp;gt; does not emit additional hello events on subsequent ticks</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/engine.test.ts &gt; SimEngine &amp;gt; is deterministic: same seed produces same rngState after N ticks</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/engine.test.ts &gt; SimEngine &amp;gt; different seeds produce different rngState</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/engine.test.ts &gt; SimEngine &amp;gt; getState returns a copy — mutating it does not affect engine</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/gunboat-hunt.test.ts &gt; gunboat hunt scenario &amp;gt; initial state: player at SURFACE, gunboat FULL_AHEAD CLOSE at LONG range</td>
+        <td class="num">7 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/gunboat-hunt.test.ts &gt; gunboat hunt scenario &amp;gt; gunboat does not detect sub at PERISCOPE (visual-only gunboat, submerged target)</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/gunboat-hunt.test.ts &gt; gunboat hunt scenario &amp;gt; gunboat detects SURFACE sub at MEDIUM range</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/gunboat-hunt.test.ts &gt; gunboat hunt scenario &amp;gt; escape: result = escaped after player at DEEP DEAD_SLOW with no contact</td>
+        <td class="num">4 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/gunboat-hunt.test.ts &gt; gunboat hunt scenario &amp;gt; player win: close then dive to fire torpedoes at gunboat within 400 ticks</td>
+        <td class="num">4 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/gunboat-hunt.test.ts &gt; gunboat hunt scenario &amp;gt; range_change event emitted when gunboat closes from LONG to SHORT</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/sim.test.ts &gt; determinism &amp;gt; same seed produces identical tick-by-tick state</td>
+        <td class="num">9 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/sim.test.ts &gt; determinism &amp;gt; different seeds diverge by tick 10 (probabilistic)</td>
+        <td class="num">3 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/sim.test.ts &gt; tick counter &amp;gt; starts at 0 before any tick</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/sim.test.ts &gt; tick counter &amp;gt; increments by 1 per tick call</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/sim.test.ts &gt; hello event &amp;gt; emits exactly one hello event at tick 1</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/sim.test.ts &gt; hello event &amp;gt; does not emit hello event before tick 1</td>
+        <td class="num">4 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/sim.test.ts &gt; hello event &amp;gt; does not emit a second hello event on tick 2</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/sim.test.ts &gt; event log is append-only &amp;gt; events from tick N are still present at tick N+1</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/sim.test.ts &gt; event log is append-only &amp;gt; running N ticks produces a monotonically growing log</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/__tests__/sim.test.ts &gt; getState() returns a snapshot &amp;gt; mutating the returned snapshot does not corrupt engine state</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/detection.test.ts &gt; computeVisibility &amp;gt; returns NONE when observer has no detection methods</td>
+        <td class="num">5 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/detection.test.ts &gt; computeVisibility &amp;gt; NONE for destroyer passive sonar at DEAD_SLOW DEEP at LONG</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/detection.test.ts &gt; computeVisibility &amp;gt; LOCKED_ON for destroyer visual at FLANK+SURFACE at CONTACT_RANGE</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/detection.test.ts &gt; computeVisibility &amp;gt; takes max across detection methods</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/detection.test.ts &gt; computeVisibility &amp;gt; returns NONE for destroyer sonar at depth ABYSSAL (observer)</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; euclideanDistance &amp;gt; returns 0 for zero deltas</td>
+        <td class="num">2 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; euclideanDistance &amp;gt; returns correct distance for 3-4-5 triangle</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; euclideanDistance &amp;gt; returns dx for dy=0</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; toRangeBand &amp;gt; CONTACT_RANGE for distance 0</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; toRangeBand &amp;gt; CONTACT_RANGE for distance just under BAND_SIZE</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; toRangeBand &amp;gt; SHORT for distance equal to BAND_SIZE</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; toRangeBand &amp;gt; MEDIUM for distance 2*BAND_SIZE</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; toRangeBand &amp;gt; LONG for distance 3*BAND_SIZE</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; toRangeBand &amp;gt; EXTREME for distance 4*BAND_SIZE</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; toRangeBand &amp;gt; clamps to EXTREME for very large distance</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; toDepthBand &amp;gt; SURFACE for y=0</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; toDepthBand &amp;gt; PERISCOPE for y=BAND_SIZE</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; toDepthBand &amp;gt; ABYSSAL for y=4*BAND_SIZE</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; toDepthBand &amp;gt; clamps to ABYSSAL for very large y</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; depthOffsetBand &amp;gt; returns 0 for offset 0</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; depthOffsetBand &amp;gt; returns 0 for offset just under BAND_SIZE</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; depthOffsetBand &amp;gt; returns 1 for offset equal to BAND_SIZE</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; depthOffsetBand &amp;gt; works with negative values (uses abs)</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/geometry.test.ts &gt; depthOffsetBand &amp;gt; clamps to 4 for large offsets</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/weapons.test.ts &gt; resolveWeaponFire &amp;gt; returns fired=false when visibility is NONE</td>
+        <td class="num">6 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/weapons.test.ts &gt; resolveWeaponFire &amp;gt; returns fired=false when hitRate is 0 (out of range)</td>
+        <td class="num">1 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/weapons.test.ts &gt; resolveWeaponFire &amp;gt; fires when visibility &amp;gt; NONE and hitRate &amp;gt; 0</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/weapons.test.ts &gt; resolveWeaponFire &amp;gt; damage matches config matrix when fired and hit</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+
+      <tr class="">
+        <td><span class="icon pass">+</span> src/sim/combat/__tests__/weapons.test.ts &gt; resolveWeaponFire &amp;gt; returns fired=false for unknown weapon id</td>
+        <td class="num">0 ms</td>
+        <td></td>
+      </tr>
+  </tbody>
+</table>
+
+<h2>Scenarios</h2>
+<table>
+  <thead>
+    <tr><th>Scenario</th><th class="num">Duration / Ticks</th><th class="replay-cell">Replay</th></tr>
+  </thead>
+  <tbody>
+    
+      <tr class="">
+        <td>
+          <span class="icon pass">+</span> <strong>hello-world</strong>
+          <span class="scenario-title">Smoke — runner emits hello on tick 1, 10-tick passive run</span>
+          
+        </td>
+        <td class="num">3 ms &middot; 10 ticks</td>
+        <td class="replay-cell"><a class="replay-link" href="../qa/?scenario=hello-world">Replay</a></td>
+      </tr>
+
+      <tr class="">
+        <td>
+          <span class="icon pass">+</span> <strong>surface-battle</strong>
+          <span class="scenario-title">Surface battle — merchant destroyed before tick 200</span>
+          
+        </td>
+        <td class="num">3 ms &middot; 190 ticks</td>
+        <td class="replay-cell"><a class="replay-link" href="../qa/?scenario=surface-battle">Replay</a></td>
+      </tr>
+
+      <tr class="">
+        <td>
+          <span class="icon pass">+</span> <strong>destroyer-battle</strong>
+          <span class="scenario-title">Destroyer closes from LONG to SHORT within 60 ticks (player holds surface)</span>
+          
+        </td>
+        <td class="num">4 ms &middot; 60 ticks</td>
+        <td class="replay-cell"><a class="replay-link" href="../qa/?scenario=destroyer-battle">Replay</a></td>
+      </tr>
+
+      <tr class="">
+        <td>
+          <span class="icon pass">+</span> <strong>destroyer-dive</strong>
+          <span class="scenario-title">Destroyer dive — player goes silent and torpedoes destroyer within 200 ticks</span>
+          
+        </td>
+        <td class="num">1 ms &middot; 103 ticks</td>
+        <td class="replay-cell"><a class="replay-link" href="../qa/?scenario=destroyer-dive">Replay</a></td>
+      </tr>
+
+      <tr class="">
+        <td>
+          <span class="icon pass">+</span> <strong>gunboat-hunt</strong>
+          <span class="scenario-title">Gunboat hunt — player closes and wins within 400 ticks</span>
+          
+        </td>
+        <td class="num">1 ms &middot; 90 ticks</td>
+        <td class="replay-cell"><a class="replay-link" href="../qa/?scenario=gunboat-hunt">Replay</a></td>
+      </tr>
+
+      <tr class="">
+        <td>
+          <span class="icon pass">+</span> <strong>merchant-hunt</strong>
+          <span class="scenario-title">Merchant hunt — approach at FULL_AHEAD and destroy</span>
+          
+        </td>
+        <td class="num">1 ms &middot; 190 ticks</td>
+        <td class="replay-cell"><a class="replay-link" href="../qa/?scenario=merchant-hunt">Replay</a></td>
+      </tr>
+  </tbody>
+</table>
+
+</body>
+</html>
