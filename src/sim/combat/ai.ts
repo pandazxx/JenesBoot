@@ -25,19 +25,17 @@ export const MERCHANT_RANGE_TICKS_PER_BAND = 20;
 export const DESTROYER_RANGE_TICKS_PER_BAND = 10;
 
 /**
- * Merchant AI — 3 rules evaluated in priority order.
- * Flees when hull is below half.
+ * Merchant AI — 2 rules evaluated in priority order.
+ *
+ * Merchants carry no weapons in MVP. Once the merchant spots the player
+ * (hasSpotted flag committed in CombatState), it flees immediately and
+ * never stops — even if it briefly loses visual contact.
+ *
+ * Rule 1: Has spotted player → AHEAD_FULL OPEN (flee, committed).
+ * Rule 2: Otherwise → STANDARD HOLD (drifting).
  */
-export function merchantAi(
-  enemy: ShipState,
-  range: RangeBand,
-  initialMaxHullHP: number,
-): AiCommand {
-  if (range <= RangeBand.SHORT && enemy.deckGunCooldown === 0) {
-    return { type: "FIRE_DECK_GUN" };
-  }
-
-  if (enemy.hullHP < initialMaxHullHP * 0.5) {
+export function merchantAi(hasSpotted: boolean): AiCommand {
+  if (hasSpotted) {
     return {
       type: "SET_SPEED",
       speed: SpeedSetting.AHEAD_FULL,

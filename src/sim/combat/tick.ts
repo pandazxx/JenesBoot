@@ -201,6 +201,13 @@ export function tickCombat(
           playerY: Math.round(s.player.y),
         },
       });
+      if (s.scenario === "surface_battle" && !s.merchantHasSpotted) {
+        s.merchantHasSpotted = true;
+        events.push({
+          type: "merchant_fled",
+          payload: { range: s.range, atTick: currentTick },
+        });
+      }
     }
   } else {
     s.enemyTracking = false;
@@ -238,7 +245,7 @@ export function tickCombat(
       s.enemyBlindShotsFired,
     );
   } else {
-    enemyCmd = merchantAi(s.enemy, s.range, s.enemy.maxHullHP);
+    enemyCmd = merchantAi(s.merchantHasSpotted);
   }
 
   if (enemyCmd.type === "SET_SPEED") {
@@ -670,6 +677,9 @@ export function buildSurfaceBattleState(config: SimConfig = defaultSimConfig()):
     acousticSigOverride: 0,
     evasion: 5,
     detectionMethods: [DetectionMethod.VISUAL],
+    // Merchant flees slower than the player (§5.1: 1 band per 20 ticks vs player's 10).
+    // aheadFullSpeed fixes the merchant speed independent of player xSpeed config tuning.
+    aheadFullSpeed: config.merchantSpeed,
   };
 
   const crew: CrewMember[] = [{ id: "mate", name: "Mate", roomId: "bridge" }];
@@ -698,6 +708,7 @@ export function buildSurfaceBattleState(config: SimConfig = defaultSimConfig()):
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
+    merchantHasSpotted: false,
   };
 }
 
@@ -773,6 +784,7 @@ export function buildDestroyerDiveState(config: SimConfig = defaultSimConfig()):
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
+    merchantHasSpotted: false,
   };
 }
 
@@ -848,6 +860,7 @@ export function buildGunboatHuntState(config: SimConfig = defaultSimConfig()): C
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
+    merchantHasSpotted: false,
   };
 }
 
@@ -923,6 +936,7 @@ export function buildDestroyerBattleState(config: SimConfig = defaultSimConfig()
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
+    merchantHasSpotted: false,
   };
 }
 
@@ -999,5 +1013,6 @@ export function buildSubmergedAmbushState(config: SimConfig = defaultSimConfig()
     escapeAccumulator: 0,
     enemyRecentlyHitTicks: 0,
     oxygenDepletedTicks: 0,
+    merchantHasSpotted: false,
   };
 }
