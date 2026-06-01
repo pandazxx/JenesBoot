@@ -164,7 +164,10 @@ async function renderViewer(scenario: Scenario, pauseAt: number | null): Promise
   const scenarioCompleteEl = document.getElementById("scenario-complete");
   const logEntries = document.getElementById("log-entries");
 
-  let playing = pauseAt === null;
+  // Always start paused — combat resolves in a few seconds at 1x speed, so
+  // auto-playing on load means the scenario ends before the viewer can observe.
+  // The user clicks Play to start; ?pauseAt= still fast-forwards to that tick first.
+  let playing = false;
   let complete = false;
   let elapsed = 0;
   let timeSinceLastTick = 0;
