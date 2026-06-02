@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="113" failures="0" errors="0" time="0.230853019">
+    <testsuite name="tests/scenarios/battle.scenario.ts" timestamp="2026-06-02T13:02:24.025Z" hostname="runnervm3jyl0" tests="9" failures="0" errors="0" skipped="0" time="0.010399067">
+        <testcase classname="tests/scenarios/battle.scenario.ts" name="battle scenario — destroyer, seed 42, 300 ticks &gt; headless binary must be present" time="0.003706984">
+        </testcase>
+        <testcase classname="tests/scenarios/battle.scenario.ts" name="battle scenario — destroyer, seed 42, 300 ticks &gt; exits with code 0" time="0.000400562">
+        </testcase>
+        <testcase classname="tests/scenarios/battle.scenario.ts" name="battle scenario — destroyer, seed 42, 300 ticks &gt; stdout is valid JSON" time="0.000169355">
+        </testcase>
+        <testcase classname="tests/scenarios/battle.scenario.ts" name="battle scenario — destroyer, seed 42, 300 ticks &gt; ticks field equals requested ticks" time="0.000142123">
+        </testcase>
+        <testcase classname="tests/scenarios/battle.scenario.ts" name="battle scenario — destroyer, seed 42, 300 ticks &gt; log contains at least one range_change event" time="0.000251738">
+        </testcase>
+        <testcase classname="tests/scenarios/battle.scenario.ts" name="battle scenario — destroyer, seed 42, 300 ticks &gt; log contains a combat_start event" time="0.000190817">
+        </testcase>
+        <testcase classname="tests/scenarios/battle.scenario.ts" name="battle scenario — destroyer, seed 42, 300 ticks &gt; log contains a combat_end event within 300 ticks" time="0.00017262">
+        </testcase>
+        <testcase classname="tests/scenarios/battle.scenario.ts" name="battle scenario — destroyer, seed 42, 300 ticks &gt; determinism: two runs with seed 42 produce identical log lengths" time="0.000118298">
+        </testcase>
+        <testcase classname="tests/scenarios/battle.scenario.ts" name="battle scenario — destroyer, seed 42, 300 ticks &gt; determinism: two runs with seed 42 produce identical rngState" time="0.000407854">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/scenarios/scenario.test.ts" timestamp="2026-06-02T13:02:24.041Z" hostname="runnervm3jyl0" tests="33" failures="0" errors="0" skipped="0" time="0.015706779">
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Smoke — runner emits hello on tick 1, 10-tick passive run &gt; completed within 10 ticks (reached tick 10)" time="0.006637931">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Smoke — runner emits hello on tick 1, 10-tick passive run &gt; hello event emitted at tick 1" time="0.000723488">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Smoke — runner emits hello on tick 1, 10-tick passive run &gt; finalState predicate" time="0.000190827">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Smoke — runner emits hello on tick 1, 10-tick passive run &gt; eventCounts[&quot;hello&quot;] exact 1" time="0.000161953">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Surface battle — merchant destroyed before tick 200 &gt; completed within 200 ticks (reached tick 190)" time="0.000220351">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Surface battle — merchant destroyed before tick 200 &gt; finalState predicate" time="0.000215284">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Surface battle — merchant destroyed before tick 200 &gt; eventCounts[&quot;combat_start&quot;] min 1" time="0.000294613">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Surface battle — merchant destroyed before tick 200 &gt; eventCounts[&quot;range_change&quot;] min 1" time="0.000149505">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Surface battle — merchant destroyed before tick 200 &gt; eventCounts[&quot;weapon_fired&quot;] min 1" time="0.000368284">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Surface battle — merchant destroyed before tick 200 &gt; eventCounts[&quot;combat_end&quot;] exact 1" time="0.000228194">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Surface battle — merchant destroyed before tick 200 &gt; finalCombatResult === &quot;player_win&quot;" time="0.000202585">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Destroyer closes from LONG to SHORT within 60 ticks (player holds surface) &gt; completed within 60 ticks (reached tick 60)" time="0.000113581">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Destroyer closes from LONG to SHORT within 60 ticks (player holds surface) &gt; finalState predicate" time="0.000211007">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Destroyer closes from LONG to SHORT within 60 ticks (player holds surface) &gt; eventCounts[&quot;combat_start&quot;] exact 1" time="0.000104828">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Destroyer closes from LONG to SHORT within 60 ticks (player holds surface) &gt; eventCounts[&quot;range_change&quot;] min 1" time="0.000083125">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Destroyer dive — player goes silent and torpedoes destroyer within 200 ticks &gt; completed within 200 ticks (reached tick 103)" time="0.000148723">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Destroyer dive — player goes silent and torpedoes destroyer within 200 ticks &gt; finalState predicate" time="0.000135393">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Destroyer dive — player goes silent and torpedoes destroyer within 200 ticks &gt; eventCounts[&quot;combat_start&quot;] exact 1" time="0.000109324">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Destroyer dive — player goes silent and torpedoes destroyer within 200 ticks &gt; eventCounts[&quot;combat_end&quot;] exact 1" time="0.000121663">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Destroyer dive — player goes silent and torpedoes destroyer within 200 ticks &gt; finalCombatResult === &quot;player_win&quot;" time="0.000114031">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Gunboat hunt — player closes and wins within 400 ticks &gt; completed within 400 ticks (reached tick 90)" time="0.000185298">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Gunboat hunt — player closes and wins within 400 ticks &gt; finalState predicate" time="0.000121673">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Gunboat hunt — player closes and wins within 400 ticks &gt; eventCounts[&quot;combat_start&quot;] exact 1" time="0.000124227">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Gunboat hunt — player closes and wins within 400 ticks &gt; eventCounts[&quot;combat_end&quot;] exact 1" time="0.000136235">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Gunboat hunt — player closes and wins within 400 ticks &gt; eventCounts[&quot;weapon_fired&quot;] min 1" time="0.00009974">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Gunboat hunt — player closes and wins within 400 ticks &gt; finalCombatResult === &quot;player_win&quot;" time="0.000118278">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Merchant hunt — approach at FULL_AHEAD and destroy &gt; completed within 200 ticks (reached tick 190)" time="0.000177797">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Merchant hunt — approach at FULL_AHEAD and destroy &gt; finalState predicate" time="0.000131338">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Merchant hunt — approach at FULL_AHEAD and destroy &gt; eventCounts[&quot;merchant_fled&quot;] min 1" time="0.000140321">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Merchant hunt — approach at FULL_AHEAD and destroy &gt; eventCounts[&quot;combat_end&quot;] exact 1" time="0.000118267">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Merchant hunt — approach at FULL_AHEAD and destroy &gt; eventCounts[&quot;range_change&quot;] min 1" time="0.000105819">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Merchant hunt — approach at FULL_AHEAD and destroy &gt; eventCounts[&quot;weapon_fired&quot;] min 3" time="0.000089364">
+        </testcase>
+        <testcase classname="tests/scenarios/scenario.test.ts" name="Merchant hunt — approach at FULL_AHEAD and destroy &gt; finalCombatResult === &quot;player_win&quot;" time="0.000087993">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/sim/__tests__/crew-assignment.test.ts" timestamp="2026-06-02T13:02:24.056Z" hostname="runnervm3jyl0" tests="7" failures="0" errors="0" skipped="0" time="0.04235283">
+        <testcase classname="src/sim/__tests__/crew-assignment.test.ts" name="setInitialState and engine basics &gt; initial state: player at SURFACE, enemy at default x after startCombat" time="0.004480257">
+        </testcase>
+        <testcase classname="src/sim/__tests__/crew-assignment.test.ts" name="setInitialState and engine basics &gt; startCombat emits combat_start on first tick" time="0.002397495">
+        </testcase>
+        <testcase classname="src/sim/__tests__/crew-assignment.test.ts" name="setInitialState and engine basics &gt; run 300 ticks vs merchant — combat ends with player_win when firing deck gun" time="0.002783075">
+        </testcase>
+        <testcase classname="src/sim/__tests__/crew-assignment.test.ts" name="setInitialState and engine basics &gt; setInitialState overrides enemy starting position before tick 1" time="0.000883569">
+        </testcase>
+        <testcase classname="src/sim/__tests__/crew-assignment.test.ts" name="setInitialState and engine basics &gt; setInitialState is a no-op after tick 1" time="0.000788506">
+        </testcase>
+        <testcase classname="src/sim/__tests__/crew-assignment.test.ts" name="setInitialState and engine basics &gt; setInitialState playerDepth overrides depth and y consistently" time="0.000853684">
+        </testcase>
+        <testcase classname="src/sim/__tests__/crew-assignment.test.ts" name="setInitialState and engine basics &gt; ScenarioInitial.enemyX affects combat via runScenario" time="0.028555333">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/sim/__tests__/destroyer-dive.test.ts" timestamp="2026-06-02T13:02:24.059Z" hostname="runnervm3jyl0" tests="4" failures="0" errors="0" skipped="0" time="0.025717492">
+        <testcase classname="src/sim/__tests__/destroyer-dive.test.ts" name="destroyer dive scenario &gt; initial state: player at SURFACE, enemy DESTROYER at default starting x" time="0.016453812">
+        </testcase>
+        <testcase classname="src/sim/__tests__/destroyer-dive.test.ts" name="destroyer dive scenario &gt; SET_DEPTH command updates depthTarget immediately" time="0.002695433">
+        </testcase>
+        <testcase classname="src/sim/__tests__/destroyer-dive.test.ts" name="destroyer dive scenario &gt; depth transitions: player reaches PERISCOPE after enough ticks" time="0.002193729">
+        </testcase>
+        <testcase classname="src/sim/__tests__/destroyer-dive.test.ts" name="destroyer dive scenario &gt; full playthrough: dive + DEAD_SLOW stealth + torpedo wins within 200 ticks" time="0.00304524">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/sim/__tests__/destroyer-pursuit.test.ts" timestamp="2026-06-02T13:02:24.062Z" hostname="runnervm3jyl0" tests="8" failures="0" errors="0" skipped="0" time="0.031365274">
+        <testcase classname="src/sim/__tests__/destroyer-pursuit.test.ts" name="destroyer pursuit scenario &gt; initial state: player at SURFACE, destroyer FULL_AHEAD CLOSE at LONG range" time="0.004579856">
+        </testcase>
+        <testcase classname="src/sim/__tests__/destroyer-pursuit.test.ts" name="destroyer pursuit scenario &gt; destroyer closes gap: enemy x decreases toward player over time" time="0.003290779">
+        </testcase>
+        <testcase classname="src/sim/__tests__/destroyer-pursuit.test.ts" name="destroyer pursuit scenario &gt; destroyer closes from LONG to SHORT within 60 ticks when player holds surface" time="0.001893297">
+        </testcase>
+        <testcase classname="src/sim/__tests__/destroyer-pursuit.test.ts" name="destroyer pursuit scenario &gt; tickCombat: destroyer fires depth_charge when player is submerged and close" time="0.002508842">
+        </testcase>
+        <testcase classname="src/sim/__tests__/destroyer-pursuit.test.ts" name="destroyer pursuit scenario &gt; tickCombat: enemy speed config is absolute and independent of player speed config" time="0.001277782">
+        </testcase>
+        <testcase classname="src/sim/__tests__/destroyer-pursuit.test.ts" name="destroyer pursuit scenario &gt; player win: dive silent and torpedo the destroyer within 400 ticks (seed 42)" time="0.004064952">
+        </testcase>
+        <testcase classname="src/sim/__tests__/destroyer-pursuit.test.ts" name="destroyer pursuit scenario &gt; position_report events emitted at configured interval" time="0.003070307">
+        </testcase>
+        <testcase classname="src/sim/__tests__/destroyer-pursuit.test.ts" name="destroyer pursuit scenario &gt; range_change event emitted when destroyer closes from LONG to SHORT" time="0.004097171">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/sim/__tests__/engine.test.ts" timestamp="2026-06-02T13:02:24.066Z" hostname="runnervm3jyl0" tests="7" failures="0" errors="0" skipped="0" time="0.015170943">
+        <testcase classname="src/sim/__tests__/engine.test.ts" name="SimEngine &gt; starts at tick 0" time="0.003146602">
+        </testcase>
+        <testcase classname="src/sim/__tests__/engine.test.ts" name="SimEngine &gt; increments tick on each call to tick()" time="0.001128517">
+        </testcase>
+        <testcase classname="src/sim/__tests__/engine.test.ts" name="SimEngine &gt; emits a hello event on tick 1" time="0.002418316">
+        </testcase>
+        <testcase classname="src/sim/__tests__/engine.test.ts" name="SimEngine &gt; does not emit additional hello events on subsequent ticks" time="0.001118472">
+        </testcase>
+        <testcase classname="src/sim/__tests__/engine.test.ts" name="SimEngine &gt; is deterministic: same seed produces same rngState after N ticks" time="0.002758418">
+        </testcase>
+        <testcase classname="src/sim/__tests__/engine.test.ts" name="SimEngine &gt; different seeds produce different rngState" time="0.002125626">
+        </testcase>
+        <testcase classname="src/sim/__tests__/engine.test.ts" name="SimEngine &gt; getState returns a copy — mutating it does not affect engine" time="0.00096474">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/sim/__tests__/gunboat-hunt.test.ts" timestamp="2026-06-02T13:02:24.072Z" hostname="runnervm3jyl0" tests="6" failures="0" errors="0" skipped="0" time="0.027767584">
+        <testcase classname="src/sim/__tests__/gunboat-hunt.test.ts" name="gunboat hunt scenario &gt; initial state: player at SURFACE, gunboat FULL_AHEAD CLOSE at LONG range" time="0.00851268">
+        </testcase>
+        <testcase classname="src/sim/__tests__/gunboat-hunt.test.ts" name="gunboat hunt scenario &gt; gunboat does not detect sub at PERISCOPE (visual-only gunboat, submerged target)" time="0.001489399">
+        </testcase>
+        <testcase classname="src/sim/__tests__/gunboat-hunt.test.ts" name="gunboat hunt scenario &gt; gunboat detects SURFACE sub at MEDIUM range" time="0.001079103">
+        </testcase>
+        <testcase classname="src/sim/__tests__/gunboat-hunt.test.ts" name="gunboat hunt scenario &gt; escape: result = escaped after player at DEEP DEAD_SLOW with no contact" time="0.003502166">
+        </testcase>
+        <testcase classname="src/sim/__tests__/gunboat-hunt.test.ts" name="gunboat hunt scenario &gt; player win: close then dive to fire torpedoes at gunboat within 400 ticks" time="0.004252314">
+        </testcase>
+        <testcase classname="src/sim/__tests__/gunboat-hunt.test.ts" name="gunboat hunt scenario &gt; range_change event emitted when gunboat closes from LONG to SHORT" time="0.002083032">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/sim/__tests__/sim.test.ts" timestamp="2026-06-02T13:02:24.076Z" hostname="runnervm3jyl0" tests="10" failures="0" errors="0" skipped="0" time="0.032289754">
+        <testcase classname="src/sim/__tests__/sim.test.ts" name="determinism &gt; same seed produces identical tick-by-tick state" time="0.00880493">
+        </testcase>
+        <testcase classname="src/sim/__tests__/sim.test.ts" name="determinism &gt; different seeds diverge by tick 10 (probabilistic)" time="0.002813921">
+            <system-err>
+[sim.test] WARN: seeds 1 and 999 produced identical logs at tick 10 — acceptable only while sim has no RNG-driven events beyond &apos;hello&apos;. Tighten this assertion once RNG events exist.
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/sim/__tests__/sim.test.ts" name="tick counter &gt; starts at 0 before any tick" time="0.000781325">
+        </testcase>
+        <testcase classname="src/sim/__tests__/sim.test.ts" name="tick counter &gt; increments by 1 per tick call" time="0.001067425">
+        </testcase>
+        <testcase classname="src/sim/__tests__/sim.test.ts" name="hello event &gt; emits exactly one hello event at tick 1" time="0.001937463">
+        </testcase>
+        <testcase classname="src/sim/__tests__/sim.test.ts" name="hello event &gt; does not emit hello event before tick 1" time="0.006315226">
+        </testcase>
+        <testcase classname="src/sim/__tests__/sim.test.ts" name="hello event &gt; does not emit a second hello event on tick 2" time="0.001390491">
+        </testcase>
+        <testcase classname="src/sim/__tests__/sim.test.ts" name="event log is append-only &gt; events from tick N are still present at tick N+1" time="0.0025138">
+        </testcase>
+        <testcase classname="src/sim/__tests__/sim.test.ts" name="event log is append-only &gt; running N ticks produces a monotonically growing log" time="0.003046641">
+        </testcase>
+        <testcase classname="src/sim/__tests__/sim.test.ts" name="getState() returns a snapshot &gt; mutating the returned snapshot does not corrupt engine state" time="0.001052563">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/sim/combat/__tests__/detection.test.ts" timestamp="2026-06-02T13:02:24.079Z" hostname="runnervm3jyl0" tests="5" failures="0" errors="0" skipped="0" time="0.005508754">
+        <testcase classname="src/sim/combat/__tests__/detection.test.ts" name="computeVisibility &gt; returns NONE when observer has no detection methods" time="0.002072507">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/detection.test.ts" name="computeVisibility &gt; NONE for destroyer passive sonar at DEAD_SLOW DEEP at LONG" time="0.0003996">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/detection.test.ts" name="computeVisibility &gt; LOCKED_ON for destroyer visual at FLANK+SURFACE at CONTACT_RANGE" time="0.000235383">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/detection.test.ts" name="computeVisibility &gt; takes max across detection methods" time="0.000277357">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/detection.test.ts" name="computeVisibility &gt; returns NONE for destroyer sonar at depth ABYSSAL (observer)" time="0.00029913">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/sim/combat/__tests__/geometry.test.ts" timestamp="2026-06-02T13:02:24.080Z" hostname="runnervm3jyl0" tests="19" failures="0" errors="0" skipped="0" time="0.020251932">
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="euclideanDistance &gt; returns 0 for zero deltas" time="0.001681118">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="euclideanDistance &gt; returns correct distance for 3-4-5 triangle" time="0.003906123">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="euclideanDistance &gt; returns dx for dy=0" time="0.000209916">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="toRangeBand &gt; CONTACT_RANGE for distance 0" time="0.000317347">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="toRangeBand &gt; CONTACT_RANGE for distance just under BAND_SIZE" time="0.000375675">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="toRangeBand &gt; SHORT for distance equal to BAND_SIZE" time="0.000224718">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="toRangeBand &gt; MEDIUM for distance 2*BAND_SIZE" time="0.000184998">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="toRangeBand &gt; LONG for distance 3*BAND_SIZE" time="0.000154292">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="toRangeBand &gt; EXTREME for distance 4*BAND_SIZE" time="0.000366632">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="toRangeBand &gt; clamps to EXTREME for very large distance" time="0.00018648">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="toDepthBand &gt; SURFACE for y=0" time="0.000167733">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="toDepthBand &gt; PERISCOPE for y=BAND_SIZE" time="0.000102324">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="toDepthBand &gt; ABYSSAL for y=4*BAND_SIZE" time="0.000235594">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="toDepthBand &gt; clamps to ABYSSAL for very large y" time="0.000117377">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="depthOffsetBand &gt; returns 0 for offset 0" time="0.000124087">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="depthOffsetBand &gt; returns 0 for offset just under BAND_SIZE" time="0.000138529">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="depthOffsetBand &gt; returns 1 for offset equal to BAND_SIZE" time="0.00008631">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="depthOffsetBand &gt; works with negative values (uses abs)" time="0.00007998">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/geometry.test.ts" name="depthOffsetBand &gt; clamps to 4 for large offsets" time="0.000120211">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/sim/combat/__tests__/weapons.test.ts" timestamp="2026-06-02T13:02:24.088Z" hostname="runnervm3jyl0" tests="5" failures="0" errors="0" skipped="0" time="0.00432261">
+        <testcase classname="src/sim/combat/__tests__/weapons.test.ts" name="resolveWeaponFire &gt; returns fired=false when visibility is NONE" time="0.001798555">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/weapons.test.ts" name="resolveWeaponFire &gt; returns fired=false when hitRate is 0 (out of range)" time="0.000367222">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/weapons.test.ts" name="resolveWeaponFire &gt; fires when visibility &gt; NONE and hitRate &gt; 0" time="0.000262394">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/weapons.test.ts" name="resolveWeaponFire &gt; damage matches config matrix when fired and hit" time="0.000263966">
+        </testcase>
+        <testcase classname="src/sim/combat/__tests__/weapons.test.ts" name="resolveWeaponFire &gt; returns fired=false for unknown weapon id" time="0.000188854">
+        </testcase>
+    </testsuite>
+</testsuites>
