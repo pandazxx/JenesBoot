@@ -1,4 +1,4 @@
-import { DepthBand, VisibilityLevel } from "./enums.js";
+import { DepthBand, VisibilityLevel, VesselType } from "./enums.js";
 import {
   euclideanDistance,
   toRangeBand,
@@ -21,12 +21,10 @@ export function tickCombat(
   playerCmd: PlayerCommand | null | undefined,
   config: CombatConfig,
 ): { newState: CombatState; events: CombatEvent[] } {
-  // Step 1: bail early if combat is over
   if (state.result !== "ongoing") {
     return { newState: cloneState(state), events: [] };
   }
 
-  // Step 2: clone state, initialize events
   const s = cloneState(state);
   const events: CombatEvent[] = [];
 
@@ -101,6 +99,38 @@ export function tickCombat(
     s.prevEnemyVisibility = enemyVis;
   }
 
+  // Track enemy_spotted / enemy_contact_lost via visibility transitions
+  if (enemyVis > VisibilityLevel.NONE && state.prevEnemyVisibility === VisibilityLevel.NONE) {
+    events.push({
+      type: "enemy_spotted",
+      payload: {
+        rangeBand,
+        playerDepth: s.player.depth,
+        playerX: Math.round(s.player.x),
+        playerY: Math.round(s.player.y),
+      },
+    });
+  }
+  if (enemyVis === VisibilityLevel.NONE && state.prevEnemyVisibility > VisibilityLevel.NONE) {
+    events.push({
+      type: "enemy_contact_lost",
+      payload: { atTick: currentTick },
+    });
+  }
+
+  // Merchant committed-flight flag: once spotted, never un-spots.
+  if (
+    s.enemyType === VesselType.MERCHANT &&
+    !s.merchantHasSpotted &&
+    enemyVis > VisibilityLevel.NONE
+  ) {
+    s.merchantHasSpotted = true;
+    events.push({
+      type: "merchant_fled",
+      payload: { rangeBand, atTick: currentTick },
+    });
+  }
+
   // Step 7: apply player command
   let playerFireWeaponId: string | null = null;
   if (playerCmd != null) {
@@ -115,7 +145,7 @@ export function tickCombat(
     }
   }
 
-  // Step 8: enemy AI
+  // Step 8: enemy AI — pass merchantHasSpotted so the committed-flight flag is honoured
   const aiCommands = tickEnemyAi(
     s.enemy,
     s.enemyAi,
@@ -124,6 +154,7 @@ export function tickCombat(
     rangeBand,
     depthOffset,
     config,
+    s.merchantHasSpotted,
   );
   const enemyFireWeaponIds: string[] = [];
 

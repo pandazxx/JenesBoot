@@ -59,6 +59,7 @@ export function buildInitialState(enemyType: VesselType, config: CombatConfig): 
     prevPlayerDepth: DepthBand.SURFACE,
     prevEnemyDepth: DepthBand.SURFACE,
     prevEnemyVisibility: VisibilityLevel.NONE,
+    merchantHasSpotted: false,
   };
 }
 

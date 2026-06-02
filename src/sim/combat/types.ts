@@ -51,6 +51,11 @@ export interface CombatState {
   prevPlayerDepth: DepthBand;
   prevEnemyDepth: DepthBand;
   prevEnemyVisibility: VisibilityLevel;
+  /**
+   * True once the merchant has spotted the player (visibility > NONE for the first time).
+   * Committed-flight flag: once set, the merchant flees even if it briefly loses contact.
+   */
+  merchantHasSpotted: boolean;
 }
 
 export type CombatEventType =
@@ -62,6 +67,9 @@ export type CombatEventType =
   | "weapon_hit"
   | "weapon_miss"
   | "combat_end"
+  | "enemy_spotted"
+  | "enemy_contact_lost"
+  | "merchant_fled"
   | "position_report";
 
 export interface CombatEvent {

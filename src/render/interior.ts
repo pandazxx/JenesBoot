@@ -101,6 +101,7 @@ function buildThreeButtons(
   btnH: number,
   labels: [string, string, string],
   onTap: (index: number) => void,
+  readOnly: boolean,
 ): TripleBtn[] {
   const totalW = PANEL_W - ROOM_MARGIN_X * 2;
   const btnW = Math.floor((totalW - DEPTH_BTN_GAP * 2) / 3);
@@ -117,13 +118,15 @@ function buildThreeButtons(
     labelText.y = btnY + Math.floor((btnH - 12) / 2);
     container.addChild(labelText);
 
-    const hitArea = new Graphics();
-    hitArea.rect(bx, btnY, btnW, btnH).fill({ color: 0xffffff, alpha: 0 });
-    hitArea.eventMode = "static";
-    hitArea.cursor = "pointer";
-    const idx = i;
-    hitArea.on("pointertap", () => onTap(idx));
-    container.addChild(hitArea);
+    if (!readOnly) {
+      const hitArea = new Graphics();
+      hitArea.rect(bx, btnY, btnW, btnH).fill({ color: 0xffffff, alpha: 0 });
+      hitArea.eventMode = "static";
+      hitArea.cursor = "pointer";
+      const idx = i;
+      hitArea.on("pointertap", () => onTap(idx));
+      container.addChild(hitArea);
+    }
 
     btns.push({ gfx, label: labelText, x: bx, w: btnW });
   }
@@ -134,7 +137,7 @@ function buildThreeButtons(
 export class InteriorView {
   readonly container: Container;
   private engine: ISimEngine;
-  private onCommand: (() => void) | undefined;
+  private readOnly: boolean;
 
   private hpBar: Graphics;
   private hpValue: Text;
@@ -155,9 +158,9 @@ export class InteriorView {
   private torpedoBtnGfx: Graphics;
   private torpedoBtnLabel: Text;
 
-  constructor(engine: ISimEngine, onPauseToggle: () => void, onCommand?: () => void) {
+  constructor(engine: ISimEngine, onPauseToggle: () => void, readOnly: boolean = false) {
     this.engine = engine;
-    this.onCommand = onCommand;
+    this.readOnly = readOnly;
     this.container = new Container();
 
     const bg = new Graphics();
@@ -170,7 +173,6 @@ export class InteriorView {
     header.y = 12;
     this.container.addChild(header);
 
-    // Room placeholder (no rooms in new system)
     const roomPlaceholder = new Graphics();
     roomPlaceholder
       .rect(ROOM_MARGIN_X, ROOM_Y, PANEL_W - ROOM_MARGIN_X * 2, 95)
@@ -243,6 +245,7 @@ export class InteriorView {
         const intent = this.engine.getState().combat?.player.horizontalIntent ?? 0;
         this.issue({ type: "SET_NAUTICAL_SPEED", speed, intent });
       },
+      readOnly,
     );
 
     // Direction control buttons
@@ -263,6 +266,7 @@ export class InteriorView {
           this.engine.getState().combat?.player.nauticalSpeed ?? NauticalSpeed.HALF_AHEAD;
         this.issue({ type: "SET_NAUTICAL_SPEED", speed, intent });
       },
+      readOnly,
     );
 
     // Pause button
@@ -281,14 +285,16 @@ export class InteriorView {
     this.pauseBtnLabel.y = PAUSE_BTN_Y + Math.floor((PAUSE_BTN_H - 12) / 2);
     this.container.addChild(this.pauseBtnLabel);
 
-    const pauseHitArea = new Graphics();
-    pauseHitArea
-      .rect(ROOM_MARGIN_X, PAUSE_BTN_Y, totalW, PAUSE_BTN_H)
-      .fill({ color: 0xffffff, alpha: 0 });
-    pauseHitArea.eventMode = "static";
-    pauseHitArea.cursor = "pointer";
-    pauseHitArea.on("pointertap", () => onPauseToggle());
-    this.container.addChild(pauseHitArea);
+    if (!readOnly) {
+      const pauseHitArea = new Graphics();
+      pauseHitArea
+        .rect(ROOM_MARGIN_X, PAUSE_BTN_Y, totalW, PAUSE_BTN_H)
+        .fill({ color: 0xffffff, alpha: 0 });
+      pauseHitArea.eventMode = "static";
+      pauseHitArea.cursor = "pointer";
+      pauseHitArea.on("pointertap", () => onPauseToggle());
+      this.container.addChild(pauseHitArea);
+    }
 
     // Depth selector
     const depthCtrlLabel = new Text({ text: "DIVE CTRL", style: makeLabelStyle() });
@@ -315,18 +321,20 @@ export class InteriorView {
       btnLabel.y = DEPTH_BTN_Y + Math.floor((DEPTH_BTN_H - 12) / 2);
       this.container.addChild(btnLabel);
 
-      const hitArea = new Graphics();
-      hitArea.rect(bx, DEPTH_BTN_Y, btnW, DEPTH_BTN_H).fill({ color: 0xffffff, alpha: 0 });
-      hitArea.eventMode = "static";
-      hitArea.cursor = "pointer";
-      hitArea.on("pointertap", () => {
-        this.issue({
-          type: "SET_DEPTH",
-          target: band,
-          diveSpeed: DiveSpeed.STANDARD,
+      if (!readOnly) {
+        const hitArea = new Graphics();
+        hitArea.rect(bx, DEPTH_BTN_Y, btnW, DEPTH_BTN_H).fill({ color: 0xffffff, alpha: 0 });
+        hitArea.eventMode = "static";
+        hitArea.cursor = "pointer";
+        hitArea.on("pointertap", () => {
+          this.issue({
+            type: "SET_DEPTH",
+            target: band,
+            diveSpeed: DiveSpeed.STANDARD,
+          });
         });
-      });
-      this.container.addChild(hitArea);
+        this.container.addChild(hitArea);
+      }
 
       this.depthBtns.push({ gfx, x: bx, w: btnW, band });
     }
@@ -351,16 +359,18 @@ export class InteriorView {
     this.deckGunBtnLabel.y = WEAPON_BTN_Y + Math.floor((WEAPON_BTN_H - 12) / 2);
     this.container.addChild(this.deckGunBtnLabel);
 
-    const deckGunHit = new Graphics();
-    deckGunHit
-      .rect(deckGunX, WEAPON_BTN_Y, weaponBtnW, WEAPON_BTN_H)
-      .fill({ color: 0xffffff, alpha: 0 });
-    deckGunHit.eventMode = "static";
-    deckGunHit.cursor = "pointer";
-    deckGunHit.on("pointertap", () => {
-      this.issue({ type: "FIRE_WEAPON", weaponId: "deck_gun" });
-    });
-    this.container.addChild(deckGunHit);
+    if (!readOnly) {
+      const deckGunHit = new Graphics();
+      deckGunHit
+        .rect(deckGunX, WEAPON_BTN_Y, weaponBtnW, WEAPON_BTN_H)
+        .fill({ color: 0xffffff, alpha: 0 });
+      deckGunHit.eventMode = "static";
+      deckGunHit.cursor = "pointer";
+      deckGunHit.on("pointertap", () => {
+        this.issue({ type: "FIRE_WEAPON", weaponId: "deck_gun" });
+      });
+      this.container.addChild(deckGunHit);
+    }
 
     this.torpedoBtnGfx = new Graphics();
     this.container.addChild(this.torpedoBtnGfx);
@@ -372,21 +382,23 @@ export class InteriorView {
     this.torpedoBtnLabel.y = WEAPON_BTN_Y + Math.floor((WEAPON_BTN_H - 12) / 2);
     this.container.addChild(this.torpedoBtnLabel);
 
-    const torpedoHit = new Graphics();
-    torpedoHit
-      .rect(torpedoX, WEAPON_BTN_Y, weaponBtnW, WEAPON_BTN_H)
-      .fill({ color: 0xffffff, alpha: 0 });
-    torpedoHit.eventMode = "static";
-    torpedoHit.cursor = "pointer";
-    torpedoHit.on("pointertap", () => {
-      this.issue({ type: "FIRE_WEAPON", weaponId: "torpedo" });
-    });
-    this.container.addChild(torpedoHit);
+    if (!readOnly) {
+      const torpedoHit = new Graphics();
+      torpedoHit
+        .rect(torpedoX, WEAPON_BTN_Y, weaponBtnW, WEAPON_BTN_H)
+        .fill({ color: 0xffffff, alpha: 0 });
+      torpedoHit.eventMode = "static";
+      torpedoHit.cursor = "pointer";
+      torpedoHit.on("pointertap", () => {
+        this.issue({ type: "FIRE_WEAPON", weaponId: "torpedo" });
+      });
+      this.container.addChild(torpedoHit);
+    }
   }
 
   private issue(cmd: PlayerCommand): void {
+    if (this.readOnly) return;
     this.engine.queueCommand(cmd);
-    this.onCommand?.();
   }
 
   update(state: CombatState, elapsed: number, paused: boolean): void {
@@ -409,7 +421,7 @@ export class InteriorView {
         : "";
     this.depthValue.text = `${depthName}${targetName}`;
 
-    // Ammo
+    // Ammo / position
     const torpedoAmmo = state.player.weaponAmmo["torpedo"];
     if (torpedoAmmo !== undefined) {
       this.positionValue.text = `SUB (${Math.round(state.player.x)},${Math.round(state.player.y)})  ENM (${Math.round(state.enemy.x)},${Math.round(state.enemy.y)})  TORP:${torpedoAmmo}`;

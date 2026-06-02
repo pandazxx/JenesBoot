@@ -61,6 +61,7 @@ export function showCombat(
   engine: ISimEngine,
   enemyType: VesselType,
   onSettings?: () => void,
+  readOnly: boolean = false,
 ): Promise<void> {
   return new Promise<void>((resolveMenu) => {
     app.stage.removeChildren();
@@ -70,9 +71,7 @@ export function showCombat(
       () => {
         paused = !paused;
       },
-      () => {
-        if (paused) engine.tick();
-      },
+      readOnly,
     );
     const radarView = new RadarView();
 
@@ -288,18 +287,24 @@ export function showCombat(
       }
     };
 
-    window.addEventListener("keydown", onKey);
+    if (!readOnly) {
+      window.addEventListener("keydown", onKey);
+    }
 
     function goToMenu(): void {
       app.ticker.remove(tickerCallback);
-      window.removeEventListener("keydown", onKey);
+      if (!readOnly) {
+        window.removeEventListener("keydown", onKey);
+      }
       app.stage.removeChildren();
       resolveMenu();
     }
 
     function restart(): void {
       app.ticker.remove(tickerCallback);
-      window.removeEventListener("keydown", onKey);
+      if (!readOnly) {
+        window.removeEventListener("keydown", onKey);
+      }
 
       const urlSeed = new URLSearchParams(window.location.search).get("seed");
       const seed = urlSeed !== null ? parseInt(urlSeed, 10) : 0;

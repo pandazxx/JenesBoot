@@ -20,7 +20,9 @@ import { Mulberry32 } from "./prng.js";
 import type { SimEvent, SimState } from "./types.js";
 import type { CombatState } from "./combat/types.js";
 import { VesselType } from "./combat/enums.js";
+import type { NauticalSpeed, DiveSpeed, DepthBand } from "./combat/enums.js";
 import { buildInitialState } from "./combat/state.js";
+import { toDepthBand } from "./combat/geometry.js";
 import { tickCombat } from "./combat/tick.js";
 import type { PlayerCommand } from "./combat/types.js";
 import { defaultCombatConfig } from "./combat/config.js";
@@ -31,11 +33,36 @@ export type { PlayerCommand } from "./combat/types.js";
 export type { CombatConfig } from "./combat/config.js";
 export { VesselType } from "./combat/enums.js";
 
+/**
+ * Initial-state overrides applied after startCombat() and before tick 1.
+ * Only callable once; ignored if called after the first tick.
+ * Keep this minimal — add fields only when scenarios actually need them.
+ */
+export interface SimInitialOverrides {
+  playerNauticalSpeed?: NauticalSpeed;
+  playerHorizontalIntent?: -1 | 0 | 1;
+  playerDepth?: DepthBand;
+  playerDiveSpeed?: DiveSpeed;
+  enemyX?: number;
+  enemyY?: number;
+  enemyNauticalSpeed?: NauticalSpeed;
+  enemyHorizontalIntent?: -1 | 0 | 1;
+}
+
+/** Scenario names — map directly to VesselType enemies by convention. */
+export type CombatScenario = VesselType;
+
 /** Public interface for the simulation engine. */
 export interface ISimEngine {
   tick(): void;
   getState(): SimState;
   startCombat(enemyType: VesselType): void;
+  /**
+   * Apply initial-state overrides to the combat state.
+   * Must be called after startCombat() and before the first tick().
+   * Calling after tick 1 is a no-op.
+   */
+  setInitialState(overrides: SimInitialOverrides): void;
   queueCommand(cmd: PlayerCommand): void;
   setConfig(config: CombatConfig): void;
 }
@@ -64,6 +91,34 @@ class SimEngineImpl implements ISimEngine {
   startCombat(enemyType: VesselType): void {
     this.combatState = buildInitialState(enemyType, this.config);
     this.combatRng = new Mulberry32((this.seed ^ 0xdead) >>> 0);
+  }
+
+  setInitialState(overrides: SimInitialOverrides): void {
+    if (this.currentTick > 0 || this.combatState === null) return;
+
+    const p = this.combatState.player;
+    const e = this.combatState.enemy;
+
+    if (overrides.playerDepth !== undefined) {
+      p.depth = overrides.playerDepth;
+      p.depthTarget = overrides.playerDepth;
+      p.y = overrides.playerDepth * 150;
+    }
+    if (overrides.playerNauticalSpeed !== undefined)
+      p.nauticalSpeed = overrides.playerNauticalSpeed;
+    if (overrides.playerHorizontalIntent !== undefined)
+      p.horizontalIntent = overrides.playerHorizontalIntent;
+    if (overrides.playerDiveSpeed !== undefined) p.diveSpeed = overrides.playerDiveSpeed;
+
+    if (overrides.enemyX !== undefined) e.x = overrides.enemyX;
+    if (overrides.enemyY !== undefined) {
+      e.y = overrides.enemyY;
+      e.depth = toDepthBand(overrides.enemyY);
+      e.depthTarget = e.depth;
+    }
+    if (overrides.enemyNauticalSpeed !== undefined) e.nauticalSpeed = overrides.enemyNauticalSpeed;
+    if (overrides.enemyHorizontalIntent !== undefined)
+      e.horizontalIntent = overrides.enemyHorizontalIntent;
   }
 
   queueCommand(cmd: PlayerCommand): void {
@@ -117,6 +172,7 @@ class SimEngineImpl implements ISimEngine {
               ...this.combatState,
               player: { ...this.combatState.player },
               enemy: { ...this.combatState.enemy },
+              enemyAi: { ...this.combatState.enemyAi },
               inFlight: [...this.combatState.inFlight],
             }
           : null,

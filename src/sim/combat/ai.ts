@@ -11,6 +11,14 @@ export type AiCommand =
   | { type: "HOLD" }
   | { type: "NONE" };
 
+/**
+ * Compute the AI commands for the enemy vessel this tick.
+ *
+ * merchantHasSpotted — committed-flight flag for merchant vessels.
+ * Once true the merchant flees even if visibility briefly drops to NONE.
+ * Callers must set this flag in CombatState when visibility > NONE for the
+ * first time, then pass it here every tick.
+ */
 export function tickEnemyAi(
   enemy: VesselState,
   ai: AiState,
@@ -19,13 +27,14 @@ export function tickEnemyAi(
   rangeBand: RangeBand,
   depthOffsetBand: number,
   config: CombatConfig,
+  merchantHasSpotted: boolean = false,
 ): AiCommand[] {
   void rangeBand;
   void depthOffsetBand;
   const commands: AiCommand[] = [];
 
   if (enemy.vesselType === VesselType.MERCHANT) {
-    if (visibility > VisibilityLevel.NONE) {
+    if (merchantHasSpotted || visibility > VisibilityLevel.NONE) {
       commands.push({ type: "SET_SPEED", speed: NauticalSpeed.FLANK, intent: -1 });
     } else {
       commands.push({ type: "HOLD" });
@@ -38,14 +47,11 @@ export function tickEnemyAi(
     const chaseSpeed = isDestroyer ? NauticalSpeed.FULL_AHEAD : NauticalSpeed.HALF_AHEAD;
 
     if (visibility > VisibilityLevel.NONE) {
-      // Close toward player
       const intent: -1 | 0 | 1 = enemy.x > player.x ? -1 : 1;
       commands.push({ type: "SET_SPEED", speed: chaseSpeed, intent });
     } else if (!ai.holdingAtLastKnown) {
-      // Navigate toward last known position
       const gapToLastKnown = ai.lastKnownX - enemy.x;
       if (Math.abs(gapToLastKnown) < BAND_SIZE) {
-        // Close enough to last known — hold
         commands.push({ type: "HOLD" });
       } else {
         const intent: -1 | 0 | 1 = gapToLastKnown > 0 ? 1 : -1;
@@ -55,7 +61,6 @@ export function tickEnemyAi(
       commands.push({ type: "HOLD" });
     }
 
-    // Fire all ready weapons
     const vesselConfig = config.vessels[enemy.vesselType] ?? config.player;
     for (const weapon of vesselConfig.weapons) {
       const cooldown = enemy.weaponCooldowns[weapon.id] ?? 0;
