@@ -1,0 +1,25 @@
+{
+  "scenarioId": "hello-world",
+  "scenarioSeed": 42,
+  "finalTick": 10,
+  "finalCombatResult": null,
+  "finalState": {
+    "playerHP": 0,
+    "enemyHP": 0,
+    "playerX": 0,
+    "enemyX": 0,
+    "playerDepth": 0,
+    "enemyDepth": 0,
+    "playerNauticalSpeed": 0,
+    "enemyNauticalSpeed": 0
+  },
+  "eventLog": [
+    {
+      "tick": 1,
+      "type": "hello",
+      "payload": {
+        "message": "sim running"
+      }
+    }
+  ]
+}

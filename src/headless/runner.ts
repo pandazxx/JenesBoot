@@ -2,7 +2,7 @@
  * Headless runner — Node CLI entry.
  *
  * Usage:
- *   node dist-node/runner.js --seed <n> --ticks <n> [--scenario <name>]
+ *   node dist-node/runner.js --seed <n> --ticks <n> [--enemy <type>]
  *
  * Runs the SimEngine for the requested number of ticks and prints the full
  * event log as JSON to stdout, then exits 0.
@@ -11,16 +11,18 @@
  */
 
 import { SimEngine } from "../sim/index.js";
+import { VesselType } from "../sim/combat/enums.js";
+import { DiveSpeed } from "../sim/combat/enums.js";
 
 function parseArgs(argv: string[]): {
   seed: number;
   ticks: number;
-  scenario: string | null;
+  enemy: string | null;
 } {
   const args = argv.slice(2);
   let seed = 0;
   let ticks = 10;
-  let scenario: string | null = null;
+  let enemy: string | null = null;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--seed" && args[i + 1] !== undefined) {
@@ -39,30 +41,48 @@ function parseArgs(argv: string[]): {
       }
       ticks = parsed;
       i++;
+    } else if (args[i] === "--enemy" && args[i + 1] !== undefined) {
+      enemy = args[i + 1] as string;
+      i++;
     } else if (args[i] === "--scenario" && args[i + 1] !== undefined) {
-      scenario = args[i + 1] as string;
+      // backward-compat alias
+      enemy = args[i + 1] as string;
       i++;
     }
   }
 
-  return { seed, ticks, scenario };
+  return { seed, ticks, enemy };
+}
+
+function resolveEnemyType(enemyArg: string | null): VesselType | null {
+  if (enemyArg === null) return null;
+  const upper = enemyArg.toUpperCase();
+  if (upper === "DESTROYER" || upper === "DESTROYER_BATTLE" || upper === "DESTROYER_DIVE") {
+    return VesselType.DESTROYER;
+  }
+  if (upper === "MERCHANT" || upper === "SURFACE_BATTLE") {
+    return VesselType.MERCHANT;
+  }
+  if (upper === "GUNBOAT" || upper === "GUNBOAT_HUNT") {
+    return VesselType.GUNBOAT;
+  }
+  if (upper === "SUBMARINE" || upper === "SUBMERGED_AMBUSH") {
+    return VesselType.SUBMARINE;
+  }
+  return null;
 }
 
 function main(): void {
-  const { seed, ticks, scenario } = parseArgs(process.argv);
+  const { seed, ticks, enemy } = parseArgs(process.argv);
 
   const engine = new SimEngine(seed);
 
-  if (scenario === "surface_battle") {
-    engine.startCombat("surface_battle");
-    engine.queueCommand({ type: "ASSIGN_CREW", crewId: "mate", roomId: "deck_gun" });
-  } else if (scenario === "destroyer_dive") {
-    engine.startCombat("destroyer_dive");
-    // Pre-assign engineer to torpedo room and order dive so combat resolves headlessly.
-    engine.queueCommand({ type: "SET_DEPTH", target: 1 }); // DepthBand.PERISCOPE = 1
-    engine.queueCommand({ type: "ASSIGN_CREW", crewId: "engineer", roomId: "torpedo" });
-  } else if (scenario !== null) {
-    console.error(`Unknown scenario: ${scenario}`);
+  const enemyType = resolveEnemyType(enemy);
+  if (enemyType !== null) {
+    engine.startCombat(enemyType);
+    engine.queueCommand({ type: "SET_DEPTH", target: 1, diveSpeed: DiveSpeed.STANDARD });
+  } else if (enemy !== null) {
+    console.error(`Unknown enemy type: ${enemy}`);
     process.exit(1);
   }
 
@@ -72,8 +92,6 @@ function main(): void {
 
   const state = engine.getState();
 
-  // Output both "tick" and "ticks" to satisfy either naming convention in
-  // scenario tests. "tick" matches SimState; "ticks" is an alias.
   const output = {
     seed,
     tick: state.tick,

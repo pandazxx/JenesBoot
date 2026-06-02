@@ -47,7 +47,12 @@ jobs:
       - name: Unit tests and scenario tests
         run: just test
 
-      - name: Publish test report
+      - name: Generate HTML test report
+        # Best-effort: a generator error must not mask the test pass/fail signal.
+        # Fails loudly in local `just ci` (no || true there); CI wraps it here.
+        run: just report || true
+
+      - name: Publish test report (dorny)
         uses: dorny/test-reporter@v1
         if: always()
         with:
@@ -56,12 +61,12 @@ jobs:
           reporter: jest-junit
           fail-on-error: false
 
-      - name: Upload test results
+      - name: Upload test results artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
-          path: test-results/junit.xml
+          path: test-results/
           retention-days: 7
 
       - name: Headless smoke check
@@ -83,6 +88,16 @@ jobs:
           name: dist
           path: dist/
           retention-days: 1
+
+  # -----------------------------------------------------------------------
+  # PR deploys are sequentialized via needs: chains to prevent gh-pages
+  # push races. All three jobs write to separate destination_dir paths
+  # and use keep_files: true, so they are safe to run in any order, but
+  # a concurrent push to gh-pages causes "remote: fatal error in
+  # commit_refs". Running them in a chain (preview → qa → test-report)
+  # makes each push atomic and eliminates the race entirely without adding
+  # any retry dependency.
+  # -----------------------------------------------------------------------
 
   deploy-preview:
     name: deploy preview
@@ -108,13 +123,49 @@ jobs:
           destination_dir: pr-${{ github.event.pull_request.number }}
           keep_files: true
 
+  deploy-test-report:
+    name: deploy test report
+    needs: deploy-preview
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+
+      - name: Deploy test report to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: test-results/
+          destination_dir: pr-${{ github.event.pull_request.number }}/test-report
+          keep_files: true
+
       - name: Comment preview URL on PR
         uses: actions/github-script@v7
+        continue-on-error: true
         with:
           script: |
-            const url = `https://pandazxx.github.io/JenesBoot/pr-${{ github.event.pull_request.number }}/`;
+            const prNum = ${{ github.event.pull_request.number }};
+            const base = `https://pandazxx.github.io/JenesBoot/pr-${prNum}`;
+            const url       = `${base}/`;
+            const qaUrl     = `${base}/qa/`;
+            const reportUrl = `${base}/test-report/`;
             const marker = '<!-- pr-preview-comment -->';
-            const body = `${marker}\n🔍 **Preview:** ${url}\n\n_Updated on every push to this PR._`;
+            const body = [
+              marker,
+              `🔍 **Preview:** ${url}`,
+              `🧪 **QA viewer:** ${qaUrl}`,
+              `📊 **Test report:** ${reportUrl}`,
+              '',
+              '_Updated on every push to this PR._',
+            ].join('\n');
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -157,6 +208,29 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: dist/
+          keep_files: true
+
+  deploy-test-report-production:
+    name: deploy test report (production)
+    needs: deploy-production
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+
+      - name: Deploy test report to gh-pages root
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: test-results/
+          destination_dir: test-report
           keep_files: true
 
   cleanup-preview:
