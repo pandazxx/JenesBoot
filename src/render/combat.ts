@@ -1,46 +1,21 @@
 /**
  * Combat render layer — PixiJS v8, split-screen layout.
  *
- * Left panel (460px): submarine interior with crew/room assignment (InteriorView).
- * Right panel (500px): tactical radar / compass (RadarView).
+ * Left panel (460px): submarine interior (InteriorView).
+ * Right panel (500px): tactical display (RadarView).
  *
  * Reads state exclusively through engine.getState() and engine.queueCommand().
- * No direct access to sim internals.
- *
- * Scenario is selected via ?scenario=<name> URL parameter.
- * Defaults to surface_battle.
  */
 
 import { Application, Container, Graphics, Text, TextStyle } from "pixi.js";
-import { SimEngine, type CombatScenario } from "../sim/index.js";
+import { SimEngine } from "../sim/index.js";
 import type { ISimEngine } from "../sim/index.js";
-import { DepthBand, SpeedSetting, SpeedDirection } from "../sim/combat/types.js";
-import type { CombatState } from "../sim/combat/types.js";
+import { DepthBand, NauticalSpeed, VesselType } from "../sim/combat/enums.js";
+import type { CombatState, PlayerCommand } from "../sim/combat/types.js";
 import { InteriorView } from "./interior.js";
 import { RadarView } from "./radar.js";
-import { getTutorialStep } from "./tutorial.js";
 
 const TICK_MS = 100;
-
-const SPEED_ORDER: SpeedSetting[] = [
-  SpeedSetting.SILENT,
-  SpeedSetting.STANDARD,
-  SpeedSetting.AHEAD_FULL,
-];
-const DIRECTION_ORDER: SpeedDirection[] = [
-  SpeedDirection.OPEN,
-  SpeedDirection.HOLD,
-  SpeedDirection.CLOSE,
-];
-
-function readScenario(): CombatScenario {
-  const param = new URLSearchParams(window.location.search).get("scenario");
-  if (param === "destroyer_dive") return "destroyer_dive";
-  if (param === "gunboat_hunt") return "gunboat_hunt";
-  if (param === "destroyer_battle") return "destroyer_battle";
-  if (param === "submerged_ambush") return "submerged_ambush";
-  return "surface_battle";
-}
 
 function makeHudButton(
   label: string,
@@ -84,15 +59,20 @@ function makeHudButton(
 export function showCombat(
   app: Application,
   engine: ISimEngine,
-  scenario: CombatScenario,
+  enemyType: VesselType,
   onSettings?: () => void,
+  readOnly: boolean = false,
 ): Promise<void> {
   return new Promise<void>((resolveMenu) => {
     app.stage.removeChildren();
 
-    const interiorView = new InteriorView(engine, () => {
-      paused = !paused;
-    });
+    const interiorView = new InteriorView(
+      engine,
+      () => {
+        paused = !paused;
+      },
+      readOnly,
+    );
     const radarView = new RadarView();
 
     interiorView.container.x = 0;
@@ -105,13 +85,11 @@ export function showCombat(
     app.stage.addChild(radarView.container);
     app.stage.addChild(divider);
 
-    // HUD buttons — top right corner
     const menuBtn = makeHudButton("MENU", 960 - 170, 5, 78, () => goToMenu());
     const settingsBtn = makeHudButton("SETTINGS", 960 - 88, 5, 83, () => onSettings?.());
     app.stage.addChild(menuBtn);
     app.stage.addChild(settingsBtn);
 
-    // Game-over overlay — shown when combat ends; absorbs taps so nothing below fires
     const overlay = new Container();
     overlay.visible = false;
 
@@ -176,13 +154,18 @@ export function showCombat(
     menuOverlayHit.on("pointertap", () => goToMenu());
     overlay.addChild(menuOverlayHit);
 
-    app.stage.addChild(overlay); // last → on top of everything
+    app.stage.addChild(overlay);
 
     app.stage.eventMode = "static";
 
     let timeSinceLastTick = 0;
     let elapsed = 0;
     let paused = true;
+
+    function issueCommand(cmd: PlayerCommand): void {
+      engine.queueCommand(cmd);
+      if (paused) engine.tick();
+    }
 
     function tickerCallback(ticker: { deltaMS: number }): void {
       if (!paused) {
@@ -197,8 +180,7 @@ export function showCombat(
       const state = engine.getState();
       const combat: CombatState | null = state.combat ?? null;
       if (combat !== null) {
-        const step = getTutorialStep(combat, scenario);
-        interiorView.update(combat, step, elapsed, paused);
+        interiorView.update(combat, elapsed, paused);
         radarView.update(combat, state);
 
         if (combat.result !== "ongoing" && !overlay.visible) {
@@ -228,65 +210,65 @@ export function showCombat(
 
       switch (e.key.toLowerCase()) {
         case "f": {
-          engine.queueCommand({ type: "FIRE_DECK_GUN" });
+          issueCommand({ type: "FIRE_WEAPON", weaponId: "deck_gun" });
           break;
         }
 
         case "t": {
-          engine.queueCommand({ type: "FIRE_TORPEDO" });
+          issueCommand({ type: "FIRE_WEAPON", weaponId: "torpedo" });
           break;
         }
 
         case "z": {
           const currentDepth = combat?.player.depth ?? DepthBand.SURFACE;
-          const nextDepth = Math.min(DepthBand.ABYSSAL, currentDepth + 1) as DepthBand;
-          engine.queueCommand({ type: "SET_DEPTH", target: nextDepth });
+          const nextDepth = Math.min(
+            DepthBand.ABYSSAL,
+            currentDepth + 1,
+          ) as (typeof DepthBand)[keyof typeof DepthBand];
+          issueCommand({ type: "SET_DEPTH", target: nextDepth, diveSpeed: 1 });
           break;
         }
 
         case "x": {
-          engine.queueCommand({ type: "SET_DEPTH", target: DepthBand.SURFACE });
+          issueCommand({ type: "SET_DEPTH", target: DepthBand.SURFACE, diveSpeed: 1 });
           break;
         }
 
         case "arrowright":
         case "d": {
-          const currentDir: SpeedDirection = combat?.player.direction ?? SpeedDirection.HOLD;
-          const currentSpd: SpeedSetting = combat?.player.speed ?? SpeedSetting.STANDARD;
-          const idx = DIRECTION_ORDER.indexOf(currentDir);
-          const nextDir =
-            DIRECTION_ORDER[Math.min(idx + 1, DIRECTION_ORDER.length - 1)] ?? currentDir;
-          engine.queueCommand({ type: "SET_SPEED", speed: currentSpd, direction: nextDir });
+          const currentSpd = combat?.player.nauticalSpeed ?? NauticalSpeed.HALF_AHEAD;
+          issueCommand({ type: "SET_NAUTICAL_SPEED", speed: currentSpd, intent: 1 });
           break;
         }
 
         case "arrowleft":
         case "a": {
-          const currentDir: SpeedDirection = combat?.player.direction ?? SpeedDirection.HOLD;
-          const currentSpd: SpeedSetting = combat?.player.speed ?? SpeedSetting.STANDARD;
-          const idx = DIRECTION_ORDER.indexOf(currentDir);
-          const prevDir = DIRECTION_ORDER[Math.max(idx - 1, 0)] ?? currentDir;
-          engine.queueCommand({ type: "SET_SPEED", speed: currentSpd, direction: prevDir });
+          const currentSpd = combat?.player.nauticalSpeed ?? NauticalSpeed.HALF_AHEAD;
+          issueCommand({ type: "SET_NAUTICAL_SPEED", speed: currentSpd, intent: -1 });
           break;
         }
 
         case "arrowup":
         case "w": {
-          const currentDir: SpeedDirection = combat?.player.direction ?? SpeedDirection.HOLD;
-          const currentSpd: SpeedSetting = combat?.player.speed ?? SpeedSetting.STANDARD;
-          const idx = SPEED_ORDER.indexOf(currentSpd);
-          const nextSpd = SPEED_ORDER[Math.min(idx + 1, SPEED_ORDER.length - 1)] ?? currentSpd;
-          engine.queueCommand({ type: "SET_SPEED", speed: nextSpd, direction: currentDir });
+          const currentSpd = combat?.player.nauticalSpeed ?? NauticalSpeed.HALF_AHEAD;
+          const nextSpd = Math.min(
+            NauticalSpeed.FLANK,
+            currentSpd + 1,
+          ) as (typeof NauticalSpeed)[keyof typeof NauticalSpeed];
+          const intent = combat?.player.horizontalIntent ?? 0;
+          issueCommand({ type: "SET_NAUTICAL_SPEED", speed: nextSpd, intent });
           break;
         }
 
         case "arrowdown":
         case "s": {
-          const currentDir: SpeedDirection = combat?.player.direction ?? SpeedDirection.HOLD;
-          const currentSpd: SpeedSetting = combat?.player.speed ?? SpeedSetting.STANDARD;
-          const idx = SPEED_ORDER.indexOf(currentSpd);
-          const prevSpd = SPEED_ORDER[Math.max(idx - 1, 0)] ?? currentSpd;
-          engine.queueCommand({ type: "SET_SPEED", speed: prevSpd, direction: currentDir });
+          const currentSpd = combat?.player.nauticalSpeed ?? NauticalSpeed.HALF_AHEAD;
+          const prevSpd = Math.max(
+            NauticalSpeed.DEAD_SLOW,
+            currentSpd - 1,
+          ) as (typeof NauticalSpeed)[keyof typeof NauticalSpeed];
+          const intent = combat?.player.horizontalIntent ?? 0;
+          issueCommand({ type: "SET_NAUTICAL_SPEED", speed: prevSpd, intent });
           break;
         }
 
@@ -305,29 +287,33 @@ export function showCombat(
       }
     };
 
-    window.addEventListener("keydown", onKey);
+    if (!readOnly) {
+      window.addEventListener("keydown", onKey);
+    }
 
     function goToMenu(): void {
       app.ticker.remove(tickerCallback);
-      window.removeEventListener("keydown", onKey);
+      if (!readOnly) {
+        window.removeEventListener("keydown", onKey);
+      }
       app.stage.removeChildren();
       resolveMenu();
     }
 
     function restart(): void {
       app.ticker.remove(tickerCallback);
-      window.removeEventListener("keydown", onKey);
+      if (!readOnly) {
+        window.removeEventListener("keydown", onKey);
+      }
 
       const urlSeed = new URLSearchParams(window.location.search).get("seed");
       const seed = urlSeed !== null ? parseInt(urlSeed, 10) : 0;
 
       const newEngine = new SimEngine(seed);
-      newEngine.startCombat(scenario);
-      showCombat(app, newEngine, scenario, onSettings)
+      newEngine.startCombat(enemyType);
+      showCombat(app, newEngine, enemyType, onSettings)
         .then(resolveMenu)
         .catch(() => undefined);
     }
   });
 }
-
-export { readScenario };

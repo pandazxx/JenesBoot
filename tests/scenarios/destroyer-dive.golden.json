@@ -1,0 +1,184 @@
+{
+  "scenarioId": "destroyer-dive",
+  "scenarioSeed": 42,
+  "finalTick": 103,
+  "finalCombatResult": "player_win",
+  "finalState": {
+    "playerHP": 20,
+    "enemyHP": 0,
+    "playerX": 0,
+    "enemyX": 140,
+    "playerDepth": 1,
+    "enemyDepth": 0,
+    "playerNauticalSpeed": 0,
+    "enemyNauticalSpeed": 1
+  },
+  "eventLog": [
+    {
+      "tick": 1,
+      "type": "hello",
+      "payload": {
+        "message": "sim running"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "combat_start",
+      "payload": {
+        "playerHP": 20,
+        "enemyHP": 20,
+        "enemyType": "DESTROYER"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "range_change",
+      "payload": {
+        "from": 3,
+        "to": 4
+      }
+    },
+    {
+      "tick": 11,
+      "type": "depth_change",
+      "payload": {
+        "who": "player",
+        "depth": 1
+      }
+    },
+    {
+      "tick": 13,
+      "type": "range_change",
+      "payload": {
+        "from": 4,
+        "to": 3
+      }
+    },
+    {
+      "tick": 29,
+      "type": "range_change",
+      "payload": {
+        "from": 3,
+        "to": 2
+      }
+    },
+    {
+      "tick": 40,
+      "type": "weapon_fired",
+      "payload": {
+        "firedBy": "player",
+        "weaponId": "torpedo",
+        "rangeBand": 2,
+        "depthOffset": 1
+      }
+    },
+    {
+      "tick": 43,
+      "type": "weapon_hit",
+      "payload": {
+        "firedBy": "player",
+        "weaponId": "torpedo",
+        "damage": 5,
+        "targetHP": 15
+      }
+    },
+    {
+      "tick": 46,
+      "type": "range_change",
+      "payload": {
+        "from": 2,
+        "to": 1
+      }
+    },
+    {
+      "tick": 50,
+      "type": "position_report",
+      "payload": {
+        "playerX": 0,
+        "playerY": 150,
+        "enemyX": 200,
+        "enemyY": 0,
+        "rangeBand": 1
+      }
+    },
+    {
+      "tick": 60,
+      "type": "weapon_fired",
+      "payload": {
+        "firedBy": "player",
+        "weaponId": "torpedo",
+        "rangeBand": 1,
+        "depthOffset": 1
+      }
+    },
+    {
+      "tick": 63,
+      "type": "weapon_hit",
+      "payload": {
+        "firedBy": "player",
+        "weaponId": "torpedo",
+        "damage": 5,
+        "targetHP": 10
+      }
+    },
+    {
+      "tick": 80,
+      "type": "weapon_fired",
+      "payload": {
+        "firedBy": "player",
+        "weaponId": "torpedo",
+        "rangeBand": 1,
+        "depthOffset": 1
+      }
+    },
+    {
+      "tick": 83,
+      "type": "weapon_hit",
+      "payload": {
+        "firedBy": "player",
+        "weaponId": "torpedo",
+        "damage": 5,
+        "targetHP": 5
+      }
+    },
+    {
+      "tick": 100,
+      "type": "weapon_fired",
+      "payload": {
+        "firedBy": "player",
+        "weaponId": "torpedo",
+        "rangeBand": 1,
+        "depthOffset": 1
+      }
+    },
+    {
+      "tick": 100,
+      "type": "position_report",
+      "payload": {
+        "playerX": 0,
+        "playerY": 150,
+        "enemyX": 140,
+        "enemyY": 0,
+        "rangeBand": 1
+      }
+    },
+    {
+      "tick": 103,
+      "type": "weapon_hit",
+      "payload": {
+        "firedBy": "player",
+        "weaponId": "torpedo",
+        "damage": 5,
+        "targetHP": 0
+      }
+    },
+    {
+      "tick": 103,
+      "type": "combat_end",
+      "payload": {
+        "result": "player_win",
+        "atTick": 103
+      }
+    }
+  ]
+}

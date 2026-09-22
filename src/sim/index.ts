@@ -19,36 +19,52 @@
 import { Mulberry32 } from "./prng.js";
 import type { SimEvent, SimState } from "./types.js";
 import type { CombatState } from "./combat/types.js";
-import { RoomType } from "./combat/types.js";
-import {
-  tickCombat,
-  buildSurfaceBattleState,
-  buildDestroyerDiveState,
-  buildGunboatHuntState,
-  buildDestroyerBattleState,
-  buildSubmergedAmbushState,
-} from "./combat/tick.js";
-import type { PlayerCommand } from "./combat/tick.js";
-import { type SimConfig, defaultSimConfig } from "./combat/config.js";
+import { VesselType } from "./combat/enums.js";
+import type { NauticalSpeed, DiveSpeed, DepthBand } from "./combat/enums.js";
+import { buildInitialState } from "./combat/state.js";
+import { toDepthBand } from "./combat/geometry.js";
+import { tickCombat } from "./combat/tick.js";
+import type { PlayerCommand } from "./combat/types.js";
+import { defaultCombatConfig } from "./combat/config.js";
+import type { CombatConfig } from "./combat/config.js";
 
 export type { SimEvent, SimState } from "./types.js";
-export type { PlayerCommand } from "./combat/tick.js";
-export type { SimConfig } from "./combat/config.js";
+export type { PlayerCommand } from "./combat/types.js";
+export type { CombatConfig } from "./combat/config.js";
+export { VesselType } from "./combat/enums.js";
 
-export type CombatScenario =
-  | "surface_battle"
-  | "destroyer_dive"
-  | "gunboat_hunt"
-  | "destroyer_battle"
-  | "submerged_ambush";
+/**
+ * Initial-state overrides applied after startCombat() and before tick 1.
+ * Only callable once; ignored if called after the first tick.
+ * Keep this minimal — add fields only when scenarios actually need them.
+ */
+export interface SimInitialOverrides {
+  playerNauticalSpeed?: NauticalSpeed;
+  playerHorizontalIntent?: -1 | 0 | 1;
+  playerDepth?: DepthBand;
+  playerDiveSpeed?: DiveSpeed;
+  enemyX?: number;
+  enemyY?: number;
+  enemyNauticalSpeed?: NauticalSpeed;
+  enemyHorizontalIntent?: -1 | 0 | 1;
+}
+
+/** Scenario names — map directly to VesselType enemies by convention. */
+export type CombatScenario = VesselType;
 
 /** Public interface for the simulation engine. */
 export interface ISimEngine {
   tick(): void;
   getState(): SimState;
-  startCombat(scenario: CombatScenario): void;
+  startCombat(enemyType: VesselType): void;
+  /**
+   * Apply initial-state overrides to the combat state.
+   * Must be called after startCombat() and before the first tick().
+   * Calling after tick 1 is a no-op.
+   */
+  setInitialState(overrides: SimInitialOverrides): void;
   queueCommand(cmd: PlayerCommand): void;
-  setConfig(config: SimConfig): void;
+  setConfig(config: CombatConfig): void;
 }
 
 /** Internal class — use the SimEngine factory/constructor export below. */
@@ -60,66 +76,53 @@ class SimEngineImpl implements ISimEngine {
   private combatState: CombatState | null = null;
   private combatRng: Mulberry32 | null = null;
   private pendingCommand: PlayerCommand | null = null;
-  private config: SimConfig;
+  private config: CombatConfig;
 
-  constructor(seed: number, config: SimConfig = defaultSimConfig()) {
+  constructor(seed: number, config: CombatConfig = defaultCombatConfig()) {
     this.seed = seed;
     this.rng = new Mulberry32(seed);
     this.config = config;
   }
 
-  setConfig(config: SimConfig): void {
+  setConfig(config: CombatConfig): void {
     this.config = config;
   }
 
-  startCombat(scenario: CombatScenario): void {
-    if (scenario === "surface_battle") {
-      this.combatState = buildSurfaceBattleState(this.config);
-    } else if (scenario === "destroyer_dive") {
-      this.combatState = buildDestroyerDiveState(this.config);
-    } else if (scenario === "gunboat_hunt") {
-      this.combatState = buildGunboatHuntState(this.config);
-    } else if (scenario === "destroyer_battle") {
-      this.combatState = buildDestroyerBattleState(this.config);
-    } else if (scenario === "submerged_ambush") {
-      this.combatState = buildSubmergedAmbushState(this.config);
-    }
+  startCombat(enemyType: VesselType): void {
+    this.combatState = buildInitialState(enemyType, this.config);
     this.combatRng = new Mulberry32((this.seed ^ 0xdead) >>> 0);
   }
 
-  /**
-   * Queue a player command.
-   *
-   * SET_SPEED, SET_DEPTH, and ASSIGN_CREW are sticky: applied immediately so
-   * state is visible in getState() before the next tick.
-   *
-   * SET_DEPTH is gated on bridge being crewed — ignored otherwise.
-   *
-   * FIRE_* commands are one-shot: consumed on the next tick then cleared.
-   */
-  queueCommand(cmd: PlayerCommand): void {
-    if (cmd.type === "SET_SPEED" && this.combatState !== null) {
-      this.combatState.player.speed = cmd.speed;
-      this.combatState.player.direction = cmd.direction;
-    } else if (cmd.type === "SET_DEPTH" && this.combatState !== null) {
-      const bridgeCrewed = this.combatState.rooms.some(
-        (r) => r.type === RoomType.BRIDGE && r.crewIds.length > 0,
-      );
-      if (bridgeCrewed) {
-        this.combatState.player.depthTarget = cmd.target;
-      }
-    } else if (cmd.type === "ASSIGN_CREW" && this.combatState !== null) {
-      const crew = this.combatState.crew.find((c) => c.id === cmd.crewId);
-      if (crew) {
-        const oldRoom = this.combatState.rooms.find((r) => r.crewIds.includes(cmd.crewId));
-        if (oldRoom) oldRoom.crewIds = oldRoom.crewIds.filter((id) => id !== cmd.crewId);
-        crew.roomId = cmd.roomId;
-        const newRoom = this.combatState.rooms.find((r) => r.id === cmd.roomId);
-        if (newRoom && !newRoom.crewIds.includes(cmd.crewId)) newRoom.crewIds.push(cmd.crewId);
-      }
-    } else {
-      this.pendingCommand = cmd;
+  setInitialState(overrides: SimInitialOverrides): void {
+    if (this.currentTick > 0 || this.combatState === null) return;
+
+    const p = this.combatState.player;
+    const e = this.combatState.enemy;
+
+    if (overrides.playerDepth !== undefined) {
+      p.depth = overrides.playerDepth;
+      p.depthTarget = overrides.playerDepth;
+      p.y = overrides.playerDepth * 150;
     }
+    if (overrides.playerNauticalSpeed !== undefined)
+      p.nauticalSpeed = overrides.playerNauticalSpeed;
+    if (overrides.playerHorizontalIntent !== undefined)
+      p.horizontalIntent = overrides.playerHorizontalIntent;
+    if (overrides.playerDiveSpeed !== undefined) p.diveSpeed = overrides.playerDiveSpeed;
+
+    if (overrides.enemyX !== undefined) e.x = overrides.enemyX;
+    if (overrides.enemyY !== undefined) {
+      e.y = overrides.enemyY;
+      e.depth = toDepthBand(overrides.enemyY);
+      e.depthTarget = e.depth;
+    }
+    if (overrides.enemyNauticalSpeed !== undefined) e.nauticalSpeed = overrides.enemyNauticalSpeed;
+    if (overrides.enemyHorizontalIntent !== undefined)
+      e.horizontalIntent = overrides.enemyHorizontalIntent;
+  }
+
+  queueCommand(cmd: PlayerCommand): void {
+    this.pendingCommand = cmd;
   }
 
   tick(): void {
@@ -132,7 +135,7 @@ class SimEngineImpl implements ISimEngine {
         this.emit("combat_start", {
           playerHP: this.combatState.player.hullHP,
           enemyHP: this.combatState.enemy.hullHP,
-          range: this.combatState.range,
+          enemyType: this.combatState.enemyType,
         });
       }
     }
@@ -169,9 +172,8 @@ class SimEngineImpl implements ISimEngine {
               ...this.combatState,
               player: { ...this.combatState.player },
               enemy: { ...this.combatState.enemy },
+              enemyAi: { ...this.combatState.enemyAi },
               inFlight: [...this.combatState.inFlight],
-              crew: this.combatState.crew.map((c) => ({ ...c })),
-              rooms: this.combatState.rooms.map((r) => ({ ...r, crewIds: [...r.crewIds] })),
             }
           : null,
     };
@@ -182,16 +184,16 @@ class SimEngineImpl implements ISimEngine {
   }
 }
 
-function SimEngineFactory(seed: number, config?: SimConfig): ISimEngine {
+function SimEngineFactory(seed: number, config?: CombatConfig): ISimEngine {
   return new SimEngineImpl(seed, config);
 }
 
 SimEngineFactory.prototype = SimEngineImpl.prototype;
 
 export const SimEngine: {
-  (seed: number, config?: SimConfig): ISimEngine;
-  new (seed: number, config?: SimConfig): ISimEngine;
+  (seed: number, config?: CombatConfig): ISimEngine;
+  new (seed: number, config?: CombatConfig): ISimEngine;
 } = SimEngineFactory as unknown as {
-  (seed: number, config?: SimConfig): ISimEngine;
-  new (seed: number, config?: SimConfig): ISimEngine;
+  (seed: number, config?: CombatConfig): ISimEngine;
+  new (seed: number, config?: CombatConfig): ISimEngine;
 };

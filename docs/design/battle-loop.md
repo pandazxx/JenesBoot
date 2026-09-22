@@ -260,11 +260,12 @@ Each archetype is 2–3 priority rules evaluated in order each AI tick. First tr
 
 | Priority | Rule |
 |---|---|
-| 1 | If range ≤ `SHORT` and deck gun reloaded → fire deck gun. |
-| 2 | If hull HP < 50% → `AHEAD_FULL, OPEN` (flee). |
-| 3 | Otherwise → `STANDARD, HOLD`. |
+| 1 | If has spotted the sub → `AHEAD_FULL, OPEN` (flee, committed). |
+| 2 | Otherwise → `STANDARD, HOLD` (drifting). |
 
 Speed: 1 band per 20 ticks (slower than player). Cannot dive.
+
+The merchant carries no weapons in MVP. A small-boat archetype that can fight back may appear later as a separate enemy class ("Q-ship" / "armed trawler"); merchants proper are unarmed.
 
 ### 5.2 Patrol Destroyer (Scenario 2)
 

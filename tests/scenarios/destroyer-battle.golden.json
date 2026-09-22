@@ -1,0 +1,255 @@
+{
+  "scenarioId": "destroyer-battle",
+  "scenarioSeed": 0,
+  "finalTick": 60,
+  "finalCombatResult": "ongoing",
+  "finalState": {
+    "playerHP": 5,
+    "enemyHP": 20,
+    "playerX": 0,
+    "enemyX": 5,
+    "playerDepth": 0,
+    "enemyDepth": 0,
+    "playerNauticalSpeed": 1,
+    "enemyNauticalSpeed": 2
+  },
+  "eventLog": [
+    {
+      "tick": 1,
+      "type": "hello",
+      "payload": {
+        "message": "sim running"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "combat_start",
+      "payload": {
+        "playerHP": 20,
+        "enemyHP": 20,
+        "enemyType": "DESTROYER"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "range_change",
+      "payload": {
+        "from": 3,
+        "to": 4
+      }
+    },
+    {
+      "tick": 12,
+      "type": "range_change",
+      "payload": {
+        "from": 4,
+        "to": 3
+      }
+    },
+    {
+      "tick": 12,
+      "type": "visibility_change",
+      "payload": {
+        "who": "enemy",
+        "visibility": 2
+      }
+    },
+    {
+      "tick": 12,
+      "type": "enemy_spotted",
+      "payload": {
+        "rangeBand": 3,
+        "playerDepth": 0,
+        "playerX": 0,
+        "playerY": 0
+      }
+    },
+    {
+      "tick": 22,
+      "type": "range_change",
+      "payload": {
+        "from": 3,
+        "to": 2
+      }
+    },
+    {
+      "tick": 22,
+      "type": "visibility_change",
+      "payload": {
+        "who": "enemy",
+        "visibility": 3
+      }
+    },
+    {
+      "tick": 22,
+      "type": "weapon_fired",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "deck_gun",
+        "rangeBand": 2,
+        "depthOffset": 0
+      }
+    },
+    {
+      "tick": 22,
+      "type": "weapon_miss",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "deck_gun"
+      }
+    },
+    {
+      "tick": 32,
+      "type": "range_change",
+      "payload": {
+        "from": 2,
+        "to": 1
+      }
+    },
+    {
+      "tick": 32,
+      "type": "visibility_change",
+      "payload": {
+        "who": "enemy",
+        "visibility": 4
+      }
+    },
+    {
+      "tick": 32,
+      "type": "weapon_fired",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "deck_gun",
+        "rangeBand": 1,
+        "depthOffset": 0
+      }
+    },
+    {
+      "tick": 32,
+      "type": "weapon_fired",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "depth_charge",
+        "rangeBand": 1,
+        "depthOffset": 0
+      }
+    },
+    {
+      "tick": 33,
+      "type": "weapon_hit",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "deck_gun",
+        "damage": 3,
+        "targetHP": 17
+      }
+    },
+    {
+      "tick": 33,
+      "type": "weapon_hit",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "depth_charge",
+        "damage": 3,
+        "targetHP": 14
+      }
+    },
+    {
+      "tick": 42,
+      "type": "range_change",
+      "payload": {
+        "from": 1,
+        "to": 0
+      }
+    },
+    {
+      "tick": 42,
+      "type": "weapon_fired",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "deck_gun",
+        "rangeBand": 0,
+        "depthOffset": 0
+      }
+    },
+    {
+      "tick": 42,
+      "type": "weapon_fired",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "depth_charge",
+        "rangeBand": 0,
+        "depthOffset": 0
+      }
+    },
+    {
+      "tick": 43,
+      "type": "weapon_hit",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "deck_gun",
+        "damage": 3,
+        "targetHP": 11
+      }
+    },
+    {
+      "tick": 43,
+      "type": "weapon_hit",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "depth_charge",
+        "damage": 3,
+        "targetHP": 8
+      }
+    },
+    {
+      "tick": 50,
+      "type": "position_report",
+      "payload": {
+        "playerX": 0,
+        "playerY": 0,
+        "enemyX": 5,
+        "enemyY": 0,
+        "rangeBand": 0
+      }
+    },
+    {
+      "tick": 52,
+      "type": "weapon_fired",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "deck_gun",
+        "rangeBand": 0,
+        "depthOffset": 0
+      }
+    },
+    {
+      "tick": 52,
+      "type": "weapon_fired",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "depth_charge",
+        "rangeBand": 0,
+        "depthOffset": 0
+      }
+    },
+    {
+      "tick": 52,
+      "type": "weapon_miss",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "depth_charge"
+      }
+    },
+    {
+      "tick": 53,
+      "type": "weapon_hit",
+      "payload": {
+        "firedBy": "enemy",
+        "weaponId": "deck_gun",
+        "damage": 3,
+        "targetHP": 5
+      }
+    }
+  ]
+}
