@@ -17,7 +17,9 @@ JenesBoot is built agent-testable by design: deterministic seeds, headless mode,
 
 ## Authoring standing orders
 
-*Story assertions first.* Write the intent in plain terms before writing a single line of script. Example: "Player surfaces from SHALLOW, closes to SHORT, fires 3 deck gun shots, merchant is destroyed." Then translate each claim into an `ExpectClause`. The assertions are the contract. The script is how you satisfy them.
+*Stories are the source of scenarios.* When a feature has an agreed story in `docs/stories/` (see `docs/process/story-driven-workflow.md`), the scenario transcribes that story: scenario `id` matches the story `id` (variants: `<story-id>--<variant>`), a header comment cites the story file path, and assertions come from the story's acceptance criteria — neither invent criteria the story doesn't state nor drop ones it does. Red is the expected starting state when the feature isn't built yet; add the scenario ids back into the story's `scenarios:` frontmatter. If a criterion can't be expressed through the scenario surface, the sim hook is missing — flag it to `gameplay-engineer` rather than approximating.
+
+*Story assertions first.* For scenarios without a story file, write the intent in plain terms before writing a single line of script. Example: "Player surfaces from SHALLOW, closes to SHORT, fires 3 deck gun shots, merchant is destroyed." Then translate each claim into an `ExpectClause`. The assertions are the contract. The script is how you satisfy them.
 
 *Iterate headless before visual.* Run `npx vitest tests/scenarios/<name>.scenario.ts --watch`. Read the event log from failing assertion details. Add a temporary `console.log(result.log)` in a predicate if needed. Adjust script tick numbers, not assertions. Open the QA viewer only after all headless assertions are green — it is a slow confirmation step, not a debug tool.
 
