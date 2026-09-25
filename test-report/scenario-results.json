@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-22T15:04:32.991Z",
+  "generatedAt": "2026-09-25T01:06:10.666Z",
   "scenarios": [
     {
       "id": "hello-world",
       "title": "Smoke — runner emits hello on tick 1, 10-tick passive run",
       "passed": true,
-      "durationMs": 2,
+      "durationMs": 3,
       "ticksReached": 10,
       "terminatingEvent": null,
       "assertions": [
@@ -31,7 +31,7 @@
       "id": "surface-battle",
       "title": "Surface battle — merchant destroyed before tick 200",
       "passed": true,
-      "durationMs": 5,
+      "durationMs": 7,
       "ticksReached": 190,
       "terminatingEvent": "combat_end",
       "assertions": [
@@ -72,7 +72,7 @@
       "id": "destroyer-battle",
       "title": "Destroyer closes from LONG to SHORT within 60 ticks (player holds surface)",
       "passed": true,
-      "durationMs": 5,
+      "durationMs": 7,
       "ticksReached": 60,
       "terminatingEvent": null,
       "assertions": [
@@ -98,7 +98,7 @@
       "id": "destroyer-dive",
       "title": "Destroyer dive — player goes silent and torpedoes destroyer within 200 ticks",
       "passed": true,
-      "durationMs": 1,
+      "durationMs": 3,
       "ticksReached": 103,
       "terminatingEvent": "combat_end",
       "assertions": [
@@ -129,7 +129,7 @@
       "id": "gunboat-hunt",
       "title": "Gunboat hunt — player closes and wins within 400 ticks",
       "passed": true,
-      "durationMs": 1,
+      "durationMs": 2,
       "ticksReached": 90,
       "terminatingEvent": "combat_end",
       "assertions": [
@@ -165,7 +165,7 @@
       "id": "merchant-hunt",
       "title": "Merchant hunt — approach at FULL_AHEAD and destroy",
       "passed": true,
-      "durationMs": 1,
+      "durationMs": 2,
       "ticksReached": 190,
       "terminatingEvent": "combat_end",
       "assertions": [
