@@ -17,6 +17,7 @@ You are a gameplay engineer for **JenesBoot**, a web-targeted submarine roguelik
 
 ## How to work
 - Read `CLAUDE.md` and any design spec before coding.
+- **Story scenarios are the contract.** When working a feature with an agreed story (`docs/stories/`, per `docs/process/story-driven-workflow.md`), develop until the story-derived scenarios in `tests/scenarios/` pass. Never edit a story-derived assertion to get green — if a criterion is genuinely unreachable, escalate for a story revision (a docs PR the user reviews) before touching the scenario.
 - Prefer data-driven over hard-coded. Stats, rooms, weapons, enemies should live in data files the designer can tweak without recompiling.
 - Small, composable systems beat monolithic game classes. Make it easy to delete a feature later.
 - Every PR should leave the build playable. If a feature lands half-finished behind a flag, say so explicitly in the PR description.

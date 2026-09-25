@@ -43,6 +43,10 @@ Tooling below this layer (package manager, linter, test runner, formatter) is ch
 - Keep PRs small and self-contained so each can be reviewed and play-tested independently.
 - **Never commit directly to `master`.** All changes must go on a feature branch and be merged via pull request. No exceptions, including one-liners and doc fixes.
 
+## Story-driven workflow
+
+Every gameplay feature follows the story-driven pipeline in `docs/process/story-driven-workflow.md`: brainstorm with the user → `game-designer` writes stories in `docs/stories/` (docs PR; user enrichment happens in review, merge = sign-off) → `gameplay-qa` turns agreed stories into red layer-2 scenarios → `gameplay-engineer` develops until green without weakening story assertions → the PR hands the user playthrough links (QA viewer + player scenario + test report) for verification. Stories own experiences; design specs own numbers. Do not start implementing a gameplay feature that has no agreed story.
+
 ## PR handoff rule
 
 Before any agent surfaces a pull-request URL to the user, it **must** spawn the `pr-sentinel` subagent with the PR number and wait for its verdict. Only forward a `VERDICT: green` to the user. On `VERDICT: red`, fix the reported issue first, then re-run the sentinel. Never skip this step to save time.
